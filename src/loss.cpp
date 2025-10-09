@@ -1,0 +1,73 @@
+#include "include/loss.hpp"
+#include <stdexcept>
+#include <numeric>
+
+float mse(const std::vector<float>& output, const std::vector<float>& target) {
+    if (output.size() != target.size() || output.empty()) {
+        throw std::invalid_argument("Output and target vectors must have the same, non-zero size for MSE.");
+    }
+    float sum_sq_err = 0.0f;
+    for (size_t i = 0; i < output.size(); ++i) {
+        float error = output[i] - target[i];
+        sum_sq_err += error * error;
+    }
+    return sum_sq_err / output.size();
+}
+
+std::vector<float> mseDer(const std::vector<float>& output, const std::vector<float>& target) {
+    if (output.size() != target.size()) {
+        throw std::invalid_argument("Output and target vectors must have the same size for MSE derivative.");
+    }
+    std::vector<float> derivative(output.size());
+    for (size_t i = 0; i < output.size(); ++i) {
+        derivative[i] = 2.0f * (output[i] - target[i]) / output.size();
+    }
+    return derivative;
+}
+
+float crossEntropy(const std::vector<float>& output, const std::vector<float>& target) {
+    if (output.size() != target.size() || output.empty()) {
+        throw std::invalid_argument("Output and target vectors must have the same, non-zero size for Cross-Entropy.");
+    }
+    float loss = 0.0f;
+    for (size_t i = 0; i < output.size(); ++i) {
+        // Add a small epsilon to prevent log(0)
+        loss += target[i] * std::log(output[i] + 1e-9f);
+    }
+    return -loss / output.size();
+}
+
+std::vector<float> crossEntropyDer(const std::vector<float>& output, const std::vector<float>& target) {
+    if (output.size() != target.size()) {
+        throw std::invalid_argument("Output and target vectors must have the same size for Cross-Entropy derivative.");
+    }
+    std::vector<float> derivative(output.size());
+    for (size_t i = 0; i < output.size(); ++i) {
+        derivative[i] = -target[i] / (output[i] + 1e-9f);
+    }
+    return derivative;
+}
+
+float binaryCrossEntropy(const std::vector<float>& output, const std::vector<float>& target) {
+    if (output.size() != target.size() || output.empty()) {
+        throw std::invalid_argument("Output and target vectors must have the same, non-zero size for Binary Cross-Entropy.");
+    }
+    float loss = 0.0f;
+    for (size_t i = 0; i < output.size(); ++i) {
+        // Add a small epsilon to prevent log(0) or log(1) for 0 or 1
+        loss += target[i] * std::log(output[i] + 1e-9f) + (1.0f - target[i]) * std::log(1.0f - output[i] + 1e-9f);
+    }
+    return -loss / output.size();
+}
+
+std::vector<float> binaryCrossEntropyDer(const std::vector<float>& output, const std::vector<float>& target) {
+    if (output.size() != target.size()) {
+        throw std::invalid_argument("Output and target vectors must have the same size for Binary Cross-Entropy derivative.");
+    }
+    std::vector<float> derivative(output.size());
+    for (size_t i = 0; i < output.size(); ++i) {
+        // Derivative with respect to the output
+        derivative[i] = -(target[i] / (output[i] + 1e-9f) - (1.0f - target[i]) / (1.0f - output[i] + 1e-9f)) / output.size();
+    }
+    return derivative;
+}
