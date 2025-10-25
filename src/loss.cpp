@@ -1,6 +1,7 @@
 #include "include/loss.hpp"
 #include <stdexcept>
 #include <numeric>
+#include <cmath>
 
 float mse(const std::vector<float>& output, const std::vector<float>& target) {
     if (output.size() != target.size() || output.empty()) {

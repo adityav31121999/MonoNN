@@ -1,4 +1,8 @@
 #include "include/activations.hpp"
+#include <vector>
+#include <cmath>
+
+/// sigmoid activation function and its derivative
 
 float sigmoid(float x) {
     return 1.0f / (1.0f + std::exp(-x));
@@ -45,6 +49,8 @@ std::vector<std::vector<float>> sigmoidDer(const std::vector<std::vector<float>>
     return result;
 }
 
+/// ReLU activation function and its derivative
+
 float relu(float x) {
     return x > 0 ? x : 0;
 }
@@ -88,6 +94,8 @@ std::vector<std::vector<float>> reluDer(const std::vector<std::vector<float>>& x
     }
     return result;
 }
+
+/// softmax activation function and its derivative
 
 std::vector<float> softmax(const std::vector<float>& x) {
     std::vector<float> result(x.size());
