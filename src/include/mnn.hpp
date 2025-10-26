@@ -10,15 +10,25 @@ std::vector<float> operator+(const std::vector<float>& a, const std::vector<floa
 std::vector<std::vector<float>> operator+(const std::vector<std::vector<float>>& a, const std::vector<std::vector<float>>& b);
 std::vector<float> operator*(const std::vector<float>& a, const std::vector<std::vector<float>>& b);
 std::vector<std::vector<float>> operator*(const std::vector<std::vector<float>>& a, const std::vector<std::vector<float>>& b);
+std::vector<float> multiply(const std::vector<float>& a, const std::vector<float>& b);
 std::vector<float> multiply(const std::vector<float>& a, const std::vector<std::vector<float>>& b);
 std::vector<std::vector<float>> multiply(const std::vector<std::vector<float>>& a, const std::vector<std::vector<float>>& b);
-std::vector<float> power(const std::vector<float>& input, float& powerOfValues);
-std::vector<std::vector<float>> power(const std::vector<std::vector<float>>& input, float& powerOfValues);
+std::vector<float> power(const std::vector<float>& input, const float& powerOfValues);
+std::vector<std::vector<float>> power(const std::vector<std::vector<float>>& input, const float& powerOfValues);
+std::vector<float> meanPool(const std::vector<std::vector<float>>& input);
+std::vector<float> maxPool(const std::vector<std::vector<float>>& input);
+std::vector<float> weightedMeanPool(const std::vector<std::vector<float>>& input, const std::vector<float>& weights);
+std::vector<float> flatten(const std::vector<std::vector<float>>& input);
+std::vector<std::vector<float>> reshape(const std::vector<float>& input, int rows, int cols);
 
+void layerForward(const std::vector<float>& input, std::vector<float>& output, const std::vector<std::vector<float>>& cweights,
+                    const std::vector<std::vector<float>>& bweights);
 void layerForward(const std::vector<float>& input, std::vector<float>& output, const std::vector<std::vector<float>>& cweights,
                     const std::vector<std::vector<float>>& bweights, float n);
 void layerForward(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output, 
-                    std::vector<std::vector<float>>& cweights, std::vector<std::vector<float>>& bweights, float n);
+                    const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights);
+void layerForward(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output, 
+                    const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights, float n);
 
 void setWeightsByNormalDist(std::vector<std::vector<std::vector<float>>>& weights, float mean, float stddev);
 void setWeightsByUniformDist(std::vector<std::vector<std::vector<float>>>& weights, float lower, float upper);
@@ -94,14 +104,22 @@ public:
     std::vector<std::vector<float>> getCLayer(int layerNumber) { return cweights[layerNumber-1]; }
     std::vector<std::vector<float>> getBLayer(int layerNumber) { return bweights[layerNumber-1]; }
 
-    void forprop(std::vector<float>& input);
-    void forprop(std::vector<std::vector<float>>& input);
-    void layerBackward(std::vector<float>& gradients);
-    void layerBackward(std::vector<std::vector<float>>& gradients);
-    void backprop(std::vector<float>& target);
-    void backprop(std::vector<std::vector<float>>& target);
-    void train(std::vector<float>& input, std::vector<float>& target);
-    void trainBatch(std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& target);
+    #ifdef USE_CPU
+        void forprop(std::vector<float>& input);
+        void backprop(std::vector<float>& target);
+        void train(const std::vector<float>& input, const std::vector<float>& target);
+        void trainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets);
+    #elif USE_CUDA
+        void cuForprop(std::vector<float>& input);
+        void cuBackprop(std::vector<float>& target);
+        void cuTrain(const std::vector<float>& input, const std::vector<float>& target);
+        void cuTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets); 
+    #elif USE_OPENCL
+        void clForprop(std::vector<float>& input);
+        void clBackprop(std::vector<float>& target);
+        void clTrain(const std::vector<float>& input, const std::vector<float>& target);
+        void clTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets); 
+    #endif
 
     ~mnn() = default;
 };
@@ -121,7 +139,6 @@ private:
     float order;                    // order of neurons
     int inWidth;                    // input matrix width
     int inHeight;                   // input matrix height
-    int outHeight;                  // output matrix height
     int outWidth;                   // output matrix width
     int layers;                     // number of hidden layers
     int batchSize;                  // batch size for training
@@ -151,9 +168,9 @@ public:
 // constructors
 
     mnn2d() = default;
-    mnn2d(int inw, int inh, int outw, int outh, int layers, float order);
-    mnn2d(int inw, int inh, int outw, int outh, int dim, int layers, float order);
-    mnn2d(int inw, int inh, int outw, int outh, std::vector<int> width, float order);
+    mnn2d(int inw, int inh, int outw, int layers, float order);
+    mnn2d(int inw, int inh, int outw, int dim, int layers, float order);
+    mnn2d(int inw, int inh, int outw, std::vector<int> width, float order);
 
     void setbatch(int batchsize) { this->batchSize = batchsize; }
     void setepochs(int epochs) { this->epochs = epochs; }
@@ -168,16 +185,48 @@ public:
     std::vector<std::vector<float>> getCLayer(int layerNumber) { return cweights[layerNumber-1]; }
     std::vector<std::vector<float>> getBLayer(int layerNumber) { return bweights[layerNumber-1]; }
 
-    void forprop(std::vector<std::vector<float>> input);
-    void forprop(std::vector<std::vector<std::vector<float>>> input);
-    void layerBackward(std::vector<std::vector<float>>& gradients);
-    void layerBackward(std::vector<std::vector<std::vector<float>>>& gradients);
-    void backprop(std::vector<std::vector<float>> target);
-    void backprop(std::vector<std::vector<std::vector<float>>> target);
-    void train(std::vector<std::vector<float>> input, std::vector<std::vector<float>> target);
-    void trainBatch(std::vector<std::vector<std::vector<float>>> input, std::vector<std::vector<std::vector<float>>> target);
+    #ifdef USE_CPU
+        void forprop(std::vector<std::vector<float>>& input);
+        void backprop(std::vector<float> target);
+        void train(const std::vector<std::vector<float>>& input, const std::vector<float>& target);
+        void trainBatch(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets);
+    #elif USE_CUDA
+        void cuForprop(std::vector<std::vector<float>>& input);
+        void cuBackprop(std::vector<float> target);
+        void cuTrain(const std::vector<std::vector<float>>& input, const std::vector<float>& target);
+        void cuTrainBatch(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets);
+    #elif USE_OPENCL
+        void clForprop(std::vector<std::vector<float>>& input);
+        void clBackprop(std::vector<float> target);
+        void clTrain(const std::vector<std::vector<float>>& input, const std::vector<float>& target);
+        void clTrainBatch(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets);
+    #endif
 
     ~mnn2d() = default;
 };
+
+#ifdef USE_OPENCL
+    std::vector<std::string> kernelNames = {
+        "kernelUpdateWeights",
+        "kernelUpdateWeightsWithL1",
+        "kernelUpdateWeightsWithL2",
+        "kernelUpdateWeightsElasticNet"
+        "kernelUpdateWeightsWeightDecay",
+        "kernelUpdateWeightsDropout"
+    };
+#elif USE_CUDA
+    __global__ void kernelUpdateWeights(float* weights, float* gweights, float learning_rate,
+                    int current_layer_size, int prev_layer_size);
+    __global__ void kernelUpdateWeightsL1(float* weights, float* gweights, float learning_rate, float lambda_l1,
+                    int current_layer_size, int prev_layer_size);
+    __global__ void kernelUpdateWeightsL2(float* weights, float* gweights, float learning_rate,
+                    float lambda_l2, int current_layer_size, int prev_layer_size);
+    __global__ void kernelUpdateWeightsElasticNet(float* weights, float* gweights, float learning_rate, float lambda_l1,
+                    float lambda_l2, int current_layer_size, int prev_layer_size);
+    __global__ void kernelUpdateWeightsWeightDecay(float* weights, float* gweights, float learning_rate,
+                    float decay_rate, int current_layer_size, int prev_layer_size);
+    __global__ void kernelUpdateWeightsDropout(float* weights, float* gweights, float learning_rate, float dropout_rate,
+                    int current_layer_size, int prev_layer_size);
+#endif
 
 #endif // MNN_HPP
