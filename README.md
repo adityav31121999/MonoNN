@@ -61,10 +61,10 @@ The library is built with a modular approach, separating functionalities into di
     - `g` = gradient
     - `<-` signifies update applied to w
   - When the gradient is applied to, the `b` term will remain unaffected, hence a part of the gradient will be applied to it.
-  - Hence: `w <- (c*(x^n) + b) - L.(nc(x^(n-1))) = c(1-(L.(n-1)/x))(x^n) + b`
-  - The term `1-(L.(n-1)/x)` solely updates the `c` coefficient of monomial not the `b` term.
-    - `c <- (1-(L.(n-1)/x)) * c`
+  - Hence: `w <- (c*(x^n) + b) - L.(nc(x^(n-1))) = c(1 - (L.n/x))(x^n) + b`
+  - The term `1 - (L.n/x)` solely updates the `c` coefficient of monomial not the `b` term.
+    - `c <- (1-(L.n/x)) * c`
   - So, a small part of it can be applied to the `b` term. So gradient can be split equally or specific value can be used to break and use it to update the coefficient with major part and minor part for `b`.
   - So the gradient term is `L(n-1)/x`, in this project will be split on the basis of `0.9 and 0.1` for both major and minor part.
-    - `c <- 0.9 * (1-(L.(n-1)/x)) * c`
-    - `b <- 0.1 * (1-(L.(n-1)/x)) * c`
+    - `c <- 0.9 * (1 - (L.n/x)) * c`
+    - `b <- 0.1 * (1 - (L.n/x)) * c`

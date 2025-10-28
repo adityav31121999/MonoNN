@@ -6,6 +6,7 @@
 #include "loss.hpp"
 
 // necessary operators and functions
+
 std::vector<float> operator+(const std::vector<float>& a, const std::vector<float>& b);
 std::vector<std::vector<float>> operator+(const std::vector<std::vector<float>>& a, const std::vector<std::vector<float>>& b);
 std::vector<float> operator*(const std::vector<float>& a, const std::vector<std::vector<float>>& b);
@@ -20,15 +21,7 @@ std::vector<float> maxPool(const std::vector<std::vector<float>>& input);
 std::vector<float> weightedMeanPool(const std::vector<std::vector<float>>& input, const std::vector<float>& weights);
 std::vector<float> flatten(const std::vector<std::vector<float>>& input);
 std::vector<std::vector<float>> reshape(const std::vector<float>& input, int rows, int cols);
-
-void layerForward(const std::vector<float>& input, std::vector<float>& output, const std::vector<std::vector<float>>& cweights,
-                    const std::vector<std::vector<float>>& bweights);
-void layerForward(const std::vector<float>& input, std::vector<float>& output, const std::vector<std::vector<float>>& cweights,
-                    const std::vector<std::vector<float>>& bweights, float n);
-void layerForward(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output, 
-                    const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights);
-void layerForward(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output, 
-                    const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights, float n);
+std::vector<std::vector<float>> transpose(const std::vector<std::vector<float>>& input);
 
 void setWeightsByNormalDist(std::vector<std::vector<std::vector<float>>>& weights, float mean, float stddev);
 void setWeightsByUniformDist(std::vector<std::vector<std::vector<float>>>& weights, float lower, float upper);
@@ -42,6 +35,24 @@ void updateWeightsL2(std::vector<std::vector<float>>& weights, std::vector<std::
 void updateWeightsElastic(std::vector<std::vector<float>>& weights, std::vector<std::vector<float>>& gradients, float learningRate, float lambdaL1, float lambdaL2);
 void updateWeightsWeightDecay(std::vector<std::vector<float>>& weights, std::vector<std::vector<float>>& gradients, float learningRate, float decayRate);
 void updateWeightsDropout(std::vector<std::vector<float>>& weights, std::vector<std::vector<float>>& gradients, float learning, float dropoutRate);
+
+void layerForward(const std::vector<float>& input, std::vector<float>& output, const std::vector<std::vector<float>>& cweights,
+                    const std::vector<std::vector<float>>& bweights);
+void layerForward(const std::vector<float>& input, std::vector<float>& output, const std::vector<std::vector<float>>& cweights,
+                    const std::vector<std::vector<float>>& bweights, float n);
+void layerForward(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output, 
+                    const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights);
+void layerForward(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output, 
+                    const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights, float n);
+
+#include <utility> // if needed for pair, but using refs
+
+auto gradient_update = [](double& c, double& b, double x, double L, int n) {
+    double factor = 1.0 - L * (n - 1.0) / x;
+    double old_c = c;
+    c = 0.9 * factor * old_c;
+    b = 0.1 * factor * old_c;
+};
 
 
 /**
