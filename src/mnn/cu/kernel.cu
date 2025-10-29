@@ -3,6 +3,96 @@
 #include <cuda.h
 #include "include/mnn.hpp"
 
+/// ----------------- Forward Propagation ----------------- ///
+__global__ void kernelLayerForward1(float* input,
+                                    float* weights,
+                                    float* biases,
+                                    float* output,
+                                    int input_size,
+                                    int output_size)
+{
+    int j = blockIdx.x * blockDim.x + threadIdx.x; // neuron index in current layer
+
+    if (j < output_size) {
+        float sum = biases[j];
+        for (int i = 0; i < input_size; ++i) {
+            sum += input[i] * weights[j * input_size + i];
+        }
+        output[j] = sum;
+    }
+}
+
+__global__ void kernelLayerForward2(float* input,
+                                    float* weights,
+                                    float* biases,
+                                    float* output,
+                                    int input_size,
+                                    int output_size,
+                                    float power)
+{
+    int j = blockIdx.x * blockDim.x + threadIdx.x; // neuron index in current layer
+
+    if (j < output_size) {
+        float sum = biases[j];
+        for (int i = 0; i < input_size; ++i) {
+            sum += input[i] * weights[j * input_size + i];
+        }
+        // Example activation function: ReLU
+        output[j] = fmaxf(0.0f, sum);
+    }
+}
+
+__global__ void kernelLayerForward3(float* input,
+                                    float* weights,
+                                    float* biases,
+                                    float* output,
+                                    int inHeight,
+                                    int inWidth,
+                                    int output_size)
+{
+    int j = blockIdx.x * blockDim.x + threadIdx.x; // neuron index in current layer
+
+    if (j < output_size) {
+        float sum = biases[j];
+        for (int i = 0; i < input_size; ++i) {
+            sum += input[i] * weights[j * input_size + i];
+        }
+        // Example activation function: Sigmoid
+        output[j] = 1.0f / (1.0f + expf(-sum));
+    }
+}
+
+__global__ void kernelLayerForward4(float* input,
+                                    float* weights,
+                                    float* biases,
+                                    float* output,
+                                    int inHeight,
+                                    int inWidth,
+                                    int output_size,
+                                    float power)
+{
+    int j = blockIdx.x * blockDim.x + threadIdx.x; // neuron index
+    if (j < output_size) {
+        float sum = biases[j];
+        for (int i = 0; i < input_size; ++i) {
+            sum += input[i] * weights[j * input_size + i];
+        }
+        // Example activation function: Tanh
+        output[j] = tanhf(sum);
+    }
+}
+
+
+/// ----------------- Backpropagation ----------------- ///
+
+__device__ __inline__ void kernelGradient(double *c, double *b, double x, double L, int n) {
+    double factor = 1.0 - L * (n - 1.0) / x;
+    double old_c = *c;
+    *c = 0.9 * factor * old_c;
+    *b = 0.1 * factor * old_c;
+}
+
+/// ----------------- Weight Update ----------------- ///
 
 __global__ void kernelUpdateWeights(float* weights,
                                     float* gweights,

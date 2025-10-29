@@ -47,7 +47,7 @@ void layerForward(const std::vector<std::vector<float>>& input, std::vector<std:
 
 #include <utility> // if needed for pair, but using refs
 
-auto gradient_update = [](double& c, double& b, double x, double L, int n) {
+inline auto gradientLambda = [](double& c, double& b, double x, double L, int n) {
     double factor = 1.0 - L * (n - 1.0) / x;
     double old_c = c;
     c = 0.9 * factor * old_c;
@@ -218,6 +218,14 @@ public:
 
 #ifdef USE_OPENCL
     std::vector<std::string> kernelNames = {
+        // forward propagation kernels
+        "kernelLayerForward1",
+        "kernelLayerForward2",
+        "kernelLayerForward3",
+        "kernelLayerForward4",
+        // backpropagation kernels
+
+        // weight update kernels
         "kernelUpdateWeights",
         "kernelUpdateWeightsWithL1",
         "kernelUpdateWeightsWithL2",
@@ -226,7 +234,19 @@ public:
         "kernelUpdateWeightsDropout"
     };
 #elif USE_CUDA
-    __global__ void kernelUpdateWeights(float* weights, float* gweights, float learning_rate,
+
+    __global__ void kernelLayerForward1(float* input, float* weights, float* biases, float* output,
+                                    int input_size, int output_size);
+    __global__ void kernelLayerForward2(float* input, float* weights, float* biases, float* output,
+                                    int input_size, int output_size, float n);
+    __global__ void kernelLayerForward3(float* input, float* weights, float* biases, float* output,
+                                    int inHeigt, int inWidth, int output_size);
+    __global__ void kernelLayerForward4(float* input, float* weights, float* biases, float* output,
+                                    int inHeigt, int inWidth, int output_size, float n);
+
+
+
+                                    __global__ void kernelUpdateWeights(float* weights, float* gweights, float learning_rate,
                     int current_layer_size, int prev_layer_size);
     __global__ void kernelUpdateWeightsL1(float* weights, float* gweights, float learning_rate, float lambda_l1,
                     int current_layer_size, int prev_layer_size);
