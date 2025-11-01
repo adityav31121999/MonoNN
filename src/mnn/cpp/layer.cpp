@@ -94,13 +94,11 @@ void layerForward(const std::vector<std::vector<float>>& input, std::vector<std:
     }
 
     // output = (input^n) * cweights + bweights
-    std::vector<std::vector<float>> dotProd(input.size(), std::vector<float>(cweights[0].size(), 0.0f));
     for (size_t i = 0; i < input.size(); ++i) {
         for (size_t j = 0; j < cweights[0].size(); ++j) {
             for (size_t k = 0; k < cweights.size(); ++k) {
-                dotProd[i][j] += input[i][k] * cweights[k][j];
+                output[i][j] += (input[i][k] * cweights[k][j]) + bweights[i][j];
             }
-            output[i][j] = dotProd[i][j] + bweights[i][j];
         }
     }
 }
@@ -135,13 +133,11 @@ void layerForward(const std::vector<std::vector<float>>& input, std::vector<std:
     for (size_t i = 0; i < input.size(); ++i) {
         powerIn[i] = power(input[i], n);
     }
-    std::vector<std::vector<float>> dotProd(input.size(), std::vector<float>(cweights[0].size(), 0.0f));
     for (size_t i = 0; i < input.size(); ++i) {
         for (size_t j = 0; j < cweights[0].size(); ++j) {
             for (size_t k = 0; k < cweights.size(); ++k) {
-                dotProd[i][j] += powerIn[i][k] * cweights[k][j];
+                output[i][j] += (powerIn[i][k] * cweights[k][j]) + bweights[i][j];
             }
-            output[i][j] = dotProd[i][j] + bweights[i][j];
         }
     }
 }
@@ -161,14 +157,13 @@ void layerForward(const std::vector<std::vector<float>>& input, std::vector<std:
  * @param[in] learning learning rate
  * @param[in] alpha major gradient for C
  */
-void layerBackward(
-    const std::vector<float>& incoming, std::vector<float>& outgoing,
-    const std::vector<float>& prevAct, 
-    std::vector<std::vector<float>>& C,
-    std::vector<std::vector<float>>& B,
-    std::vector<std::vector<float>>& gradc,
-    std::vector<std::vector<float>>& gradb,
-    float m, float alpha, float learning, int typeOfUpdate)
+void layerBackward(const std::vector<float>& incoming, std::vector<float>& outgoing,
+                    const std::vector<float>& prevAct, 
+                    std::vector<std::vector<float>>& C,
+                    std::vector<std::vector<float>>& B,
+                    std::vector<std::vector<float>>& gradc,
+                    std::vector<std::vector<float>>& gradb,
+                    float m, float alpha, float learning, int typeOfUpdate)
 {
     // store final updates here
     std::vector<std::vector<float>> new_C(C.size(), std::vector<float>(C[0].size(), 0.0f));
@@ -259,15 +254,14 @@ void layerBackward(
  * @param[in] learning learning rate
  * @param[in] alpha major gradient for C
  */
-void layerBackward(
-    const std::vector<std::vector<float>>& incoming,
-    std::vector<std::vector<float>>& outgoing,
-    const std::vector<std::vector<float>>& prevAct,
-    std::vector<std::vector<float>>& C,
-    std::vector<std::vector<float>>& B,
-    std::vector<std::vector<float>>& gradc,
-    std::vector<std::vector<float>>& gradb,
-    float m, float alpha, float learning, int typeOfUpdate)
+void layerBackward(const std::vector<std::vector<float>>& incoming,
+                    std::vector<std::vector<float>>& outgoing,
+                    const std::vector<std::vector<float>>& prevAct,
+                    std::vector<std::vector<float>>& C,
+                    std::vector<std::vector<float>>& B,
+                    std::vector<std::vector<float>>& gradc,
+                    std::vector<std::vector<float>>& gradb,
+                    float m, float alpha, float learning, int typeOfUpdate)
 {
     // store final updates here
     std::vector<std::vector<float>> new_C(C.size(), std::vector<float>(C[0].size(), 0.0f));
@@ -313,28 +307,6 @@ void layerBackward(
     }
 
     C = new_C, B = new_B;
-}
-
-/**
- * @brief single layer batch backprop for mnn
- */
-void layerBackwardBatch(const std::vector<std::vector<float>>& incoming, std::vector<std::vector<float>>& outgoing,
-                    const std::vector<std::vector<float>>& prevAct, std::vector<std::vector<float>>& C,
-                    std::vector<std::vector<float>>& B, std::vector<std::vector<float>>& gradc, 
-                    std::vector<std::vector<float>>& gradb, float m, float alpha, float learning, int typeOfUpdate)
-{
-    //
-}
-
-/**
- * @brief single layer batch backprop for mnn2d
- */
-void layerBackwardBatch(const std::vector<std::vector<std::vector<float>>>& incoming, std::vector<std::vector<std::vector<float>>>& outgoing,
-                    const std::vector<std::vector<std::vector<float>>>& prevAct, std::vector<std::vector<float>>& C, 
-                    std::vector<std::vector<float>>& B, std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb,
-                    float m, float alpha, float learning, int typeOfUpdate)
-{
-    //
 }
 
 #endif

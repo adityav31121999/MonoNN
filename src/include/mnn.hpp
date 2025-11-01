@@ -2,8 +2,17 @@
 #define MNN_HPP
 #include <vector>
 #include <string>
+#include <utility>
 #include "activations.hpp"
 #include "loss.hpp"
+
+#define LEARNING_MAX 0.01f          // maximum learning rate allowed
+#define LEARNING_MIN 0.00001f       // minimum learning rate allowed
+#define LAMBDA_L1 0.001f            // L1 regularization parameter
+#define LAMBDA_L2 0.001f            // L2 regularization parameter
+#define DROPOUT_RATE 0.6f           // dropout rate
+#define DECAY_RATE 0.001f           // weight decay rate
+#define WEIGHT_DECAY 0.001f         // weight decay parameter
 
 // necessary operators and functions
 
@@ -18,7 +27,7 @@ std::vector<float> power(const std::vector<float>& input, const float& powerOfVa
 std::vector<std::vector<float>> power(const std::vector<std::vector<float>>& input, const float& powerOfValues);
 std::vector<float> meanPool(const std::vector<std::vector<float>>& input);
 std::vector<float> maxPool(const std::vector<std::vector<float>>& input);
-std::vector<float> weightedMeanPool(const std::vector<std::vector<float>>& input, const std::vector<float>& weights);
+std::vector<float> weightedMeanPool(const std::vector<float>& weights, const std::vector<std::vector<float>>& input);
 std::vector<float> flatten(const std::vector<std::vector<float>>& input);
 std::vector<std::vector<float>> reshape(const std::vector<float>& input, int rows, int cols);
 std::vector<std::vector<float>> transpose(const std::vector<std::vector<float>>& input);
@@ -36,6 +45,8 @@ void updateWeightsElastic(std::vector<std::vector<float>>& weights, std::vector<
 void updateWeightsWeightDecay(std::vector<std::vector<float>>& weights, std::vector<std::vector<float>>& gradients, float learningRate, float decayRate);
 void updateWeightsDropout(std::vector<std::vector<float>>& weights, std::vector<std::vector<float>>& gradients, float learning, float dropoutRate);
 
+// single layer forprop
+
 void layerForward(const std::vector<float>& input, std::vector<float>& output, const std::vector<std::vector<float>>& cweights,
                     const std::vector<std::vector<float>>& bweights);
 void layerForward(const std::vector<float>& input, std::vector<float>& output, const std::vector<std::vector<float>>& cweights,
@@ -45,15 +56,34 @@ void layerForward(const std::vector<std::vector<float>>& input, std::vector<std:
 void layerForward(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output, 
                     const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights, float n);
 
-#include <utility> // if needed for pair, but using refs
+// single layer backprop
 
-inline auto gradientLambda = [](double& c, double& b, double x, double L, int n) {
-    double factor = 1.0 - L * (n - 1.0) / x;
-    double old_c = c;
-    c = 0.9 * factor * old_c;
-    b = 0.1 * factor * old_c;
-};
+void layerBackward(const std::vector<float>& incoming, std::vector<float>& outgoing, const std::vector<float>& prevAct, 
+                    std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& B, std::vector<std::vector<float>>& gradc, 
+                    std::vector<std::vector<float>>& gradb, float m, float alpha, float learning, int typeOfUpdate);
+void layerBackward(const std::vector<std::vector<float>>& incoming, std::vector<std::vector<float>>& outgoing,
+                    const std::vector<std::vector<float>>& prevAct, std::vector<std::vector<float>>& C, 
+                    std::vector<std::vector<float>>& B, std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb,
+                    float m, float alpha, float learning, int typeOfUpdate);
+void layerBackwardBatch(const std::vector<std::vector<float>>& incoming, std::vector<std::vector<float>>& outgoing,
+                    const std::vector<std::vector<float>>& prevAct, std::vector<std::vector<float>>& C,
+                    std::vector<std::vector<float>>& B, std::vector<std::vector<float>>& gradc, 
+                    std::vector<std::vector<float>>& gradb, float m, float alpha, float learning, int typeOfUpdate);
+void layerBackwardBatch(const std::vector<std::vector<std::vector<float>>>& incoming, std::vector<std::vector<std::vector<float>>>& outgoing,
+                    const std::vector<std::vector<std::vector<float>>>& prevAct, std::vector<std::vector<float>>& C, 
+                    std::vector<std::vector<float>>& B, std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb,
+                    float m, float alpha, float learning, int typeOfUpdate);
 
+void makeBinFile(const std::string& fileAddress, unsigned long long param);
+void serializeWeights(const std::vector<std::vector<std::vector<float>>>& cweights,
+                        const std::vector<std::vector<std::vector<float>>>& bweights,
+                        const std::string& fileAddress);
+void deserializeWeights(std::vector<float>& cweights, std::vector<float>& bweights,
+                        const std::string& fileAddress);
+void deserializeWeights(std::vector<std::vector<std::vector<float>>>& cweights,
+                        std::vector<std::vector<std::vector<float>>>& bweights,
+                        const std::vector<int>& width, const std::vector<int>& height,
+                        const std::string& fileAddress);
 
 /**
  * @brief Class representing a Monomial Neural Network (MNN).
@@ -73,6 +103,7 @@ private:
     int batchSize;              // batch size for training
     int epochs;                 // number of epochs
     int iterations;             // number of iterations
+    float alpha;                // gradient splitting factor
     float learningRate;         // learning rate
     float lambdaL1;             // L1 regularization parameter
     float lambdaL2;             // L2 regularization parameter
@@ -83,6 +114,10 @@ private:
     std::vector<float> input;       // input vector
     std::vector<float> output;      // output vector
     std::vector<float> target;      // target vector
+
+    unsigned long long param;       // counter for iterations
+    std::string binFileAddress;     // binary file address to save weights and biases
+    FILE* binFile = nullptr;        // binary file pointer to read/write weights and biases
 
 // store values for training
 
@@ -98,9 +133,9 @@ public:
 // constructors
 
     mnn() = default;
-    mnn(int insize, int outsize, int layers, float order);
-    mnn(int insize, int outsize, int dim, int layers, float order);
-    mnn(int insize, int outsize, std::vector<int> width, float order);
+    mnn(int insize, int outsize, int layers, float order, std::string binFileAddress);
+    mnn(int insize, int outsize, int dim, int layers, float order, std::string binFileAddress);
+    mnn(int insize, int outsize, std::vector<int> width, float order, std::string binFileAddress);
 
     void setbatch(int batchsize) { this->batchSize = batchSize; }
     void setepochs(int epochs) { this->epochs = epochs; }
@@ -114,20 +149,24 @@ public:
     void setBGradients(std::vector<std::vector<float>>& bgradient, int layerNumber) { bgradients[layerNumber - 1] = bgradient; }
     std::vector<std::vector<float>> getCLayer(int layerNumber) { return cweights[layerNumber-1]; }
     std::vector<std::vector<float>> getBLayer(int layerNumber) { return bweights[layerNumber-1]; }
+    void makeBinFile(const std::string& fileAddress);
 
     #ifdef USE_CPU
         void forprop(std::vector<float>& input);
         void backprop(std::vector<float>& target);
+        void backprop(std::vector<std::vector<float>> target);
         void train(const std::vector<float>& input, const std::vector<float>& target);
         void trainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets);
     #elif USE_CUDA
         void cuForprop(std::vector<float>& input);
         void cuBackprop(std::vector<float>& target);
+        void cuBackprop(std::vector<std::vector<float>> target);
         void cuTrain(const std::vector<float>& input, const std::vector<float>& target);
         void cuTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets); 
     #elif USE_OPENCL
         void clForprop(std::vector<float>& input);
         void clBackprop(std::vector<float>& target);
+        void clBackprop(std::vector<std::vector<float>> target);
         void clTrain(const std::vector<float>& input, const std::vector<float>& target);
         void clTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets); 
     #endif
@@ -166,6 +205,10 @@ private:
     std::vector<float> output;      // output vector: Mean Pool activate[layers-1]
     std::vector<float> target;      // target vector
 
+    unsigned long long param;       // counter for iterations
+    std::string binFileAddress;     // binary file address to save weights and biases
+    FILE* binFile;                  // binary file pointer to read/write weights and biases
+
 // weights and biases
 
     std::vector<std::vector<std::vector<float>>> cweights;      // c-coefficients of the network
@@ -179,9 +222,9 @@ public:
 // constructors
 
     mnn2d() = default;
-    mnn2d(int inw, int inh, int outw, int layers, float order);
-    mnn2d(int inw, int inh, int outw, int dim, int layers, float order);
-    mnn2d(int inw, int inh, int outw, std::vector<int> width, float order);
+    mnn2d(int inw, int inh, int outw, int layers, float order, std::string binFileAddress);
+    mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::string binFileAddress);
+    mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, std::string binFileAddress);
 
     void setbatch(int batchsize) { this->batchSize = batchsize; }
     void setepochs(int epochs) { this->epochs = epochs; }
@@ -195,20 +238,24 @@ public:
     void setBGradients(std::vector<std::vector<float>>& bgradient, int layerNumber) { bgradients[layerNumber - 1] = bgradient; }
     std::vector<std::vector<float>> getCLayer(int layerNumber) { return cweights[layerNumber-1]; }
     std::vector<std::vector<float>> getBLayer(int layerNumber) { return bweights[layerNumber-1]; }
+    void makeBinFile(const std::string& fileAddress);
 
     #ifdef USE_CPU
         void forprop(std::vector<std::vector<float>>& input);
         void backprop(std::vector<float> target);
+        void backprop(std::vector<std::vector<float>> target);
         void train(const std::vector<std::vector<float>>& input, const std::vector<float>& target);
         void trainBatch(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets);
     #elif USE_CUDA
         void cuForprop(std::vector<std::vector<float>>& input);
         void cuBackprop(std::vector<float> target);
+        void cuBackprop(std::vector<std::vector<float>> target);
         void cuTrain(const std::vector<std::vector<float>>& input, const std::vector<float>& target);
         void cuTrainBatch(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets);
     #elif USE_OPENCL
         void clForprop(std::vector<std::vector<float>>& input);
         void clBackprop(std::vector<float> target);
+        void clBackprop(std::vector<std::vector<float>> target);
         void clTrain(const std::vector<std::vector<float>>& input, const std::vector<float>& target);
         void clTrainBatch(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets);
     #endif
@@ -246,7 +293,7 @@ public:
 
 
 
-                                    __global__ void kernelUpdateWeights(float* weights, float* gweights, float learning_rate,
+    __global__ void kernelUpdateWeights(float* weights, float* gweights, float learning_rate,
                     int current_layer_size, int prev_layer_size);
     __global__ void kernelUpdateWeightsL1(float* weights, float* gweights, float learning_rate, float lambda_l1,
                     int current_layer_size, int prev_layer_size);

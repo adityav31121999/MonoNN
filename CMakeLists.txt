@@ -45,7 +45,6 @@ if(USE_CUDA)
     include_directories(${CUDAToolkit_INCLUDE_DIRS}) # Ensure CUDA headers are available
     if(MSVC)
         set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
-        # Ensure this property is also set for static library targets in their CMakeLists.txt files
     endif()
 elseif(USE_OPENCL)
     set(OpenCL_CL_VERSION "200")
@@ -58,6 +57,7 @@ elseif(USE_OPENCL)
     add_compile_definitions(USE_OPENCL)
 else()
     add_compile_definitions(USE_CPU)
+    message(STATUS "Using CPU-based operations with C++ :)")
 endif()
 
 add_subdirectory(src)

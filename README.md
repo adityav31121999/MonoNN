@@ -2,7 +2,7 @@
 - This is an experimental project to study the modification to multi-layer perception from linear to monomial-based neurons.
 - The monomial is of the form: w => `f(x) = c*(x^n) + b`
   - `x`: input to monimial
-  - `n`: order of all monomial, neurons and mlp
+  - `n`: order of monomial, neurons and mlp
   - `c`: coefficient of `x^n`
   - `b`: constant
   - Both c and b are trainable parameters.
@@ -17,11 +17,18 @@ The core logic is planned within the `src` directory. The implementation defines
   - Headers for loss, activations and class definitions are provided separately.
   - Source files are provided for functions of specific purpose.
 
+### _MonoNN structure_
+- Both MonoNN have similar mechanism and weight structure, with gradient storing also per hidden layer.
+  - For 1D i/o, it has 1D product and Activations per layer.
+  - For 2D i/o, it has 2D product and Activations per layer.
+    - Output is calculated via Mean/Max/Weighted Mean Pooling.
+  - Hyperparameters such as learning rate, decay rate and regularisation parameters are also provided.
+
 ## Features
 
 The library is built with a modular approach, separating functionalities into different files.
 
-### `operators.cpp`
+### _operators.cpp and weights.cpp_
 - **Matrix/Vector Operations**: Overloaded `operator*` for standard matrix-matrix and vector-matrix multiplication.
 - **Multi-threaded Element-wise Multiplication**: Optimized `multiply` functions that leverage multi-threading for improved performance on modern CPUs.
 - **Pooling Functions**:
@@ -29,8 +36,6 @@ The library is built with a modular approach, separating functionalities into di
   - `maxPool`: Computes the max pooling over matrix rows.
   - `weightedMeanPool`: Computes a weighted average pooling.
 - **Power Functions**: `power` function to apply element-wise exponentiation to vectors and matrices.
-
-### `weights.cpp`
 - **Weight Initialization**:
   - `setWeightsByNormalDist`: Initialize weights from a normal distribution.
   - `setWeightsByUniformDist`: Initialize weights from a uniform distribution.
@@ -44,15 +49,9 @@ The library is built with a modular approach, separating functionalities into di
   - `updateWeightsElastic`: Gradient descent with Elastic Net (L1 & L2) regularization.
   - `updateWeightsWeightDecay`: Gradient descent with weight decay.
   - `updateWeightsDropout`: Applies dropout during weight updates.
+- Similar to C++ operators, **OpenCL** and **CUDA** kernels are provided for fast training of MonoNNs.
 
-## MonoNN structure
-- Both MonoNN have similar mechanism and weight structure, with gradient storing also per hidden layer.
-  - For 1D i/o, it has 1D product and Activations per layer.
-  - For 2D i/o, it has 2D product and Activations per layer.
-    - Output is calculated via Mean/Max/Weighted Mean Pooling.
-  - Hyperparameters such as learning rate, decay rate and regularisation parameters are also provided.
-
-### Gradients
+### _Gradients_
 - The gradient of Neurons are calculated as:
   - Derivative of Monomial is given as: g => `f'(x) = nc(x^(n-1))`
   - Parameter is updated as `w <- w - L.g`
@@ -68,3 +67,11 @@ The library is built with a modular approach, separating functionalities into di
   - So the gradient term is `L(n-1)/x`, in this project will be split on the basis of `0.9 and 0.1` for both major and minor part.
     - `c <- 0.9 * (1 - (L.n/x)) * c`
     - `b <- 0.1 * (1 - (L.n/x)) * c`
+  - Hence, based on this, the gradients that will calculated during backpropagation, will be split to c and b.
+  - This helps in modifying the impact of both c and b.
+
+## Theorem Sketch
+- _**Universal Approximation (given by Grok)**_: Monomial networks with fixed $ m \geq 2 $ and sufficient layers/neurons can approximate any continuous function on compact sets. Why?
+  - Powers $ \{x^m\} $ span nonlinear basis
+  - Layer composition generates dense function class
+  - More expressive than linear MLPs for same width/depth

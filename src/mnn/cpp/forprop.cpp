@@ -1,6 +1,13 @@
 #ifdef USE_CPU
 #include "mnn.hpp"
+#include <vector>
+#include <stdexcept>
 
+
+/**
+ * @brief forprop for monomial neural network with vector input
+ * @param input input vector
+ */
 void mnn::forprop(std::vector<float>& input)
 {
     // std::vector<float> forPower;
@@ -19,6 +26,11 @@ void mnn::forprop(std::vector<float>& input)
     output = activate[layers - 1];
 }
 
+
+/**
+ * @brief forprop for monomial neural network with matrix input
+ * @param input input matrix
+ */
 void mnn2d::forprop(std::vector<std::vector<float>>& input)
 {
     // std::vector<float> forPower;

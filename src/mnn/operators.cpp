@@ -270,17 +270,15 @@ std::vector<float> maxPool(const std::vector<std::vector<float>>& input) {
  * @param weights Weights for each row.
  * @return Resulting vector after weighted mean pooling.
  */
-std::vector<float> weightedMeanPool(const std::vector<std::vector<float>>& input, const std::vector<float>& weights) {
-    std::vector<float> result(input[0].size(), 0.0f);
-    float weightSum = 0.0f;
-    for (size_t i = 0; i < input.size(); ++i) {
-        for (size_t j = 0; j < input[i].size(); ++j) {
-            result[j] += input[i][j] * weights[i];
-        }
-        weightSum += weights[i];
+std::vector<float> weightedMeanPool(const std::vector<float>& weights, const std::vector<std::vector<float>>& input) {
+    if (weights.size() != input[0].size()) {
+        throw std::invalid_argument("Weights size must match the number of rows in the input matrix.");
     }
-    for (auto& val : result) {
-        val /= weightSum;
+
+    std::vector<float> result(input.size(), 0.0f);
+    result = multiply(weights, input);
+    for(int i = 0; i < result.size(); i++) {
+        result[i] /= weights.size();
     }
     return result;
 }

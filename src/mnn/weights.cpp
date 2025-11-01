@@ -2,6 +2,7 @@
 #include <random>
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 
 /**
  * @brief Update weights using standard gradient descent.
@@ -130,6 +131,7 @@ void setWeightsByNormalDist(std::vector<std::vector<std::vector<float>>>& weight
             }
         }
     }
+    std::cout << "Weights initialized using Normal Distribution (mean=" << mean << ", stddev=" << stddev << ").\n";
 }
 
 /**
@@ -149,6 +151,7 @@ void setWeightsByUniformDist(std::vector<std::vector<std::vector<float>>>& weigh
             }
         }
     }
+    std::cout << "Weights initialized using Uniform Distribution (lower=" << lower << ", upper=" << upper << ").\n";
 }
 
 /**
@@ -163,6 +166,7 @@ void setWeightsByUniformDist(std::vector<std::vector<std::vector<float>>>& weigh
 void setWeightsByXavier(std::vector<std::vector<std::vector<float>>>& weights, int fin, int fout, bool uniformOrNot) {
     float limit = std::sqrt(6.0f / (fin + fout));
     setWeightsByUniformDist(weights, (uniformOrNot == 1 ? -limit : 0), limit);
+    std::cout << "Weights initialized using Xavier/Glorot initialization with " << (uniformOrNot ? "Uniform" : "Normal") << " distribution.\n";
 }
 
 /**
@@ -175,6 +179,7 @@ void setWeightsByXavier(std::vector<std::vector<std::vector<float>>>& weights, i
 void setWeightsByHe(std::vector<std::vector<std::vector<float>>>& weights, int fin, int fout) {
     float stddev = std::sqrt(2.0f / fin);
     setWeightsByNormalDist(weights, 0.0f, stddev);
+    std::cout << "Weights initialized using He initialization.\n";
 }
 
 /**
@@ -186,4 +191,5 @@ void setWeightsByHe(std::vector<std::vector<std::vector<float>>>& weights, int f
 void setWeightsByLeCunn(std::vector<std::vector<std::vector<float>>>& weights, int fin, int fout) {
     float stddev = std::sqrt(1.0f / fin);
     setWeightsByNormalDist(weights, 0.0f, stddev);
+    std::cout << "Weights initialized using LeCun initialization.\n";
 }
