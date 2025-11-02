@@ -334,3 +334,9 @@ std::vector<std::vector<float>> transpose(const std::vector<std::vector<float>> 
     }
     return result;
 }
+
+// return maximum element's index in the input vector
+int maxIndex(const std::vector<float> &input)
+{
+    return std::distance(input.begin(), std::max_element(input.begin(), input.end()));
+}

@@ -3,6 +3,6 @@
 
 #include "include/mnn.hpp"
 #include "include/activations.hpp"
-#include "include/loss.hpp"
+#include "include/operators.hpp"
 
 #endif

@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 message("> Project Name: ${PROJECT_NAME} | Version: ${VERSION}")
-message("> DCA Experimental Project for structure and logic verification")
+message("> Experimental Implementation of Monomial Neural Network")
 
 # language settings
 enable_language(C CXX)
@@ -28,7 +28,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${FullOutputDir}")
 
 set(USE_OPENCL OFF)
 set(USE_CUDA OFF)
-# set(USE_CPU OFF)
+set(USE_CPU ON)
 
 # set compile definitions
 if(USE_CUDA)
@@ -47,8 +47,8 @@ if(USE_CUDA)
         set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
     endif()
 elseif(USE_OPENCL)
-    set(OpenCL_CL_VERSION "200")
-    set(CL_TARGET_OPENCL_VERSION "200")
+    set(OpenCL_CL_VERSION "300")
+    set(CL_TARGET_OPENCL_VERSION "300")
     find_package(OpenCL REQUIRED)
     message(STATUS "Found OpenCL version ${OpenCL_CL_VERSION}")
     message(STATUS "Using OpenCL for compilation.")

@@ -3,7 +3,6 @@
 #include <vector>
 #include <stdexcept>
 
-
 /**
  * @brief forprop for monomial neural network with vector input
  * @param input input vector
@@ -19,7 +18,7 @@ void mnn::forprop(std::vector<float>& input)
     // from 2nd to last
     for(int i = 1; i < layers; i++) {
         // forPower = power(activate[i-1], order); layerForward(forPower, dotProds[i], getCLayer(i+1), getBLayer(i+1));
-        layerForward(forPower, dotProds[i], getCLayer(i+1), getBLayer(i+1), order);
+        layerForward(activate[i-1], dotProds[i], getCLayer(i+1), getBLayer(i+1), order);
         activate[i] = sigmoid(dotProds[i]);
     }
 
@@ -36,6 +35,7 @@ void mnn2d::forprop(std::vector<std::vector<float>>& input)
     // std::vector<float> forPower;
     // use of operator * for vector and matrix multiplication
     // first layer
+    std::vector<std::vector<float>> activat(reshape(softmax(flatten(input)), input.size(), input[0].size()));
     layerForward(input, dotProds[0], getCLayer(1), getBLayer(1), order);
     activate[0] = reshape(softmax(flatten(dotProds[0])), dotProds[0].size(), dotProds[0][0].size());
 

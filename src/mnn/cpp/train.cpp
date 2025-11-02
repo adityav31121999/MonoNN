@@ -2,6 +2,7 @@
 #include "mnn.hpp"
 #include <vector>
 #include <stdexcept>
+#include <iostream>
 
 /**
  * @brief Trains the mnn network on a single input-target pair.
