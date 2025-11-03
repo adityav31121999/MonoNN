@@ -24,6 +24,7 @@ std::vector<float> weightedMeanPool(const std::vector<float>& weights, const std
 std::vector<float> flatten(const std::vector<std::vector<float>>& input);
 std::vector<std::vector<float>> reshape(const std::vector<float>& input, int rows, int cols);
 std::vector<std::vector<float>> transpose(const std::vector<std::vector<float>>& input);
+std::vector<std::vector<float>> average(const std::vector<std::vector<std::vector<float>>>& input);
 int maxIndex(const std::vector<float>& input);
 
 void setWeightsByNormalDist(std::vector<std::vector<std::vector<float>>>& weights, float mean, float stddev);
@@ -38,6 +39,7 @@ void updateWeightsL2(std::vector<std::vector<float>>& weights, std::vector<std::
 void updateWeightsElastic(std::vector<std::vector<float>>& weights, std::vector<std::vector<float>>& gradients, float learningRate, float lambdaL1, float lambdaL2);
 void updateWeightsWeightDecay(std::vector<std::vector<float>>& weights, std::vector<std::vector<float>>& gradients, float learningRate, float decayRate);
 void updateWeightsDropout(std::vector<std::vector<float>>& weights, std::vector<std::vector<float>>& gradients, float learning, float dropoutRate);
+void updateWeights(std::vector<std::vector<float>>& weights, std::vector<std::vector<float>>& gradients, float& learningRate, int type);
 
 // single layer forprop
 
@@ -50,7 +52,7 @@ void layerForward(const std::vector<std::vector<float>>& input, std::vector<std:
 void layerForward(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output, 
                     const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights, float n);
 
-// single layer backprop
+// single layer backprop (with direct weights update)
 
 void layerBackward(const std::vector<float>& incoming, const std::vector<float>& prevAct, 
                     std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& B, 
@@ -60,15 +62,32 @@ void layerBackward(const std::vector<float>& incoming, std::vector<float>& outgo
                     std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& B, 
                     std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb,
                     float m, float alpha, float learning, int typeOfUpdate);
-
-void layerBackward(const std::vector<std::vector<float>>& incoming, const std::vector<std::vector<float>>& dotProds, const std::vector<std::vector<float>>& prevAct,
-                    std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& B, 
-                    std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb, 
+void layerBackward(const std::vector<std::vector<float>>& incoming, const std::vector<std::vector<float>>& prevAct,
+                    std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& B,
+                    std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb,
                     float m, float alpha, float learning, int typeOfUpdate);
 void layerBackward(const std::vector<std::vector<float>>& incoming, std::vector<std::vector<float>>& outgoing,
                     const std::vector<std::vector<float>>& dotProds, const std::vector<std::vector<float>>& prevAct,
                     std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& B,
                     std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb,
                     float m, float alpha, float learning, int typeOfUpdate);
+
+// single layer backprop 
+
+void layerBackward(const std::vector<float>& incoming, const std::vector<float>& prevAct,
+                    std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb,
+                    float m, float alpha);
+void layerBackward(const std::vector<float>& incoming, std::vector<float>& outgoing, const std::vector<float>& prevAct,
+                    const std::vector<std::vector<float>>& C,
+                    std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb,
+                    float m, float alpha);
+void layerBackward(const std::vector<std::vector<float>>& incoming, const std::vector<std::vector<float>>& prevAct,
+                    std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb,
+                    float m, float alpha);
+void layerBackward(const std::vector<std::vector<float>>& incoming, std::vector<std::vector<float>>& outgoing,
+                    const std::vector<std::vector<float>>& dotProds, const std::vector<std::vector<float>>& prevAct,
+                    const std::vector<std::vector<float>>& C,
+                    std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb,
+                    float m, float alpha);
 
 #endif // LOSS_HPP

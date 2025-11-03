@@ -142,7 +142,7 @@ void layerForward(const std::vector<std::vector<float>>& input, std::vector<std:
     }
 }
 
-//// Backprop ////
+//// Backprop -> first layer ////
 
 /**
  * @brief single layer backprop for mnn for first layer
@@ -155,6 +155,7 @@ void layerForward(const std::vector<std::vector<float>>& input, std::vector<std:
  * @param[in] m order of monomial
  * @param[in] learning learning rate
  * @param[in] alpha major gradient for C
+ * @param[in] typeOfUpdate type of weight update method
  */
 void layerBackward(const std::vector<float>& incoming,
                     const std::vector<float>& prevAct, 
@@ -174,51 +175,16 @@ void layerBackward(const std::vector<float>& incoming,
     // derivativ of prevAct (no sigmoid applied)
     std::vector<float> dprevAct(prevAct.size(), 1.0f);
 
-    // gradc = alpha * prev_p^T x dl/dz_l, gradc = (1 - alpha) * v1^T x dl/dz_l
+    // gradc = alpha * prev_p^T x dl/dz_l, gradb = (1 - alpha) * v1^T x dl/dz_l
     for(int i = 0; i < prev_p.size(); i++) {
         for(int j = 0; j < incoming.size(); j++) {
             gradc[i][j] = alpha * prev_p[i] * incoming[j];
-            gradb[i][j] = incoming[j];
+            gradb[i][j] = (1.0f - alpha) * incoming[j];
         }
     }
 
-    // update weights
-    switch (typeOfUpdate) {
-        case 0:
-            // updateWeights
-            updateWeights(new_C, gradc, learning);
-            updateWeights(new_B, gradb, learning);
-            break;
-        case 1:
-            // updateWeightsL1
-            updateWeightsL1(new_C, gradc, learning, LAMBDA_L1);
-            updateWeightsL1(new_B, gradb, learning, LAMBDA_L1);
-            break;
-        case 2:
-            // updateWeightsL2
-            updateWeightsL2(new_C, gradc, learning, LAMBDA_L2);
-            updateWeightsL2(new_B, gradb, learning, LAMBDA_L2);
-            break;
-        case 3:
-            // updateWeightsElasticNet
-            updateWeightsElastic(new_C, gradc, learning, LAMBDA_L1, LAMBDA_L2);
-            updateWeightsElastic(new_B, gradb, learning, LAMBDA_L1, LAMBDA_L2);
-            break;
-        case 4:
-            // updateWeightsWeightDecay
-            updateWeightsWeightDecay(new_C, gradc, learning, WEIGHT_DECAY);
-            updateWeightsWeightDecay(new_B, gradb, learning, WEIGHT_DECAY);
-            break;
-        case 5:
-            // updateWeightsDropout
-            updateWeightsDropout(new_C, gradc, learning, DROPOUT_RATE);
-            updateWeightsDropout(new_B, gradb, learning, DROPOUT_RATE);
-            break;
-        default:
-            std::cout << "Invalid update type" << std::endl;
-            break;
-    }
-
+    updateWeights(new_C, gradc, learning, typeOfUpdate);
+    updateWeights(new_B, gradb, learning, typeOfUpdate);
     C = new_C, B = new_B;
 }
 
@@ -234,9 +200,9 @@ void layerBackward(const std::vector<float>& incoming,
  * @param[in] m order of monomial
  * @param[in] learning learning rate
  * @param[in] alpha major gradient for C
+ * @param[in] typeOfUpdate type of weight update method
  */
 void layerBackward(const std::vector<std::vector<float>>& incoming,
-                    const std::vector<std::vector<float>>& dotProds,
                     const std::vector<std::vector<float>>& prevAct,
                     std::vector<std::vector<float>>& C,
                     std::vector<std::vector<float>>& B,
@@ -249,14 +215,13 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
     std::vector<std::vector<float>> new_B(B.size(), std::vector<float>(B[0].size(), 0.0f));
     new_C = C, new_B = B;
 
-    std::vector<std::vector<float>> v1(B.size(), std::vector<float>(B[0].size(), 1.0f));          // dz_l/dB_l
-    std::vector<std::vector<float>> prev_p = power(prevAct, m);  // dz_l/dC_l
-    // derivativ of prevAct (activation is softmax)
-    std::vector<std::vector<float>> dprevAct = reshape(softmax(flatten(dotProds)), dotProds.size(), dotProds[0].size());
+    // dz_l/dB_l
+    std::vector<std::vector<float>> v1(prevAct.size(), std::vector<float>(prevAct[0].size(), 1.0f));
+    // dz_l/dC_l
+    std::vector<std::vector<float>> prev_p = power(prevAct, m);
 
-    // gradc = prev_p^T x dl/dz_l, gradc = (1 - alpha) * v1^T x dl/dz_l
-    gradc = multiply(transpose(prev_p), incoming);
-    gradb = multiply(transpose(v1), incoming);
+    gradc = multiply(transpose(prev_p), incoming);  // gradc = alpha * prev_p^T x dl/dz_l
+    gradb = multiply(transpose(v1), incoming);      // gradb = (1 - alpha) * v1^T x dl/dz_l
     for(int i = 0; i < gradc.size(); i++) {
         for(int j = 0; j < gradc[0].size(); j++) {
             gradc[i][j] = alpha * gradc[i][j];
@@ -264,45 +229,12 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
         }
     }
 
-    // update weights
-    switch (typeOfUpdate) {
-        case 0:
-            // updateWeights
-            updateWeights(new_C, gradc, learning);
-            updateWeights(new_B, gradb, learning);
-            break;
-        case 1:
-            // updateWeightsL1
-            updateWeightsL1(new_C, gradc, learning, LAMBDA_L1);
-            updateWeightsL1(new_B, gradb, learning, LAMBDA_L1);
-            break;
-        case 2:
-            // updateWeightsL2
-            updateWeightsL2(new_C, gradc, learning, LAMBDA_L2);
-            updateWeightsL2(new_B, gradb, learning, LAMBDA_L2);
-            break;
-        case 3:
-            // updateWeightsElasticNet
-            updateWeightsElastic(new_C, gradc, learning, LAMBDA_L1, LAMBDA_L2);
-            updateWeightsElastic(new_B, gradb, learning, LAMBDA_L1, LAMBDA_L2);
-            break;
-        case 4:
-            // updateWeightsWeightDecay
-            updateWeightsWeightDecay(new_C, gradc, learning, WEIGHT_DECAY);
-            updateWeightsWeightDecay(new_B, gradb, learning, WEIGHT_DECAY);
-            break;
-        case 5:
-            // updateWeightsDropout
-            updateWeightsDropout(new_C, gradc, learning, DROPOUT_RATE);
-            updateWeightsDropout(new_B, gradb, learning, DROPOUT_RATE);
-            break;
-        default:
-            std::cout << "Invalid update type" << std::endl;
-            break;
-    }
-
+    updateWeights(new_C, gradc, learning, typeOfUpdate);
+    updateWeights(new_B, gradb, learning, typeOfUpdate);
     C = new_C, B = new_B;
 }
+
+//// Backprop -> last to second layer ////
 
 /**
  * @brief single layer backprop for mnn
@@ -316,6 +248,7 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
  * @param[in] m order of monomial
  * @param[in] learning learning rate
  * @param[in] alpha major gradient for C
+ * @param[in] typeOfUpdate type of weight update method
  */
 void layerBackward(const std::vector<float>& incoming, std::vector<float>& outgoing,
                     const std::vector<float>& prevAct, 
@@ -348,55 +281,22 @@ void layerBackward(const std::vector<float>& incoming, std::vector<float>& outgo
     // outgoing gradient = (dl/dz_l x C^T) . dprev_p . dprevAct
     // incoming gradient x C^T
     std::vector<std::vector<float>> C_T = transpose(C);
+    outgoing.clear();
+    outgoing.resize(dprev_p.size(), 0.0f);
     outgoing = multiply(incoming, C_T);
     outgoing = multiply(outgoing, dprev_p);
     outgoing = multiply(outgoing, dprevAct);
 
-    // gradc = alpha * prev_p^T x dl/dz_l, gradc = (1 - alpha) * v1^T x dl/dz_l
+    // gradc = alpha * prev_p^T x dl/dz_l, gradb = (1 - alpha) * v1^T x dl/dz_l
     for(int i = 0; i < prev_p.size(); i++) {
         for(int j = 0; j < incoming.size(); j++) {
             gradc[i][j] = alpha * prev_p[i] * incoming[j];
-            gradb[i][j] = incoming[j];
+            gradb[i][j] = (1.0f - alpha) * incoming[j];
         }
     }
 
-    // update weights
-    switch (typeOfUpdate) {
-        case 0:
-            // updateWeights
-            updateWeights(new_C, gradc, learning);
-            updateWeights(new_B, gradb, learning);
-            break;
-        case 1:
-            // updateWeightsL1
-            updateWeightsL1(new_C, gradc, learning, LAMBDA_L1);
-            updateWeightsL1(new_B, gradb, learning, LAMBDA_L1);
-            break;
-        case 2:
-            // updateWeightsL2
-            updateWeightsL2(new_C, gradc, learning, LAMBDA_L2);
-            updateWeightsL2(new_B, gradb, learning, LAMBDA_L2);
-            break;
-        case 3:
-            // updateWeightsElasticNet
-            updateWeightsElastic(new_C, gradc, learning, LAMBDA_L1, LAMBDA_L2);
-            updateWeightsElastic(new_B, gradb, learning, LAMBDA_L1, LAMBDA_L2);
-            break;
-        case 4:
-            // updateWeightsWeightDecay
-            updateWeightsWeightDecay(new_C, gradc, learning, WEIGHT_DECAY);
-            updateWeightsWeightDecay(new_B, gradb, learning, WEIGHT_DECAY);
-            break;
-        case 5:
-            // updateWeightsDropout
-            updateWeightsDropout(new_C, gradc, learning, DROPOUT_RATE);
-            updateWeightsDropout(new_B, gradb, learning, DROPOUT_RATE);
-            break;
-        default:
-            std::cout << "Invalid update type" << std::endl;
-            break;
-    }
-
+    updateWeights(new_C, gradc, learning, typeOfUpdate);
+    updateWeights(new_B, gradb, learning, typeOfUpdate);
     C = new_C, B = new_B;
 }
 
@@ -405,7 +305,8 @@ void layerBackward(const std::vector<float>& incoming, std::vector<float>& outgo
  * @brief single layer backprop for mnn2d
  * @param[in] incoming incoming gradient (dL/dz_l) matrix
  * @param[out] outgoing outgoing gradient (dL/dz_(l-1)) matrix
- * @param[in] prevAct activation of previous layer matrix
+ * @param[in] dotProds previous layers dot product
+ * @param[in] prevAct activation of previous layer dot product
  * @param[in, out] C current layers coefficients weights matrix
  * @param[in, out] B current layers bias weights matrix
  * @param[out] gradc gradients for C matrix
@@ -413,6 +314,7 @@ void layerBackward(const std::vector<float>& incoming, std::vector<float>& outgo
  * @param[in] m order of monomial
  * @param[in] learning learning rate
  * @param[in] alpha major gradient for C
+ * @param[in] typeOfUpdate type of weight update method
  */
 void layerBackward(const std::vector<std::vector<float>>& incoming,
                     std::vector<std::vector<float>>& outgoing,
@@ -429,8 +331,10 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
     std::vector<std::vector<float>> new_B(B.size(), std::vector<float>(B[0].size(), 0.0f));
     new_C = C, new_B = B;
 
-    std::vector<std::vector<float>> v1(B.size(), std::vector<float>(B[0].size(), 1.0f));          // dz_l/dB_l
-    std::vector<std::vector<float>> prev_p = power(prevAct, m);  // dz_l/dC_l
+    // dz_l/dB_l
+    std::vector<std::vector<float>> v1(prevAct.size(), std::vector<float>(prevAct[0].size(), 1.0f));
+    // dz_l/dC_l
+    std::vector<std::vector<float>> prev_p = power(prevAct, m);
     // derivative of prev_p (element-wise)
     std::vector<std::vector<float>> dprev_p(prevAct.size(), std::vector<float>(prevAct[0].size(), 0.0f));
     for (size_t i = 0; i < prev_p.size(); ++i) {
@@ -440,12 +344,13 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
                     });
     }
     // derivativ of prevAct (activation is softmax)
-    std::vector<std::vector<float>> dprevAct = reshape(softmax(flatten(dotProds)), dotProds.size(), dotProds[0].size());
+    std::vector<std::vector<float>> dprevAct = reshape(softmaxDer(flatten(dotProds)), dotProds.size(), dotProds[0].size());
 
     // outgoing gradient = (dl/dz_l x C^T) . dprev_p . dprevAct
-    // incoming gradient x C^T
     std::vector<std::vector<float>> C_T = transpose(C);
-    outgoing = multiply(incoming, C_T);
+    outgoing.clear();
+    outgoing.resize(dprev_p.size(), std::vector<float>(dprev_p[0].size(), 0.0f));
+    outgoing = multiply(incoming, C_T);         // incoming gradient x C^T
     for(int i = 0; i < outgoing.size(); i++) {
         for(int j = 0; j < outgoing[0].size(); j++) {
             outgoing[i][j] = outgoing[i][j] * dprev_p[i][j] * dprevAct[i][j];
@@ -462,43 +367,8 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
         }
     }
 
-    // update weights
-    switch (typeOfUpdate) {
-        case 0:
-            // updateWeights
-            updateWeights(new_C, gradc, learning);
-            updateWeights(new_B, gradb, learning);
-            break;
-        case 1:
-            // updateWeightsL1
-            updateWeightsL1(new_C, gradc, learning, LAMBDA_L1);
-            updateWeightsL1(new_B, gradb, learning, LAMBDA_L1);
-            break;
-        case 2:
-            // updateWeightsL2
-            updateWeightsL2(new_C, gradc, learning, LAMBDA_L2);
-            updateWeightsL2(new_B, gradb, learning, LAMBDA_L2);
-            break;
-        case 3:
-            // updateWeightsElasticNet
-            updateWeightsElastic(new_C, gradc, learning, LAMBDA_L1, LAMBDA_L2);
-            updateWeightsElastic(new_B, gradb, learning, LAMBDA_L1, LAMBDA_L2);
-            break;
-        case 4:
-            // updateWeightsWeightDecay
-            updateWeightsWeightDecay(new_C, gradc, learning, WEIGHT_DECAY);
-            updateWeightsWeightDecay(new_B, gradb, learning, WEIGHT_DECAY);
-            break;
-        case 5:
-            // updateWeightsDropout
-            updateWeightsDropout(new_C, gradc, learning, DROPOUT_RATE);
-            updateWeightsDropout(new_B, gradb, learning, DROPOUT_RATE);
-            break;
-        default:
-            std::cout << "Invalid update type" << std::endl;
-            break;
-    }
-
+    updateWeights(new_C, gradc, learning, typeOfUpdate);
+    updateWeights(new_B, gradb, learning, typeOfUpdate);
     C = new_C, B = new_B;
 }
 

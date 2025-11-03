@@ -4,6 +4,8 @@
 #include <cmath>
 #include <iostream>
 
+// update weights
+
 /**
  * @brief Update weights using standard gradient descent.
  * @param weights The weights of a layer to be updated. Passed by reference.
@@ -113,6 +115,50 @@ void updateWeightsDropout(std::vector<std::vector<float>>& weights, std::vector<
             });
     }
 }
+
+/**
+ * @brief update wieights using gradients using given type
+ * @param weights original value matrix
+ * @param gradient gradients for values
+ * @param learningRate step size of change to be applied
+ * @param type for update method (0-5) simple (0), L1(1),
+ *      L2(2), elastic net(3), weight decay(4), dropout(5).
+ */
+void updateWeights(std::vector<std::vector<float>> &weights, std::vector<std::vector<float>> &gradients, float &learningRate, int type)
+{
+    // update weights
+    switch (type) {
+        case 0:
+            // updateWeights
+            updateWeights(weights, gradients, learningRate);
+            break;
+        case 1:
+            // updateWeightsL1
+            updateWeightsL1(weights, gradients, learningRate, LAMBDA_L1);
+            break;
+        case 2:
+            // updateWeightsL2
+            updateWeightsL2(weights, gradients, learningRate, LAMBDA_L2);
+            break;
+        case 3:
+            // updateWeightsElasticNet
+            updateWeightsElastic(weights, gradients, learningRate, LAMBDA_L1, LAMBDA_L2);
+            break;
+        case 4:
+            // updateWeightsWeightDecay
+            updateWeightsWeightDecay(weights, gradients, learningRate, WEIGHT_DECAY);
+            break;
+        case 5:
+            // updateWeightsDropout
+            updateWeightsDropout(weights, gradients, learningRate, DROPOUT_RATE);
+            break;
+        default:
+            std::cout << "Invalid update type" << std::endl;
+            break;
+    }
+}
+
+// set weights
 
 /**
  * @brief Initialize weights using a normal (Gaussian) distribution.

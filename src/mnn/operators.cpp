@@ -335,6 +335,30 @@ std::vector<std::vector<float>> transpose(const std::vector<std::vector<float>> 
     return result;
 }
 
+/**
+ * @brief average of matrix vector
+ * @param input matrix vector
+ * @return average matrix
+ */
+std::vector<std::vector<float>> average(const std::vector<std::vector<std::vector<float>>> &input)
+{
+    int n = input.size();
+    std::vector<std::vector<float>> result(input[0].size(), std::vector<float>(input[0][0].size()));
+    for(int i = 0; i < n; i++) {
+        for(int j = 0; j < input[i].size(); j++) {
+            for(int k = 0; k < input[i][j].size(); k++) {
+                result[j][k] += input[i][j][k];
+            }
+        }
+    }
+    for(int j = 0; j < result.size(); j++) {
+        for(int k = 0; k < result[j].size(); k++) {
+            result[j][k] /= n;
+        }
+    }
+    return result;
+}
+
 // return maximum element's index in the input vector
 int maxIndex(const std::vector<float> &input)
 {

@@ -9,6 +9,7 @@ set(MNN_SOURCES
     mnn/weights.cpp
     mnn/mnn.cpp
     mnn/mnn2d.cpp
+    mnn/access.cpp
 )
 
 if(USE_CPU)

@@ -1,6 +1,8 @@
 #include "activations.hpp"
 #include <vector>
 #include <cmath>
+#include <numeric>
+#include <algorithm>
 
 /// sigmoid activation function and its derivative
 
@@ -165,9 +167,9 @@ std::vector<std::vector<float>> reluDer(const std::vector<std::vector<float>>& x
 std::vector<float> softmax(const std::vector<float>& x) {
     std::vector<float> result(x.size());
     float sumExp = 0.0f;
-    for (float val : x) {
-        sumExp += std::exp(val);
-    }
+    sumExp = std::accumulate(x.begin(), x.end(), 0.0f, [](float acc, float val) {
+        return acc + std::exp(val);
+    });
     for (size_t i = 0; i < x.size(); ++i) {
         result[i] = std::exp(x[i]) / sumExp;
     }

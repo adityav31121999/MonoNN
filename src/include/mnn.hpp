@@ -40,7 +40,7 @@ private:
     int inSize;                 // input size
     int outSize;                // output size
     int layers;                 // number of hidden layers
-    int batchSize;              // batch size for training
+    int batchSize;              // number of inputs for batch training
     int epochs;                 // number of epochs
     int iterations;             // number of iterations
     float alpha;                // gradient splitting factor
