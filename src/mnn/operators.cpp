@@ -128,7 +128,7 @@ std::vector<float> multiply(const std::vector<float>& a, const std::vector<std::
     std::vector<float> result(b.size(), 0.0f);
     unsigned int num_threads = std::thread::hardware_concurrency();
     std::vector<std::thread> threads;
-    num_threads = std::min((unsigned int)b.size(), num_threads > 0 ? num_threads : 1);
+    num_threads = std::min<unsigned int>((unsigned int)b.size(), num_threads > 0 ? num_threads : 1);
  
     auto worker = [&](size_t start_row, size_t end_row) {
         for (size_t i = start_row; i < end_row; ++i) {
@@ -168,7 +168,7 @@ std::vector<std::vector<float>> multiply(const std::vector<std::vector<float>>& 
     std::vector<std::vector<float>> result(a.size(), std::vector<float>(a[0].size()));
     unsigned int num_threads = std::thread::hardware_concurrency();
     std::vector<std::thread> threads;
-    num_threads = std::min((unsigned int)a.size(), num_threads > 0 ? num_threads : 1);
+    num_threads = std::min<unsigned int>((unsigned int)a.size(), num_threads > 0 ? num_threads : 1);
  
     auto worker = [&](size_t start_row, size_t end_row) {
         for (size_t i = start_row; i < end_row; ++i) {

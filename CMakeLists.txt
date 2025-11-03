@@ -26,9 +26,9 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${FullOutputDir}/static_libs")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${FullOutputDir}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${FullOutputDir}")
 
-set(USE_OPENCL OFF)
+set(USE_OPENCL ON)
 set(USE_CUDA OFF)
-set(USE_CPU ON)
+set(USE_CPU OFF)
 
 # set compile definitions
 if(USE_CUDA)

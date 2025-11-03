@@ -93,11 +93,12 @@ __kernel void softmax(__global float* x, __global float* out, float temp, int si
     if (global_id < size) {
         if (sum_val > 0.0f) {
             out[global_id] = shifted_exp / sum_val;
-        } else {
-             // Handle sum == 0 case (should ideally not happen with max-shift unless underflow is severe).
-             // Setting to a small positive value (e.g., 1/size) or 0.0f is implementation specific.
-             // Setting to 0.0f is numerically safer if the result must be 0-1.
-             out[global_id] = 0.0f; 
+        }
+        else {
+            // Handle sum == 0 case (should ideally not happen with max-shift unless underflow is severe).
+            // Setting to a small positive value (e.g., 1/size) or 0.0f is implementation specific.
+            // Setting to 0.0f is numerically safer if the result must be 0-1.
+            out[global_id] = 0.0f; 
         }
     }
 }
@@ -152,6 +153,79 @@ __kernel void softmaxDer(__global float* x, __global float* out, float temp, int
 }
 
 /// ----------------- Math Functions ----------------- ///
+
+__kernel void scaleByValue(__global float* x, __global float* out, float val, int size)
+{
+    int i = get_global_id(0);
+    if (i < size) {
+        out[i] = x[i] * val;
+    }
+}
+
+
+__kernel void power(__global float* x, __global float* out, float n, int size)
+{
+    int i = get_global_id(0);
+    if (i < size) {
+        out[i] = pow(x[i], n);
+    }
+}
+
+__kernel void dPower(__global float* x, __global float* out, float n, int size)
+{
+    int i = get_global_id(0);
+    if (i < size) {
+        out[i] = n * pow(x[i], n - 1.0f);
+    }
+}
+
+__kernel void meanPool(__global float* in, __global float* out, int inRows, int inCols, int poolSize) {
+    int r = get_global_id(0); // Current row in the output
+    int c = get_global_id(1); // Current column in the output
+
+    int outRows = inRows / poolSize;
+    int outCols = inCols / poolSize;
+
+    if (r < outRows && c < outCols) {
+        float sum = 0.0f;
+        for (int i = 0; i < poolSize; ++i) {
+            for (int j = 0; j < poolSize; ++j) {
+                int in_row = r * poolSize + i;
+                int in_col = c * poolSize + j;
+                sum += in[in_row * inCols + in_col];
+            }
+        }
+        out[r * outCols + c] = sum / (poolSize * poolSize);
+    }
+}
+
+__kernel void maxPool(__global float* in, __global float* out, int inRows, int inCols, int poolSize) {
+    int r = get_global_id(0); // Current row in the output
+    int c = get_global_id(1); // Current column in the output
+
+    int outRows = inRows / poolSize;
+    int outCols = inCols / poolSize;
+
+    if (r < outRows && c < outCols) {
+        float max_val = -FLT_MAX; // Initialize with a very small number
+        for (int i = 0; i < poolSize; ++i) {
+            for (int j = 0; j < poolSize; ++j) {
+                int in_row = r * poolSize + i;
+                int in_col = c * poolSize + j;
+                max_val = max(max_val, in[in_row * inCols + in_col]);
+            }
+        }
+        out[r * outCols + c] = max_val;
+    }
+}
+
+__kernel void transpose (const __global float* in, __global float* out, int rows, int cols) {
+    int i = get_global_id(0);
+    int j = get_global_id(1);
+    if (i < rows && j < cols) {
+        out[j * rows + i] = in[i * cols + j];
+    }
+}
 
 __kernel void vecxvec2vec (const __global float* x1, const __global float* x2, __global float* result, int size) {
     int i = get_global_id(0);
@@ -218,7 +292,7 @@ __kernel void matxvec2vec (const __global float* mat, const __global float* vec,
     }
 }
 
-c
+
 __kernel void hadamard (const __global float* mat1, const __global float* mat2, __global float* result, int mat1Rows, int mat1Cols) {
     int i = get_global_id(0);
     int totalSize = mat1Rows * mat1Cols; // Total number of elements in the matrix
@@ -228,6 +302,68 @@ __kernel void hadamard (const __global float* mat1, const __global float* mat2, 
         result[i] = mat1[i] * mat2[i];
     }
 }
+
+__kernel void hadamard2 (const __global float* mat1, const __global float* mat2, const global float* mat3,__global float* result, int mat1Rows, int mat1Cols) {
+    int i = get_global_id(0);
+    int totalSize = mat1Rows * mat1Cols; // Total number of elements in the matrix
+
+    if (i < totalSize) {
+        // Element-wise multiplication (Hadamard product)
+        result[i] = mat1[i] * mat2[i] * mat3[i];
+    }
+}
+
+/**
+ * @brief Computes the element-wise average of a vector of matrices.
+ *
+ * Each work-item is responsible for calculating one element (j, k) of the
+ * final averaged matrix. It does this by iterating through all 'N' input
+ * matrices, summing the values at its assigned (j, k) position, and then
+
+ * dividing by N.
+ *
+ * @param inputBuffer   A flattened 1D buffer representing the 3D input data
+ *                      (N matrices of size Rows x Cols).
+ * @param outputBuffer  A flattened 1D buffer to store the 2D averaged result.
+ * @param N             The number of matrices in the input vector.
+ * @param Rows          The number of rows in each matrix.
+ * @param Cols          The number of columns in each matrix.
+ */
+__kernel void matrix_vector_average(
+    __global const float* inputBuffer,
+    __global float* outputBuffer,
+    const int N,
+    const int Rows,
+    const int Cols)
+{
+    // Identify the position (row j, column k) this work-item is responsible for.
+    // get_global_id(0) corresponds to the columns (width).
+    // get_global_id(1) corresponds to the rows (height).
+    int k = get_global_id(0); // Column index
+    int j = get_global_id(1); // Row index
+
+    // Boundary check to ensure we don't process out of bounds.
+    if (j >= Rows || k >= Cols) {
+        return;
+    }
+
+    float sum = 0.0f;
+    int matrixSize = Rows * Cols;
+
+    // Loop through all 'N' matrices.
+    for (int i = 0; i < N; ++i) {
+        // Calculate the 1D index for input[i][j][k] in the flattened buffer.
+        int inputIndex = i * matrixSize + j * Cols + k;
+        sum += inputBuffer[inputIndex];
+    }
+
+    // Calculate the 1D index for the output[j][k] in the flattened buffer.
+    int outputIndex = j * Cols + k;
+
+    // Calculate the average and write it to the output buffer.
+    outputBuffer[outputIndex] = sum / (float)N;
+}
+
 
 /// ----------------- Forward Propagation ----------------- ///
 
@@ -409,21 +545,19 @@ __kernel void kernelLayerBackward2(
     int out_i = get_global_id(0);
     if (out_i < inSize && get_global_id(1) == 0) {
         // Calculate: (incoming_gradient * C^T)
-        float sum = 0.0f;
+        float weighted_sum_of_incoming_grad = 0.0f;
         for (int j = 0; j < outSize; ++j) {
-            sum += incoming_gradient[j] * C[out_i * outSize + j];
+            weighted_sum_of_incoming_grad += incoming_gradient[j] * C[out_i * outSize + j];
         }
 
-        // Derivative of monomial part: d(a^m)/da = m*a^(m-1)
-        // Note: C++ code has a bug here, using pow(x, m-1) on prev_p, not prev_act.
-        // Correct derivative is on the activation `a`.
+        // Derivative of monomial part: d(a^m)/da = m*a^(m-1).
         float d_prev_p = m * pow(prev_activations[out_i], m - 1.0f);
 
         // Derivative of activation function (sigmoid): a * (1 - a)
         float d_prev_act = prev_activations[out_i] * (1.0f - prev_activations[out_i]);
 
         // Chain rule: outgoing = (sum) * d_prev_p * d_prev_act
-        outgoing_gradient[out_i] = sum * d_prev_p * d_prev_act;
+        outgoing_gradient[out_i] = weighted_sum_of_incoming_grad * alpha * d_prev_p * d_prev_act;
     }
 }
 
@@ -456,11 +590,12 @@ __kernel void kernelUpdateWeights(__global float* weights,
                                 int current_layer_size,
                                 int prev_layer_size)
 {
-    int j = get_global_id(0);
-    int i = get_global_id(1);
+    // Let global_id(0) be column (previous layer) and global_id(1) be row (current layer)
+    int i = get_global_id(0); // Index for previous layer size (column)
+    int j = get_global_id(1); // Index for current layer size (row)
 
-    if (j < current_layer_size && i < prev_layer_size) {
-        int weight_idx = j * prev_layer_size + i; // Assuming row-major for weights
+    if (i < prev_layer_size && j < current_layer_size) {
+        int weight_idx = j * prev_layer_size + i;
         // The original kernel had `gweights[weight_idx] = gradient;` which was incomplete.
         // Assuming gweights already contains the gradient for this weight.
         weights[weight_idx] -= learning_rate * gweights[weight_idx];
@@ -475,12 +610,12 @@ __kernel void kernelUpdateWeightsWithL1(__global float* weights,
                                         float learning_rate, 
                                         float lambda_l1)
 {
-    // Consistent 2D indexing with other update kernels
-    int i = get_global_id(0); // neuron index in previous layer ('col')
-    int j = get_global_id(1); // neuron index in current layer ('row')
+    // Let global_id(0) be column (previous layer) and global_id(1) be row (current layer)
+    int i = get_global_id(0); // Index for previous layer size (column)
+    int j = get_global_id(1); // Index for current layer size (row)
 
     if (i < prev_layer_size && j < current_layer_size) {
-        int weight_idx = j * prev_layer_size + i;
+        int weight_idx = j * prev_layer_size + i; // Row-major index
 
         float current_weight = weights[weight_idx];
 
@@ -513,12 +648,12 @@ __kernel void kernelUpdateWeightsWithL2(__global float* weights,
                                         float learning_rate, 
                                         float lambda_l2)
 {
-    // Consistent 2D indexing with other update kernels
-    int i = get_global_id(0); // neuron index in previous layer ('col')
-    int j = get_global_id(1); // neuron index in current layer ('row')
+    // Let global_id(0) be column (previous layer) and global_id(1) be row (current layer)
+    int i = get_global_id(0); // Index for previous layer size (column)
+    int j = get_global_id(1); // Index for current layer size (row)
 
     if (i < prev_layer_size && j < current_layer_size) {
-        int weight_idx = j * prev_layer_size + i;
+        int weight_idx = j * prev_layer_size + i; // Row-major index
         
         // Gradient of the L2 regularization term
         float current_weight = weights[weight_idx];
@@ -540,12 +675,12 @@ __kernel void kernelUpdateWeightsElasticNet(__global float* weights,
                                             float lambda_l1,
                                             float lambda_l2)
 {
-    // Consistent 2D indexing with other update kernels
-    int i = get_global_id(0); // neuron index in previous layer ('col')
-    int j = get_global_id(1); // neuron index in current layer ('row')
+    // Let global_id(0) be column (previous layer) and global_id(1) be row (current layer)
+    int i = get_global_id(0); // Index for previous layer size (column)
+    int j = get_global_id(1); // Index for current layer size (row)
 
     if (i < prev_layer_size && j < current_layer_size) {
-        int weight_idx = j * prev_layer_size + i;
+        int weight_idx = j * prev_layer_size + i; // Row-major index
         
         // Gradient of the L2 regularization term
         float current_weight = weights[weight_idx];
@@ -580,12 +715,12 @@ __kernel void kernelUpdateWeightsWithWeightDecay(__global float* weights,
                                                  float learning_rate,
                                                  float decay_rate)
 {
-    // Consistent 2D indexing with other update kernels
-    int i = get_global_id(0); // neuron index in previous layer ('col')
-    int j = get_global_id(1); // neuron index in current layer ('row')
+    // Let global_id(0) be column (previous layer) and global_id(1) be row (current layer)
+    int i = get_global_id(0); // Index for previous layer size (column)
+    int j = get_global_id(1); // Index for current layer size (row)
 
     if (i < prev_layer_size && j < current_layer_size) {
-        int weight_idx = j * prev_layer_size + i;
+        int weight_idx = j * prev_layer_size + i; // Row-major index
 
         float current_weight = weights[weight_idx];
         float gradient = gweights[weight_idx];
@@ -603,11 +738,12 @@ __kernel void kernelUpdateWeightsDropout(__global float* weights,
                                          float dropout_rate,
                                          uint base_seed)
 {
-    int i = get_global_id(0); // neuron index in previous layer ('col')
-    int j = get_global_id(1); // neuron index in current layer ('row')
+    // Let global_id(0) be column (previous layer) and global_id(1) be row (current layer)
+    int i = get_global_id(0); // Index for previous layer size (column)
+    int j = get_global_id(1); // Index for current layer size (row)
 
     if (i < prev_layer_size && j < current_layer_size) {
-        int weight_idx = j * prev_layer_size + i;
+        int weight_idx = j * prev_layer_size + i; // Row-major index
 
         // Create a unique seed for each work-item to ensure different random numbers.
         // The base_seed should be changed for each kernel call (e.g., based on time or iteration).

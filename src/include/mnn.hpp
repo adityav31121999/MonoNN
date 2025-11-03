@@ -1,9 +1,9 @@
 #ifndef MNN_HPP
-#define MNN_HPP
+#define MNN_HPP 1
 #include <vector>
 #include <string>
 #include <utility>
-#include "operators.hpp"
+#include <map>
 #include "operators.hpp"
 
 #define LEARNING_MAX 0.01f          // maximum learning rate allowed
@@ -92,18 +92,26 @@ public:
     #elif USE_CUDA
         void cuForprop(const std::vector<float>& input);
         void cuBackprop(const std::vector<float>& target);
-        void cuBackprop(const std::vector<std::vector<float>> target);
+        void cuBackprop(const std::vector<std::vector<float>>& target);
         void cuTrain(const std::vector<float>& input, const std::vector<float>& target);
         void cuTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets); 
     #elif USE_OPENCL
+
+        cl::Context clContext;               // OpenCL context
+        cl::CommandQueue clCommandQueue;     // OpenCL command queue
+        std::map<std::string, cl::Kernel> kernels; // Map to store kernel objects by name
+        cl_int err;                          // To hold OpenCL error codes
+
         void clForprop(const std::vector<float>& input);
         void clBackprop(const std::vector<float>& target);
-        void clBackprop(const std::vector<std::vector<float>> target);
+        void clBackprop(const std::vector<std::vector<float>>& target);
         void clTrain(const std::vector<float>& input, const std::vector<float>& target);
         void clTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets); 
+
     #endif
 
     void train(const std::string& dataSetPath, int batchSize);
+    void test(const std::string& dataSetPath, float loss);
 
 // destructor
     ~mnn() = default;
@@ -178,77 +186,29 @@ public:
         void trainBatch(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets);
     #elif USE_CUDA
         void cuForprop(const std::vector<std::vector<float>>& input);
-        void cuBackprop(const std::vector<float> target);
-        void cuBackprop(const std::vector<std::vector<float>> target);
+        void cuBackprop(const std::vector<float>& target);
+        void cuBackprop(const std::vector<std::vector<float>>& target);
         void cuTrain(const std::vector<std::vector<float>>& input, const std::vector<float>& target);
         void cuTrainBatch(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets);
     #elif USE_OPENCL
+
+        cl::Context clContext;               // OpenCL context
+        cl::CommandQueue clCommandQueue;     // OpenCL command queue
+        std::map<std::string, cl::Kernel> kernels; // Map to store kernel objects by name
+        cl_int err;                          // To hold OpenCL error codes
+
         void clForprop(const std::vector<std::vector<float>>& input);
-        void clBackprop(const std::vector<float> target);
-        void clBackprop(const std::vector<std::vector<float>> target);
+        void clBackprop(const std::vector<float>& target);
+        void clBackprop(const std::vector<std::vector<float>>& target);
         void clTrain(const std::vector<std::vector<float>>& input, const std::vector<float>& target);
         void clTrainBatch(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets);
     #endif
 
     void train(const std::string& dataSetPath, int batchSize);
+    void test(const std::string& dataSetPath, float loss);
 
+// destructor
     ~mnn2d() = default;
 };
-
-#ifdef USE_OPENCL
-    std::vector<std::string> kernelNames = {
-        // actvations and derivative
-        "sigmoid",
-        "sigmoidDer",
-        "softmax",
-        "softmaxDer",
-        // maths
-        "transpose",
-        "vecxvec2mat",
-        "vecxmat2vec",
-        "matxmat2mt,"
-        "matxvec2vec",
-        "hadamard",
-        // forward propagation kernels
-        "kernelLayerForward1",
-        "kernelLayerForward2",
-        "kernelLayerForward3",
-        "kernelLayerForward4",
-        // backpropagation kernels
-
-        // weight update kernels
-        "kernelUpdateWeights",
-        "kernelUpdateWeightsWithL1",
-        "kernelUpdateWeightsWithL2",
-        "kernelUpdateWeightsElasticNet"
-        "kernelUpdateWeightsWeightDecay",
-        "kernelUpdateWeightsDropout"
-    };
-#elif USE_CUDA
-
-    __global__ void kernelLayerForward1(float* input, float* weights, float* biases, float* output,
-                                    int input_size, int output_size);
-    __global__ void kernelLayerForward2(float* input, float* weights, float* biases, float* output,
-                                    int input_size, int output_size, float n);
-    __global__ void kernelLayerForward3(float* input, float* weights, float* biases, float* output,
-                                    int inHeigt, int inWidth, int output_size);
-    __global__ void kernelLayerForward4(float* input, float* weights, float* biases, float* output,
-                                    int inHeigt, int inWidth, int output_size, float n);
-
-
-
-    __global__ void kernelUpdateWeights(float* weights, float* gweights, float learning_rate,
-                    int current_layer_size, int prev_layer_size);
-    __global__ void kernelUpdateWeightsL1(float* weights, float* gweights, float learning_rate, float lambda_l1,
-                    int current_layer_size, int prev_layer_size);
-    __global__ void kernelUpdateWeightsL2(float* weights, float* gweights, float learning_rate,
-                    float lambda_l2, int current_layer_size, int prev_layer_size);
-    __global__ void kernelUpdateWeightsElasticNet(float* weights, float* gweights, float learning_rate, float lambda_l1,
-                    float lambda_l2, int current_layer_size, int prev_layer_size);
-    __global__ void kernelUpdateWeightsWeightDecay(float* weights, float* gweights, float learning_rate,
-                    float decay_rate, int current_layer_size, int prev_layer_size);
-    __global__ void kernelUpdateWeightsDropout(float* weights, float* gweights, float learning_rate, float dropout_rate,
-                    int current_layer_size, int prev_layer_size);
-#endif
 
 #endif // MNN_HPP

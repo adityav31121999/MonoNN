@@ -12,8 +12,8 @@
  * @param order Order of the monomial.
  */
 mnn2d::mnn2d(int inw, int inh, int outw, int layers, float order, std::string binFileAddress) :
-    inWidth(inw), inHeight(inh), outWidth(outw), layers(layers),
-    order(order), width(layers, 0), batchSize(1), binFileAddress(binFileAddress)
+    order(order), inWidth(inw), inHeight(inh), outWidth(outw), layers(layers),
+    batchSize(1), binFileAddress(binFileAddress)
 {
     // set hidden layers width and height
     int dim = (inw + outw) / 2;
@@ -60,7 +60,13 @@ mnn2d::mnn2d(int inw, int inh, int outw, int layers, float order, std::string bi
     }
     param *= 2; // b-weights
     makeBinFile(binFileAddress);
-    std::cout << "Network initialized with " << param << " parameters." << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
+    std::cout << "Network initialized with " << param << " parameters." 
+              << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
+    #ifdef USE_OPENCL
+    // Initialize OpenCL context and command queue
+        clContext = cl::Context(CL_DEVICE_TYPE_ALL, nullptr, nullptr, nullptr, &err);
+        createKernelsFromFile(clContext, "D:\\monoNN\\src\\mnn\\cl\\kernel.cl", kernels);
+    #endif
 }
 
 /**
@@ -74,8 +80,8 @@ mnn2d::mnn2d(int inw, int inh, int outw, int layers, float order, std::string bi
  * @param order Order of the monomial.
  */
 mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::string binFileAddress) :
-    order(order), inWidth(inw), inHeight(inh), outWidth(outw),
-    width(layers, dim), batchSize(1), layers(layers), binFileAddress(binFileAddress)
+    order(order), inWidth(inw), inHeight(inh), outWidth(outw), layers(layers),
+    batchSize(1), binFileAddress(binFileAddress)
 {
     // set hidden layers width and height
     width.resize(layers, dim);
@@ -121,7 +127,13 @@ mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::
     }
     param *= 2; // b-weights
     makeBinFile(binFileAddress);
-    std::cout << "Network initialized with " << param << " parameters." << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
+    std::cout << "Network initialized with " << param << " parameters." 
+              << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
+    #ifdef USE_OPENCL
+    // Initialize OpenCL context and command queue
+        clContext = cl::Context(CL_DEVICE_TYPE_ALL, nullptr, nullptr, nullptr, &err);
+        createKernelsFromFile(clContext, "D:\\monoNN\\src\\mnn\\cl\\kernel.cl", kernels);
+    #endif
 }
 
 /**
@@ -133,8 +145,8 @@ mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::
  * @param dim Dimension of hidden layers.
  */
 mnn2d::mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, std::string binFileAddress) :
-    inWidth(inw), inHeight(inh), outWidth(outw),
-    width(width), batchSize(1), layers(width.size()), order(order), binFileAddress(binFileAddress)
+    order(order), inWidth(inw), inHeight(inh), outWidth(outw), layers(width.size()),
+    width(width), batchSize(1), binFileAddress(binFileAddress)
 {
     // initialize weights
     cweights.resize(layers);
@@ -176,7 +188,13 @@ mnn2d::mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, st
     }
     param *= 2; // b-weights
     makeBinFile(binFileAddress);
-    std::cout << "Network initialized with " << param << " parameters." << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
+    std::cout << "Network initialized with " << param << " parameters." 
+              << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
+    #ifdef USE_OPENCL
+    // Initialize OpenCL context and command queue
+        clContext = cl::Context(CL_DEVICE_TYPE_ALL, nullptr, nullptr, nullptr, &err);
+        createKernelsFromFile(clContext, "D:\\monoNN\\src\\mnn\\cl\\kernel.cl", kernels);
+    #endif
 }
 
 /**

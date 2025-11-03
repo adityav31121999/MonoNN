@@ -13,7 +13,6 @@ int main() {
     std::string binFileAddress2 = "D:\\monoNN\\weights2.bin";
 
     mnn network(inSize, outSize, hidden_layers1, order, binFileAddress1);
-    mnn2d net2d(inh, inw, outSize, hidden_layers2, order, binFileAddress2);
 
     return 0;
 }

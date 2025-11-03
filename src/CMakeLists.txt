@@ -30,7 +30,8 @@ elseif(USE_CUDA)
     )
 elseif(USE_OPENCL)
     list(APPEND MNN_SOURCES
-        mnn/cl/clkernel.cl
+        mnn/cl/kernel.cl
+        mnn/cl/kernels.cpp
         mnn/cl/clforprop.cpp
         mnn/cl/clbackprop.cpp
         mnn/cl/cltrain.cpp
