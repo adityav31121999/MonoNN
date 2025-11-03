@@ -3,11 +3,34 @@
 #include <vector>
 #include <cmath>
 
+// activations and their derivatives
+
+float sigmoid(float x);
+float sigmoidDer(float x);
+std::vector<float> sigmoid(const std::vector<float>& x);
+std::vector<float> sigmoidDer(const std::vector<float>& x);
+std::vector<std::vector<float>> sigmoid(const std::vector<std::vector<float>>& x);
+std::vector<std::vector<float>> sigmoidDer(const std::vector<std::vector<float>>& x);
+
+float relu(float x);
+float reluDer(float x);
+std::vector<float> relu(const std::vector<float>& x);
+std::vector<float> reluDer(const std::vector<float>& x);
+std::vector<std::vector<float>> relu(const std::vector<std::vector<float>>& x);
+std::vector<std::vector<float>> reluDer(const std::vector<std::vector<float>>& x);
+
+std::vector<float> softmax(const std::vector<float>& x);
+std::vector<float> softmaxDer(const std::vector<float>& x);
+std::vector<float> softmax(const std::vector<float>& x, float temp);
+std::vector<float> softmaxDer(const std::vector<float>& x, float temp);
+
+// errors
+
 float mse(const std::vector<float>& output, const std::vector<float>& target);
 float crossEntropy(const std::vector<float>& output, const std::vector<float>& target);
 float binaryCrossEntropy(const std::vector<float>& output, const std::vector<float>& target);
 
-// necessary operators and functions
+// math operators
 
 std::vector<float> operator+(const std::vector<float>& a, const std::vector<float>& b);
 std::vector<std::vector<float>> operator+(const std::vector<std::vector<float>>& a, const std::vector<std::vector<float>>& b);
@@ -27,11 +50,15 @@ std::vector<std::vector<float>> transpose(const std::vector<std::vector<float>>&
 std::vector<std::vector<float>> average(const std::vector<std::vector<std::vector<float>>>& input);
 int maxIndex(const std::vector<float>& input);
 
+// weight initialisation
+
 void setWeightsByNormalDist(std::vector<std::vector<std::vector<float>>>& weights, float mean, float stddev);
 void setWeightsByUniformDist(std::vector<std::vector<std::vector<float>>>& weights, float lower, float upper);
 void setWeightsByXavier(std::vector<std::vector<std::vector<float>>>& weights, int fin, int fout, bool uniformOrNot);
 void setWeightsByHe(std::vector<std::vector<std::vector<float>>>& weights, int fin, int fout);
 void setWeightsByLeCunn(std::vector<std::vector<std::vector<float>>>& weights, int fin, int fout);
+
+// modify weights with gradients
 
 void updateWeights(std::vector<std::vector<float>>& weights, std::vector<std::vector<float>>& gradients, float& learningRate);
 void updateWeightsL1(std::vector<std::vector<float>>& weights, std::vector<std::vector<float>>& gradients, float learningRate, float lambdaL1);

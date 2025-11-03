@@ -7,7 +7,7 @@
  * @brief forprop for monomial neural network with vector input
  * @param input input vector
  */
-void mnn::forprop(std::vector<float>& input)
+void mnn::forprop(const std::vector<float>& input)
 {
     // std::vector<float> forPower;
     // use of operator * for vector and matrix multiplication
@@ -30,7 +30,7 @@ void mnn::forprop(std::vector<float>& input)
  * @brief forprop for monomial neural network with matrix input
  * @param input input matrix
  */
-void mnn2d::forprop(std::vector<std::vector<float>>& input)
+void mnn2d::forprop(const std::vector<std::vector<float>>& input)
 {
     // std::vector<float> forPower;
     // use of operator * for vector and matrix multiplication

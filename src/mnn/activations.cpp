@@ -1,4 +1,4 @@
-#include "activations.hpp"
+#include "operators.hpp"
 #include <vector>
 #include <cmath>
 #include <numeric>

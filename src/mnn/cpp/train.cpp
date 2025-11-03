@@ -16,7 +16,10 @@ void mnn::train(const std::vector<float>& input, const std::vector<float>& targe
         this->input = input;
         forprop(this->input);
 
-        if(maxIndex(output) != maxIndex(target)) break;
+        if(maxIndex(output) != maxIndex(target)) {
+            std::cout << "Correct output predicted :) at epoch " << i << "." << std::endl;
+            break;
+        }
         i++;
 
         // check for error and break if acceptable
@@ -37,8 +40,51 @@ void mnn::train(const std::vector<float>& input, const std::vector<float>& targe
  * @param targets A vector of target vectors.
  */
 void mnn::trainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets) {
-    if (inputs.size() != targets.size() || inputs[0].size() != targets[0].size()) {
+    if (inputs.size() != targets.size()) {
         throw std::invalid_argument("Number of inputs and targets in batch must be the same.");
+    }
+    if (inputs.empty()) {
+        return; // Nothing to train
+    }
+    if (inputs[0].size() != inSize || targets[0].size() != outSize) {
+        throw std::invalid_argument("Input or target dimensions do not match network configuration.");
+    }
+ 
+    this->batchSize = inputs.size();
+    int totalEpochs = 0;
+ 
+    while (true) {
+        for (int e = 0; e < this->epochs; ++e) {
+            float total_loss = 0.0f;
+            for (size_t i = 0; i < inputs.size(); ++i) {
+                this->input = inputs[i];
+                forprop(this->input);
+                total_loss += crossEntropy(this->output, targets[i]);
+            }
+            totalEpochs++;
+            std::cout << "Epoch " << totalEpochs << ", Average CE Loss: " << total_loss / inputs.size() << std::endl;
+            backprop(const_cast<std::vector<std::vector<float>>&>(targets));
+        }
+ 
+        int correct_predictions = 0;
+        for (size_t i = 0; i < inputs.size(); ++i) {
+            forprop(inputs[i]);
+            if (maxIndex(this->output) == maxIndex(targets[i])) {
+                correct_predictions++;
+            }
+        }
+ 
+        if (correct_predictions == inputs.size()) {
+            std::cout << "All " << inputs.size() << " outputs in the batch are correct after " << totalEpochs << " epochs. Training complete." << std::endl;
+            break;
+        }
+        else {
+            std::cout << "predictions: " <<  correct_predictions << "/" << inputs.size() << std::endl;
+        }
+        if (totalEpochs == epochs) {
+            std::cout << correct_predictions << "/" << inputs.size() << " correct. Increasing epochs by 10 and continuing training." << std::endl;
+            this->epochs += 10;
+        }
     }
 }
 
@@ -54,7 +100,10 @@ void mnn2d::train(const std::vector<std::vector<float>>& input, const std::vecto
         this->input = input;
         forprop(this->input);
 
-        if(maxIndex(output) != maxIndex(target)) break;
+        if(maxIndex(output) != maxIndex(target)) {
+            std::cout << "Correct output predicted :) at epoch " << i << "." << std::endl;
+            break;
+        }
         i++;
 
         // check for error and break if acceptable
@@ -75,8 +124,47 @@ void mnn2d::train(const std::vector<std::vector<float>>& input, const std::vecto
  * @param targets A vector of target vectors.
  */
 void mnn2d::trainBatch(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets) {
-    if (inputs.size() != targets.size() || inputs[0].size() != targets[0].size()) {
+    if (inputs.size() != targets.size()) {
         throw std::invalid_argument("Number of inputs and targets in batch must be the same.");
+    }
+    if (inputs.empty()) {
+        return; // Nothing to train
+    }
+    if (inputs[0].size() != inHeight || inputs[0][0].size() != inWidth || targets[0].size() != outWidth) {
+        throw std::invalid_argument("Input or target dimensions do not match network configuration.");
+    }
+ 
+    this->batchSize = inputs.size();
+    int totalEpochs = 0;
+ 
+    while (true) {
+        for (int e = 0; e < this->epochs; ++e) {
+            float total_loss = 0.0f;
+            for (size_t i = 0; i < inputs.size(); ++i) {
+                this->input = inputs[i];
+                forprop(this->input);
+                total_loss += crossEntropy(this->output, targets[i]);
+            }
+            totalEpochs++;
+            std::cout << "Epoch " << totalEpochs << ", Average CE Loss: " << total_loss / inputs.size() << std::endl;
+            backprop(const_cast<std::vector<std::vector<float>>&>(targets));
+        }
+ 
+        int correct_predictions = 0;
+        for (size_t i = 0; i < inputs.size(); ++i) {
+            forprop(inputs[i]);
+            if (maxIndex(this->output) == maxIndex(targets[i])) {
+                correct_predictions++;
+            }
+        }
+ 
+        if (correct_predictions == inputs.size()) {
+            std::cout << "All " << inputs.size() << " outputs in the batch are correct after " << totalEpochs << " epochs. Training complete." << std::endl;
+            break;
+        } else {
+            std::cout << correct_predictions << "/" << inputs.size() << " correct. Increasing epochs by 10 and continuing training." << std::endl;
+            this->epochs += 10;
+        }
     }
 }
 

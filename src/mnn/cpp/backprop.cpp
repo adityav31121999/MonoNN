@@ -7,7 +7,7 @@
  * @brief Backpropagation for the mnn class (1D data).
  * @param expected The expected output vector.
  */
-void mnn::backprop(std::vector<float>& expected) {
+void mnn::backprop(const std::vector<float>& expected) {
     int type = 3;
     this->target = expected;
     std::vector<float> output_error(outSize, 0.0f);
@@ -31,7 +31,7 @@ void mnn::backprop(std::vector<float>& expected) {
  * @brief Backpropagation for the mnn class (1D data) for batch backpropagation
  * @param expected The expected output vector.
  */
-void mnn::backprop(std::vector<std::vector<float>>& expected)
+void mnn::backprop(const std::vector<std::vector<float>>& expected)
 {
     int type = 3;
     std::vector<std::vector<float>> output_error(expected.size(), std::vector<float>(outSize, 0.0f));
@@ -70,7 +70,7 @@ void mnn::backprop(std::vector<std::vector<float>>& expected)
  * @brief Backpropagation for the mnn2d class (2D data).
  * @param expected The expected output vector (after pooling).
  */
-void mnn2d::backprop(std::vector<float>& expected) {
+void mnn2d::backprop(const std::vector<float>& expected) {
     int type = 3;
     this->target = expected;
     std::vector<float> output_error(target.size(), 0.0f);
@@ -102,7 +102,7 @@ void mnn2d::backprop(std::vector<float>& expected) {
  * @brief Backpropagation for the mnn2d class (2D data) for batch backpropagation
  * @param expected The expected output vector (after pooling).
  */
-void mnn2d::backprop(std::vector<std::vector<float>>& expected) {
+void mnn2d::backprop(const std::vector<std::vector<float>>& expected) {
     int type = 3;
     std::vector<std::vector<float>> output_error(expected.size(), std::vector<float>(expected[0].size(), 0.0f));
     for(int i = 0; i < expected.size(); i++) {

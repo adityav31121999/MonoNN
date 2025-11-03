@@ -3,7 +3,7 @@
 #include <vector>
 #include <string>
 #include <utility>
-#include "activations.hpp"
+#include "operators.hpp"
 #include "operators.hpp"
 
 #define LEARNING_MAX 0.01f          // maximum learning rate allowed
@@ -45,10 +45,6 @@ private:
     int iterations;             // number of iterations
     float alpha;                // gradient splitting factor
     float learningRate;         // learning rate
-    float lambdaL1;             // L1 regularization parameter
-    float lambdaL2;             // L2 regularization parameter
-    float decayRate;            // weight decay rate
-    float dropoutRate;          // dropout rate
     std::vector<int> width;     // width of each layer and subsequent layers height
 
     std::vector<float> input;       // input vector
@@ -81,10 +77,6 @@ public:
     void setepochs(int epochs) { this->epochs = epochs; }
     void setiterations(int iterations) { this->iterations = iterations; }
     void setlearningrate(float learningrate) { this->learningRate = learningRate; }
-    void setlambdal1(float lambdaL1) { this->lambdaL1 = lambdaL1; }
-    void setlambdal2(float lambdaL2) { this->lambdaL2 = lambdaL2; }
-    void setdecayrate(float decayRate) { this->decayRate = decayRate; }
-    void setdropoutrate(float dropoutRate) { this->dropoutRate = dropoutRate; }
     void setCGradients(std::vector<std::vector<float>>& cgradient, int layerNumber) { cgradients[layerNumber - 1] = cgradient; }
     void setBGradients(std::vector<std::vector<float>>& bgradient, int layerNumber) { bgradients[layerNumber - 1] = bgradient; }
     std::vector<std::vector<float>> getCLayer(int layerNumber) { return cweights[layerNumber-1]; }
@@ -92,25 +84,28 @@ public:
     void makeBinFile(const std::string& fileAddress);
 
     #ifdef USE_CPU
-        void forprop(std::vector<float>& input);
-        void backprop(std::vector<float>& target);
-        void backprop(std::vector<std::vector<float>>& target);
+        void forprop(const std::vector<float>& input);
+        void backprop(const std::vector<float>& target);
+        void backprop(const std::vector<std::vector<float>>& target);
         void train(const std::vector<float>& input, const std::vector<float>& target);
         void trainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets);
     #elif USE_CUDA
-        void cuForprop(std::vector<float>& input);
-        void cuBackprop(std::vector<float>& target);
-        void cuBackprop(std::vector<std::vector<float>> target);
+        void cuForprop(const std::vector<float>& input);
+        void cuBackprop(const std::vector<float>& target);
+        void cuBackprop(const std::vector<std::vector<float>> target);
         void cuTrain(const std::vector<float>& input, const std::vector<float>& target);
         void cuTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets); 
     #elif USE_OPENCL
-        void clForprop(std::vector<float>& input);
-        void clBackprop(std::vector<float>& target);
-        void clBackprop(std::vector<std::vector<float>> target);
+        void clForprop(const std::vector<float>& input);
+        void clBackprop(const std::vector<float>& target);
+        void clBackprop(const std::vector<std::vector<float>> target);
         void clTrain(const std::vector<float>& input, const std::vector<float>& target);
         void clTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets); 
     #endif
 
+    void train(const std::string& dataSetPath, int batchSize);
+
+// destructor
     ~mnn() = default;
 };
 
@@ -136,10 +131,6 @@ private:
     int iterations;                 // number of iterations
     float alpha;                    // gradient splitting factor
     float learningRate;             // learning rate
-    float lambdaL1;                 // L1 regularization parameter
-    float lambdaL2;                 // L2 regularization parameter
-    float decayRate;                // weight decay rate
-    float dropoutRate;              // dropout rate
     std::vector<int> width;         // width of each layer
 
     std::vector<std::vector<float>> input;      // input vector
@@ -171,41 +162,53 @@ public:
     void setepochs(int epochs) { this->epochs = epochs; }
     void setiterations(int iterations) { this->iterations = iterations; }
     void setlearningrate(float learningrate) { this->learningRate = learningrate; }
-    void setlambdal1(float lambdaL1) { this->lambdaL1 = lambdaL1; }
-    void setlambdal2(float lambdaL2) { this->lambdaL2 = lambdaL2; }
-    void setdecayrate(float decayRate) { this->decayRate = decayRate; }
-    void setdropoutrate(float dropoutRate) { this->dropoutRate = dropoutRate; }
     void setCGradients(std::vector<std::vector<float>>& cgradient, int layerNumber) { cgradients[layerNumber - 1] = cgradient; }
     void setBGradients(std::vector<std::vector<float>>& bgradient, int layerNumber) { bgradients[layerNumber - 1] = bgradient; }
+    // access C weight layer (1-based index)
     std::vector<std::vector<float>> getCLayer(int layerNumber) { return cweights[layerNumber-1]; }
+    // access B weight layer (1-based index)
     std::vector<std::vector<float>> getBLayer(int layerNumber) { return bweights[layerNumber-1]; }
     void makeBinFile(const std::string& fileAddress);
 
     #ifdef USE_CPU
-        void forprop(std::vector<std::vector<float>>& input);
-        void backprop(std::vector<float>& target);
-        void backprop(std::vector<std::vector<float>>& target);
+        void forprop(const std::vector<std::vector<float>>& input);
+        void backprop(const std::vector<float>& target);
+        void backprop(const std::vector<std::vector<float>>& target);
         void train(const std::vector<std::vector<float>>& input, const std::vector<float>& target);
         void trainBatch(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets);
     #elif USE_CUDA
-        void cuForprop(std::vector<std::vector<float>>& input);
-        void cuBackprop(std::vector<float> target);
-        void cuBackprop(std::vector<std::vector<float>> target);
+        void cuForprop(const std::vector<std::vector<float>>& input);
+        void cuBackprop(const std::vector<float> target);
+        void cuBackprop(const std::vector<std::vector<float>> target);
         void cuTrain(const std::vector<std::vector<float>>& input, const std::vector<float>& target);
         void cuTrainBatch(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets);
     #elif USE_OPENCL
-        void clForprop(std::vector<std::vector<float>>& input);
-        void clBackprop(std::vector<float> target);
-        void clBackprop(std::vector<std::vector<float>> target);
+        void clForprop(const std::vector<std::vector<float>>& input);
+        void clBackprop(const std::vector<float> target);
+        void clBackprop(const std::vector<std::vector<float>> target);
         void clTrain(const std::vector<std::vector<float>>& input, const std::vector<float>& target);
         void clTrainBatch(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets);
     #endif
+
+    void train(const std::string& dataSetPath, int batchSize);
 
     ~mnn2d() = default;
 };
 
 #ifdef USE_OPENCL
     std::vector<std::string> kernelNames = {
+        // actvations and derivative
+        "sigmoid",
+        "sigmoidDer",
+        "softmax",
+        "softmaxDer",
+        // maths
+        "transpose",
+        "vecxvec2mat",
+        "vecxmat2vec",
+        "matxmat2mt,"
+        "matxvec2vec",
+        "hadamard",
         // forward propagation kernels
         "kernelLayerForward1",
         "kernelLayerForward2",

@@ -1,3 +1,234 @@
+
+// Helper macro/function for parallel reduction within a work-group.
+// This is a common pattern for work-group reductions.
+// Note: This pattern assumes local_size is a power of 2.
+#define WORK_GROUP_REDUCE(OP, INIT_VAL) \
+    for (uint s = local_size / 2; s > 0; s /= 2) { \
+        barrier(CLK_LOCAL_MEM_FENCE); \
+        if (local_id < s) { \
+            local_buffer[local_id] = OP(local_buffer[local_id], local_buffer[local_id + s]); \
+        } \
+    }
+
+inline float OP_MAX(float a, float b) { return max(a, b); }
+inline float OP_SUM(float a, float b) { return a + b; }
+
+/// ----------------- Activations and their Derivatives ----------------- ///
+
+__kernel void sigmoid(__global float* x, __global float* out, int size)
+{
+    int i = get_global_id(0);
+    if (i < size) {
+        out[i] = 1.0f / (1.0f + exp(-x[i]));
+    }
+}
+
+__kernel void sigmoidDer(__global float* x, __global float* out, int size)
+{
+    int i = get_global_id(0);
+    if (i < size) {
+        float sigmoid_x = 1.0f / (1.0f + exp(-x[i]));
+        out[i] = sigmoid_x * (1.0f - sigmoid_x);
+    }
+}
+
+// Softmax Kernel
+__kernel void softmax(__global float* x, __global float* out, float temp, int size)
+{
+    int global_id = get_global_id(0); // For global data access (linear index)
+    int local_id = get_local_id(0);   // For local memory access
+    uint local_size = get_local_size(0); // Work-group size
+
+    // If the entire array must be processed by ONE work-group, 
+    // the max local_size (e.g., 256 or 1024) must be >= size.
+    // Error handling for size > max_local_size is typically done by the host.
+    
+    // Using a predefined size for local memory is necessary for OpenCL. 
+    // This size must be at least 'local_size' (max expected WGS, e.g., 256).
+    // The OpenCL 1.2 standard defines FLT_MAX for the maximum float.
+    #ifndef FLT_MAX
+    #define FLT_MAX 3.402823466e+38f
+    #endif
+
+    // Assuming a max work-group size of 256 for the local buffer
+    __local float local_buffer[256]; 
+
+    // --- Step 1: Find max value using parallel reduction ---
+
+    // Load data into local memory. Elements outside 'size' get a safe identity value.
+    float my_val = (global_id < size) ? x[global_id] : -FLT_MAX; 
+    local_buffer[local_id] = my_val;
+
+    barrier(CLK_LOCAL_MEM_FENCE); // Wait for all threads to load their data
+
+    // Perform parallel max reduction (using the defined macro)
+    WORK_GROUP_REDUCE(OP_MAX, -FLT_MAX)
+
+    // Thread 0 now has the max value for the work-group
+    float max_val = local_buffer[0];
+
+    barrier(CLK_LOCAL_MEM_FENCE); // Wait for max_val to be visible to all threads
+
+    // --- Step 2: Compute exponentials and sum using parallel reduction ---
+
+    // Compute shifted exponential. Elements outside 'size' get 0.0f (identity for sum).
+    float shifted_exp = 0.0f;
+    if (global_id < size) {
+        shifted_exp = exp((x[global_id] - max_val) / temp); 
+    }
+    
+    local_buffer[local_id] = shifted_exp;
+
+    barrier(CLK_LOCAL_MEM_FENCE); // Wait for all threads to compute exponentials
+
+    // Perform parallel sum reduction
+    WORK_GROUP_REDUCE(OP_SUM, 0.0f)
+
+    // Thread 0 now has the sum of exponentials for the work-group
+    float sum_val = local_buffer[0];
+
+    barrier(CLK_LOCAL_MEM_FENCE); // Wait for sum_val to be visible
+
+    // --- Step 3: Normalize elements and write output ---
+    if (global_id < size) {
+        if (sum_val > 0.0f) {
+            out[global_id] = shifted_exp / sum_val;
+        } else {
+             // Handle sum == 0 case (should ideally not happen with max-shift unless underflow is severe).
+             // Setting to a small positive value (e.g., 1/size) or 0.0f is implementation specific.
+             // Setting to 0.0f is numerically safer if the result must be 0-1.
+             out[global_id] = 0.0f; 
+        }
+    }
+}
+
+
+// Softmax Derivative Kernel
+// This calculates s_i * (1 - s_i) where s_i is the Softmax output.
+__kernel void softmaxDer(__global float* x, __global float* out, float temp, int size)
+{
+    int global_id = get_global_id(0);
+    int local_id = get_local_id(0);
+    uint local_size = get_local_size(0);
+
+    #ifndef FLT_MAX
+    #define FLT_MAX 3.402823466e+38f
+    #endif
+
+    __local float local_buffer[256]; // Must be large enough for max local_size
+
+    // --- Step 1 & 2: Identical to Softmax kernel to get max_val and sum_val ---
+    
+    float my_val = (global_id < size) ? x[global_id] : -FLT_MAX;
+    local_buffer[local_id] = my_val;
+    barrier(CLK_LOCAL_MEM_FENCE);
+    WORK_GROUP_REDUCE(OP_MAX, -FLT_MAX)
+    float max_val = local_buffer[0];
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    float shifted_exp = 0.0f;
+    if (global_id < size) {
+        shifted_exp = exp((x[global_id] - max_val) / temp);
+    }
+    
+    local_buffer[local_id] = shifted_exp;
+    barrier(CLK_LOCAL_MEM_FENCE);
+    WORK_GROUP_REDUCE(OP_SUM, 0.0f)
+    float sum_val = local_buffer[0];
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    // --- Step 3: Calculate Softmax and its derivative ---
+    if (global_id < size) {
+        float s_i = 0.0f;
+        if (sum_val > 0.0f) {
+            s_i = shifted_exp / sum_val; 
+        } 
+        
+        // The derivative for a single element s_i with respect to its own input x_i is s_i * (1 - s_i).
+        // This derivative is WRONG if x is the result of a previous operation and we're propagating the gradient.
+        // It's correct if the derivative is with respect to the pre-softmax input (for one-hot targets).
+        out[global_id] = s_i * (1.0f - s_i);
+    }
+}
+
+/// ----------------- Math Functions ----------------- ///
+
+__kernel void vecxvec2vec (const __global float* x1, const __global float* x2, __global float* result, int size) {
+    int i = get_global_id(0);
+    if (i < size) {
+        result[i] = x1[i] * x2[i];
+    }
+}
+
+__kernel void vecxvec2mat (const __global float* x1, const __global float* x2, __global float* result, int x1size, int x2size) {
+    int i = get_global_id(0);
+    int resultSize = x1size * x2size;
+    if (i < resultSize) {
+        int row = i / x2size;
+        int col = i % x2size;
+        result[i] = x1[row] * x2[col]; // Outer Product
+    }
+}
+
+__kernel void vecxmat2vec (const __global float* vec, const __global float* mat, __global float* result, int matRows, int matCols) {
+    int i = get_global_id(0);
+    // i is the column index of the result vector (0 to matCols-1)
+    if (i < matCols) {
+        float sum = 0.0f; // Initialize accumulator
+        // j is the index of vec / row index of mat (0 to matRows-1)
+        for (int j = 0; j < matRows; j++) {
+            // mat[j][i] index is j * matCols + i
+            sum += vec[j] * mat[j * matCols + i];
+        }
+        result[i] = sum;
+    }
+}
+
+__kernel void matxmat2mat (const __global float* mat1, const __global float* mat2, __global float* result, int mat1Rows, int mat1Cols, int mat2cols) {
+    int i = get_global_id(0);
+    int resultSize = mat1Rows * mat2cols; // Total size of the result matrix (M x N)
+
+    if (i < resultSize) {
+        int r = i / mat2cols; // Row index in mat1 and result (M)
+        int c = i % mat2cols; // Col index in mat2 and result (N)
+        int K = mat1Cols;     // Inner dimension (K)
+
+        float sum = 0.0f; // Initialize accumulator
+        for (int k = 0; k < K; k++) {
+            // result[r][c] = sum(mat1[r][k] * mat2[k][c])
+            // mat1[r][k] index: r * mat1Cols + k
+            // mat2[k][c] index: k * mat2cols + c
+            sum += mat1[r * mat1Cols + k] * mat2[k * mat2cols + c];
+        }
+        result[i] = sum;
+    }
+}
+
+__kernel void matxvec2vec (const __global float* mat, const __global float* vec, __global float* result, int matRows, int matCols) {
+    int i = get_global_id(0);
+    // i is the row index of mat / element index of result (0 to matRows-1)
+    if (i < matRows) {
+        float sum = 0.0f; // Initialize accumulator
+        // j is the column index of mat / element index of vec (0 to matCols-1)
+        for (int j = 0; j < matCols; j++) {
+            // mat[i][j] index: i * matCols + j
+            sum += mat[i * matCols + j] * vec[j];
+        }
+        result[i] = sum;
+    }
+}
+
+c
+__kernel void hadamard (const __global float* mat1, const __global float* mat2, __global float* result, int mat1Rows, int mat1Cols) {
+    int i = get_global_id(0);
+    int totalSize = mat1Rows * mat1Cols; // Total number of elements in the matrix
+
+    if (i < totalSize) {
+        // Element-wise multiplication (Hadamard product)
+        result[i] = mat1[i] * mat2[i];
+    }
+}
+
 /// ----------------- Forward Propagation ----------------- ///
 
 __kernel void kernelLayerForward1(__global const float* input, __global float* output,
@@ -105,11 +336,116 @@ __kernel void kernelLayerForward4(__global const float* input, __global float* o
 
 /// ----------------- Backpropagation ----------------- ///
 
-inline void kernelGradient(double *c, double *b, double x, double L, int n) {
-    double factor = 1.0 - L * (n - 1.0) / x;
-    double old_c = *c;
-    *c = 0.9 * factor * old_c;
-    *b = 0.1 * factor * old_c;
+/*
+ * @brief Backpropagation for the first layer of an mnn (or any layer not needing an outgoing gradient).
+ * @param incoming_gradient dL/dz_l (size: outSize)
+ * @param prev_activations  a_{l-1} (size: inSize)
+ * @param grad_c            dL/dC_l (size: inSize x outSize)
+ * @param grad_b            dL/dB_l (size: inSize x outSize)
+ * @param m                 Monomial order
+ * @param alpha             Gradient splitting factor
+ */
+__kernel void kernelLayerBackward1(
+    __global const float* incoming_gradient,
+    __global const float* prev_activations,
+    __global float* grad_c,
+    __global float* grad_b,
+    float m,
+    float alpha,
+    int inSize,
+    int outSize)
+{
+    // 2D grid: i for inSize (row), j for outSize (col)
+    int i = get_global_id(0);
+    int j = get_global_id(1);
+
+    if (i < inSize && j < outSize) {
+        // Corresponds to: gradc[i][j] = alpha * prev_p[i] * incoming[j];
+        float prev_act_pow_m = pow(prev_activations[i], m);
+        grad_c[i * outSize + j] = alpha * prev_act_pow_m * incoming_gradient[j];
+
+        // Corresponds to: gradb[i][j] = (1.0f - alpha) * incoming[j];
+        grad_b[i * outSize + j] = (1.0f - alpha) * incoming_gradient[j];
+    }
+}
+
+/*
+ * @brief Backpropagation for hidden layers of an mnn (calculates outgoing gradient).
+ * @param incoming_gradient dL/dz_l (size: outSize)
+ * @param outgoing_gradient dL/dz_{l-1} (size: inSize)
+ * @param prev_activations  a_{l-1} (size: inSize)
+ * @param C                 C_l weights (size: inSize x outSize)
+ * @param grad_c            dL/dC_l (size: inSize x outSize)
+ * @param grad_b            dL/dB_l (size: inSize x outSize)
+ * @param m                 Monomial order
+ * @param alpha             Gradient splitting factor
+ */
+__kernel void kernelLayerBackward2(
+    __global const float* incoming_gradient,
+    __global float* outgoing_gradient,
+    __global const float* prev_activations,
+    __global const float* C,
+    __global float* grad_c,
+    __global float* grad_b,
+    float m,
+    float alpha,
+    int inSize,
+    int outSize)
+{
+    // --- 1. Calculate gradients for C and B (same as kernelLayerBackward1) ---
+    // This part can be launched with a 2D grid of size (inSize, outSize)
+    int grad_i = get_global_id(0);
+    int grad_j = get_global_id(1);
+
+    if (grad_i < inSize && grad_j < outSize) {
+        float prev_act_pow_m = pow(prev_activations[grad_i], m);
+        grad_c[grad_i * outSize + grad_j] = alpha * prev_act_pow_m * incoming_gradient[grad_j];
+        grad_b[grad_i * outSize + grad_j] = (1.0f - alpha) * incoming_gradient[grad_j];
+    }
+
+    // --- 2. Calculate outgoing gradient (dL/dz_{l-1}) ---
+    // This part should be launched with a 1D grid of size `inSize`.
+    // We use a "fat" grid (inSize, outSize) and have each work-item in the first column compute one output.
+    int out_i = get_global_id(0);
+    if (out_i < inSize && get_global_id(1) == 0) {
+        // Calculate: (incoming_gradient * C^T)
+        float sum = 0.0f;
+        for (int j = 0; j < outSize; ++j) {
+            sum += incoming_gradient[j] * C[out_i * outSize + j];
+        }
+
+        // Derivative of monomial part: d(a^m)/da = m*a^(m-1)
+        // Note: C++ code has a bug here, using pow(x, m-1) on prev_p, not prev_act.
+        // Correct derivative is on the activation `a`.
+        float d_prev_p = m * pow(prev_activations[out_i], m - 1.0f);
+
+        // Derivative of activation function (sigmoid): a * (1 - a)
+        float d_prev_act = prev_activations[out_i] * (1.0f - prev_activations[out_i]);
+
+        // Chain rule: outgoing = (sum) * d_prev_p * d_prev_act
+        outgoing_gradient[out_i] = sum * d_prev_p * d_prev_act;
+    }
+}
+
+/*
+ * @brief Backpropagation for mnn2d (conceptual).
+ * An efficient implementation would decompose this into multiple kernels:
+ * 1. Matrix multiply for outgoing gradient: outgoing = (incoming * C^T)
+ * 2. Element-wise multiply: outgoing = outgoing .* d_prev_p .* d_prev_act
+ * 3. Matrix multiply for grad_c: grad_c = alpha * (prev_p^T * incoming)
+ * 4. Reduction/Replication for grad_b.
+ * This kernel is a placeholder for that more complex logic.
+ */
+__kernel void kernelLayerBackward2D(
+    __global const float* incoming_gradient, // dL/dz_l (inHeight x outSize)
+    __global float* outgoing_gradient,       // dL/dz_{l-1} (inHeight x inWidth)
+    __global const float* prev_activations,  // a_{l-1} (inHeight x inWidth)
+    __global const float* C,                 // C_l (inWidth x outSize)
+    __global float* grad_c,                  // dL/dC_l (inWidth x outSize)
+    __global float* grad_b,                  // dL/dB_l (inHeight x outSize)
+    float m, float alpha, int inHeight, int inWidth, int outSize)
+{
+    // This is a conceptual placeholder.
 }
 
 /// ----------------- Update Weights ----------------- ///
