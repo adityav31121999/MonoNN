@@ -12,6 +12,7 @@ set(MNN_SOURCES
     mnn/access.cpp
     mnn/image.cpp
     mnn/train.cpp
+    mnn/test.cpp
 )
 
 if(USE_CPU)
@@ -20,6 +21,7 @@ if(USE_CPU)
         mnn/cpp/forprop.cpp
         mnn/cpp/backprop.cpp
         mnn/cpp/train.cpp
+        mnn/cpp/threadTrain.cpp
     )
 elseif(USE_CUDA)
     list(APPEND MNN_SOURCES
@@ -27,6 +29,7 @@ elseif(USE_CUDA)
         mnn/cu/forprop.cu
         mnn/cu/backprop.cu
         mnn/cu/train.cu
+        mnn/cu/cuBufTrain.cpp
     )
 elseif(USE_OPENCL)
     list(APPEND MNN_SOURCES
@@ -35,6 +38,7 @@ elseif(USE_OPENCL)
         mnn/cl/clforprop.cpp
         mnn/cl/clbackprop.cpp
         mnn/cl/cltrain.cpp
+        mnn/cl/clBufTrain.cpp
     )
 endif()
 

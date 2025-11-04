@@ -1,4 +1,3 @@
-
 // Helper macro/function for parallel reduction within a work-group.
 // This is a common pattern for work-group reductions.
 // Note: This pattern assumes local_size is a power of 2.
@@ -10,8 +9,23 @@
         } \
     }
 
+#ifndef FLT_MAX
+    #define FLT_MAX 3.402823466e+38f
+#endif
+
 inline float OP_MAX(float a, float b) { return max(a, b); }
+inline float OP_MIN(float a, float b) { return min(a, b); }
 inline float OP_SUM(float a, float b) { return a + b; }
+inline float OP_SUB(float a, float b) { return a - b; }
+inline float OP_MUL(float a, float b) { return a * b; }
+inline float OP_DIV(float a, float b) { return a / b; }
+inline float OP_POW(float a, float b) { return pow(a, b); }
+inline float OP_EXP(float a) { return exp(a); }
+inline float OP_SIGN(float a) { if (a == 0.0f)
+                                    return 0.0f;
+                                else
+                                    return signbit(a) ? -1.0f : 1.0f;
+                              }
 
 /// ----------------- Activations and their Derivatives ----------------- ///
 
@@ -46,9 +60,6 @@ __kernel void softmax(__global float* x, __global float* out, float temp, int si
     // Using a predefined size for local memory is necessary for OpenCL. 
     // This size must be at least 'local_size' (max expected WGS, e.g., 256).
     // The OpenCL 1.2 standard defines FLT_MAX for the maximum float.
-    #ifndef FLT_MAX
-    #define FLT_MAX 3.402823466e+38f
-    #endif
 
     // Assuming a max work-group size of 256 for the local buffer
     __local float local_buffer[256]; 
@@ -112,10 +123,6 @@ __kernel void softmaxDer(__global float* x, __global float* out, float temp, int
     int local_id = get_local_id(0);
     uint local_size = get_local_size(0);
 
-    #ifndef FLT_MAX
-    #define FLT_MAX 3.402823466e+38f
-    #endif
-
     __local float local_buffer[256]; // Must be large enough for max local_size
 
     // --- Step 1 & 2: Identical to Softmax kernel to get max_val and sum_val ---
@@ -154,6 +161,22 @@ __kernel void softmaxDer(__global float* x, __global float* out, float temp, int
 
 /// ----------------- Math Functions ----------------- ///
 
+__kernel void add(__global float* x, __global float* y, __global float* out, int size)
+{
+    int i = get_global_id(0);
+    if (i < size) {
+        out[i] = x[i] + y[i];
+    }
+}
+
+__kernel void subtract(__global float* x, __global float* y, __global float* out, int size)
+{
+    int i = get_global_id(0);
+    if (i < size) {
+        out[i] = x[i] - y[i];
+    }
+}
+
 __kernel void scaleByValue(__global float* x, __global float* out, float val, int size)
 {
     int i = get_global_id(0);
@@ -161,7 +184,6 @@ __kernel void scaleByValue(__global float* x, __global float* out, float val, in
         out[i] = x[i] * val;
     }
 }
-
 
 __kernel void power(__global float* x, __global float* out, float n, int size)
 {
@@ -258,7 +280,9 @@ __kernel void vecxmat2vec (const __global float* vec, const __global float* mat,
     }
 }
 
-__kernel void matxmat2mat (const __global float* mat1, const __global float* mat2, __global float* result, int mat1Rows, int mat1Cols, int mat2cols) {
+__kernel void matxmat2mat (const __global float* mat1, const __global float* mat2,
+                            __global float* result, int mat1Rows, int mat1Cols, int mat2cols) 
+{
     int i = get_global_id(0);
     int resultSize = mat1Rows * mat2cols; // Total size of the result matrix (M x N)
 
@@ -472,115 +496,7 @@ __kernel void kernelLayerForward4(__global const float* input, __global float* o
 
 /// ----------------- Backpropagation ----------------- ///
 
-/*
- * @brief Backpropagation for the first layer of an mnn (or any layer not needing an outgoing gradient).
- * @param incoming_gradient dL/dz_l (size: outSize)
- * @param prev_activations  a_{l-1} (size: inSize)
- * @param grad_c            dL/dC_l (size: inSize x outSize)
- * @param grad_b            dL/dB_l (size: inSize x outSize)
- * @param m                 Monomial order
- * @param alpha             Gradient splitting factor
- */
-__kernel void kernelLayerBackward1(
-    __global const float* incoming_gradient,
-    __global const float* prev_activations,
-    __global float* grad_c,
-    __global float* grad_b,
-    float m,
-    float alpha,
-    int inSize,
-    int outSize)
-{
-    // 2D grid: i for inSize (row), j for outSize (col)
-    int i = get_global_id(0);
-    int j = get_global_id(1);
 
-    if (i < inSize && j < outSize) {
-        // Corresponds to: gradc[i][j] = alpha * prev_p[i] * incoming[j];
-        float prev_act_pow_m = pow(prev_activations[i], m);
-        grad_c[i * outSize + j] = alpha * prev_act_pow_m * incoming_gradient[j];
-
-        // Corresponds to: gradb[i][j] = (1.0f - alpha) * incoming[j];
-        grad_b[i * outSize + j] = (1.0f - alpha) * incoming_gradient[j];
-    }
-}
-
-/*
- * @brief Backpropagation for hidden layers of an mnn (calculates outgoing gradient).
- * @param incoming_gradient dL/dz_l (size: outSize)
- * @param outgoing_gradient dL/dz_{l-1} (size: inSize)
- * @param prev_activations  a_{l-1} (size: inSize)
- * @param C                 C_l weights (size: inSize x outSize)
- * @param grad_c            dL/dC_l (size: inSize x outSize)
- * @param grad_b            dL/dB_l (size: inSize x outSize)
- * @param m                 Monomial order
- * @param alpha             Gradient splitting factor
- */
-__kernel void kernelLayerBackward2(
-    __global const float* incoming_gradient,
-    __global float* outgoing_gradient,
-    __global const float* prev_activations,
-    __global const float* C,
-    __global float* grad_c,
-    __global float* grad_b,
-    float m,
-    float alpha,
-    int inSize,
-    int outSize)
-{
-    // --- 1. Calculate gradients for C and B (same as kernelLayerBackward1) ---
-    // This part can be launched with a 2D grid of size (inSize, outSize)
-    int grad_i = get_global_id(0);
-    int grad_j = get_global_id(1);
-
-    if (grad_i < inSize && grad_j < outSize) {
-        float prev_act_pow_m = pow(prev_activations[grad_i], m);
-        grad_c[grad_i * outSize + grad_j] = alpha * prev_act_pow_m * incoming_gradient[grad_j];
-        grad_b[grad_i * outSize + grad_j] = (1.0f - alpha) * incoming_gradient[grad_j];
-    }
-
-    // --- 2. Calculate outgoing gradient (dL/dz_{l-1}) ---
-    // This part should be launched with a 1D grid of size `inSize`.
-    // We use a "fat" grid (inSize, outSize) and have each work-item in the first column compute one output.
-    int out_i = get_global_id(0);
-    if (out_i < inSize && get_global_id(1) == 0) {
-        // Calculate: (incoming_gradient * C^T)
-        float weighted_sum_of_incoming_grad = 0.0f;
-        for (int j = 0; j < outSize; ++j) {
-            weighted_sum_of_incoming_grad += incoming_gradient[j] * C[out_i * outSize + j];
-        }
-
-        // Derivative of monomial part: d(a^m)/da = m*a^(m-1).
-        float d_prev_p = m * pow(prev_activations[out_i], m - 1.0f);
-
-        // Derivative of activation function (sigmoid): a * (1 - a)
-        float d_prev_act = prev_activations[out_i] * (1.0f - prev_activations[out_i]);
-
-        // Chain rule: outgoing = (sum) * d_prev_p * d_prev_act
-        outgoing_gradient[out_i] = weighted_sum_of_incoming_grad * alpha * d_prev_p * d_prev_act;
-    }
-}
-
-/*
- * @brief Backpropagation for mnn2d (conceptual).
- * An efficient implementation would decompose this into multiple kernels:
- * 1. Matrix multiply for outgoing gradient: outgoing = (incoming * C^T)
- * 2. Element-wise multiply: outgoing = outgoing .* d_prev_p .* d_prev_act
- * 3. Matrix multiply for grad_c: grad_c = alpha * (prev_p^T * incoming)
- * 4. Reduction/Replication for grad_b.
- * This kernel is a placeholder for that more complex logic.
- */
-__kernel void kernelLayerBackward2D(
-    __global const float* incoming_gradient, // dL/dz_l (inHeight x outSize)
-    __global float* outgoing_gradient,       // dL/dz_{l-1} (inHeight x inWidth)
-    __global const float* prev_activations,  // a_{l-1} (inHeight x inWidth)
-    __global const float* C,                 // C_l (inWidth x outSize)
-    __global float* grad_c,                  // dL/dC_l (inWidth x outSize)
-    __global float* grad_b,                  // dL/dB_l (inHeight x outSize)
-    float m, float alpha, int inHeight, int inWidth, int outSize)
-{
-    // This is a conceptual placeholder.
-}
 
 /// ----------------- Update Weights ----------------- ///
 

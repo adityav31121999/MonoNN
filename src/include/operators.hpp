@@ -106,8 +106,7 @@ void layerBackward(const std::vector<std::vector<float>>& incoming, std::vector<
 
 // Conditional inclusion of OpenCL C++ header based on OS
 #if defined(_WIN64)
-    #define CL_HPP_ENABLE_EXCEPTIONS
-    #define CL_HPP_TARGET_OPENCL_VERSION 200
+    #define CL_HPP_TARGET_OPENCL_VERSION 300
     // For Windows, use the older/common cl.hpp
     #include <CL/cl.hpp>
 #elif defined(__linux__)
@@ -115,6 +114,21 @@ void layerBackward(const std::vector<std::vector<float>>& incoming, std::vector<
     #define CL_TARGET_OPENCL_VERSION 220 // Inform C headers to target OpenCL 2.2
     #include <CL/opencl.hpp>
 #endif
+
+#define WORKSIZE_1D 256
+#define WORKSIZE_2DX 16
+#define WORKSIZE_2DY 16
+
+inline auto calculate_global_1d = [&](size_t local_work_size_1d, size_t total_size) { 
+    return ((total_size + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d; 
+};
+
+inline auto calculate_global_2d = [&](size_t local_work_size_2d_arr[2], size_t dim0, size_t dim1) { 
+    size_t g0 = ((dim0 + local_work_size_2d_arr[0] - 1) / local_work_size_2d_arr[0]) * local_work_size_2d_arr[0];
+    size_t g1 = ((dim1 + local_work_size_2d_arr[1] - 1) / local_work_size_2d_arr[1]) * local_work_size_2d_arr[1];
+    return cl::NDRange(g0, g1); 
+};
+
 
 // --- OpenCL Error String Helper ---
 // (Add this function definition before the CL_CHECK macro)

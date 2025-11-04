@@ -84,29 +84,39 @@ public:
     void makeBinFile(const std::string& fileAddress);
 
     #ifdef USE_CPU
+
         void forprop(const std::vector<float>& input);
         void backprop(const std::vector<float>& target);
         void backprop(const std::vector<std::vector<float>>& target);
         void train(const std::vector<float>& input, const std::vector<float>& target);
         void trainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets);
+        void thredTrain(const std::vector<float>& input, const std::vector<float>& target);
+        void threadTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets);
+
     #elif USE_CUDA
+
         void cuForprop(const std::vector<float>& input);
         void cuBackprop(const std::vector<float>& target);
         void cuBackprop(const std::vector<std::vector<float>>& target);
         void cuTrain(const std::vector<float>& input, const std::vector<float>& target);
         void cuTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets); 
+        void cuBufTrain(const std::vector<float>& input, const std::vector<float>& target);
+        void cuBufTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets); 
+
     #elif USE_OPENCL
 
         cl::Context clContext;               // OpenCL context
         cl::CommandQueue clCommandQueue;     // OpenCL command queue
+        cl::Device device;                  // Represents the selected OpenCL device.
         std::map<std::string, cl::Kernel> kernels; // Map to store kernel objects by name
-        cl_int err;                          // To hold OpenCL error codes
 
         void clForprop(const std::vector<float>& input);
         void clBackprop(const std::vector<float>& target);
         void clBackprop(const std::vector<std::vector<float>>& target);
         void clTrain(const std::vector<float>& input, const std::vector<float>& target);
-        void clTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets); 
+        void clTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets);
+        void clBufTrain(const std::vector<float>& input, const std::vector<float>& target);
+        void clBufTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets);
 
     #endif
 
@@ -179,17 +189,25 @@ public:
     void makeBinFile(const std::string& fileAddress);
 
     #ifdef USE_CPU
+
         void forprop(const std::vector<std::vector<float>>& input);
         void backprop(const std::vector<float>& target);
         void backprop(const std::vector<std::vector<float>>& target);
         void train(const std::vector<std::vector<float>>& input, const std::vector<float>& target);
         void trainBatch(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets);
+        void threadTrain(const std::vector<std::vector<float>>& input, const std::vector<float>& target);
+        void threadTrainBatch(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets);
+
     #elif USE_CUDA
+
         void cuForprop(const std::vector<std::vector<float>>& input);
         void cuBackprop(const std::vector<float>& target);
         void cuBackprop(const std::vector<std::vector<float>>& target);
         void cuTrain(const std::vector<std::vector<float>>& input, const std::vector<float>& target);
         void cuTrainBatch(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets);
+        void cuBufTrain(const std::vector<std::vector<float>>& input, const std::vector<float>& target);
+        void cuBufTrainBatch(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets);
+
     #elif USE_OPENCL
 
         cl::Context clContext;               // OpenCL context
@@ -202,6 +220,9 @@ public:
         void clBackprop(const std::vector<std::vector<float>>& target);
         void clTrain(const std::vector<std::vector<float>>& input, const std::vector<float>& target);
         void clTrainBatch(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets);
+        void clBufTrain(const std::vector<std::vector<float>>& input, const std::vector<float>& target);
+        void clBufTrainBatch(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets);
+
     #endif
 
     void train(const std::string& dataSetPath, int batchSize);
