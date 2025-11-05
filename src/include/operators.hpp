@@ -5,6 +5,19 @@
 #include <string>
 #include <map>
 
+// file operations for weights serialization
+
+void makeBinFile(const std::string& fileAddress, unsigned long long param);
+void serializeWeights(const std::vector<std::vector<std::vector<float>>>& cweights,
+                        const std::vector<std::vector<std::vector<float>>>& bweights,
+                        const std::string& fileAddress);
+void deserializeWeights(std::vector<float>& cweights, std::vector<float>& bweights,
+                        const std::string& fileAddress);
+void deserializeWeights(std::vector<std::vector<std::vector<float>>>& cweights,
+                        std::vector<std::vector<std::vector<float>>>& bweights,
+                        const std::vector<int>& width, const std::vector<int>& height,
+                        const std::string& fileAddress);
+
 // activations and their derivatives
 
 float sigmoid(float x);

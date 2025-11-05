@@ -46,7 +46,6 @@ __kernel void sigmoidDer(__global float* x, __global float* out, int size)
     }
 }
 
-// Softmax Kernel
 __kernel void softmax(__global float* x, __global float* out, float temp, int size)
 {
     int global_id = get_global_id(0); // For global data access (linear index)
@@ -327,7 +326,9 @@ __kernel void hadamard (const __global float* mat1, const __global float* mat2, 
     }
 }
 
-__kernel void hadamard2 (const __global float* mat1, const __global float* mat2, const global float* mat3,__global float* result, int mat1Rows, int mat1Cols) {
+__kernel void hadamard2 (const __global float* mat1, const __global float* mat2, const global float* mat3,
+        __global float* result, int mat1Rows, int mat1Cols)
+{
     int i = get_global_id(0);
     int totalSize = mat1Rows * mat1Cols; // Total number of elements in the matrix
 
@@ -336,6 +337,7 @@ __kernel void hadamard2 (const __global float* mat1, const __global float* mat2,
         result[i] = mat1[i] * mat2[i] * mat3[i];
     }
 }
+
 
 /**
  * @brief Computes the element-wise average of a vector of matrices.
@@ -494,183 +496,123 @@ __kernel void kernelLayerForward4(__global const float* input, __global float* o
     }
 }
 
-/// ----------------- Backpropagation ----------------- ///
-
-
-
 /// ----------------- Update Weights ----------------- ///
 
 __kernel void kernelUpdateWeights(__global float* weights, 
                                 __global float* gweights,
                                 float learning_rate,
-                                int current_layer_size,
-                                int prev_layer_size)
+                                int totalElements)
 {
-    // Let global_id(0) be column (previous layer) and global_id(1) be row (current layer)
-    int i = get_global_id(0); // Index for previous layer size (column)
-    int j = get_global_id(1); // Index for current layer size (row)
-
-    if (i < prev_layer_size && j < current_layer_size) {
-        int weight_idx = j * prev_layer_size + i;
-        // The original kernel had `gweights[weight_idx] = gradient;` which was incomplete.
-        // Assuming gweights already contains the gradient for this weight.
-        weights[weight_idx] -= learning_rate * gweights[weight_idx];
+    int i = get_global_id(0);
+    if (i < totalElements) {
+        weights[i] -= learning_rate * gweights[i];
     }
 }
 
-
 __kernel void kernelUpdateWeightsWithL1(__global float* weights,
                                         __global float* gweights, 
-                                        int current_layer_size, 
-                                        int prev_layer_size,
+                                        int totalElements,
                                         float learning_rate, 
                                         float lambda_l1)
 {
-    // Let global_id(0) be column (previous layer) and global_id(1) be row (current layer)
-    int i = get_global_id(0); // Index for previous layer size (column)
-    int j = get_global_id(1); // Index for current layer size (row)
-
-    if (i < prev_layer_size && j < current_layer_size) {
-        int weight_idx = j * prev_layer_size + i; // Row-major index
-
-        float current_weight = weights[weight_idx];
+    int i = get_global_id(0);
+    if (i < totalElements) {
+        float current_weight = weights[i];
 
         // Subgradient of the L1 regularization term
-        float sign;
-        if (current_weight < 0.0f) {
-            sign = -1.0f;
-        }
-        else if (current_weight > 0.0f) {
-            sign = 1.0f;
-        }
-        else {
-            sign = 0.0f;
-        }
+        float sign = OP_SIGN(current_weight);
 
         float l1_gradient = sign * lambda_l1;
 
         // Total gradient
-        float total_gradient = gweights[weight_idx] + l1_gradient;
+        float total_gradient = gweights[i] + l1_gradient;
 
-        weights[weight_idx] -= learning_rate * total_gradient;
+        weights[i] -= learning_rate * total_gradient;
     }
 }
 
 
 __kernel void kernelUpdateWeightsWithL2(__global float* weights,
                                         __global float* gweights, 
-                                        int current_layer_size, 
-                                        int prev_layer_size,
+                                        int totalElements,
                                         float learning_rate, 
                                         float lambda_l2)
 {
-    // Let global_id(0) be column (previous layer) and global_id(1) be row (current layer)
-    int i = get_global_id(0); // Index for previous layer size (column)
-    int j = get_global_id(1); // Index for current layer size (row)
-
-    if (i < prev_layer_size && j < current_layer_size) {
-        int weight_idx = j * prev_layer_size + i; // Row-major index
-        
+    int i = get_global_id(0);
+    if (i < totalElements) {
         // Gradient of the L2 regularization term
-        float current_weight = weights[weight_idx];
+        float current_weight = weights[i];
         float l2_gradient = lambda_l2 * current_weight;
         
         // Total gradient
-        float total_gradient = gweights[weight_idx] + l2_gradient;
+        float total_gradient = gweights[i] + l2_gradient;
 
-        weights[weight_idx] -= learning_rate * total_gradient;
+        weights[i] -= learning_rate * total_gradient;
     }
 }
 
 
 __kernel void kernelUpdateWeightsElasticNet(__global float* weights,
                                             __global float* gweights, 
-                                            int current_layer_size, 
-                                            int prev_layer_size,
+                                            int totalElements,
                                             float learning_rate, 
                                             float lambda_l1,
                                             float lambda_l2)
 {
-    // Let global_id(0) be column (previous layer) and global_id(1) be row (current layer)
-    int i = get_global_id(0); // Index for previous layer size (column)
-    int j = get_global_id(1); // Index for current layer size (row)
-
-    if (i < prev_layer_size && j < current_layer_size) {
-        int weight_idx = j * prev_layer_size + i; // Row-major index
-        
+    int i = get_global_id(0);
+    if (i < totalElements) {
         // Gradient of the L2 regularization term
-        float current_weight = weights[weight_idx];
+        float current_weight = weights[i];
         float l2_gradient = lambda_l2 * current_weight;
         
         // Subgradient of the L1 regularization term
-        float sign;
-        if (current_weight < 0.0f) {
-            sign = -1.0f;
-        }
-        else if (current_weight > 0.0f) {
-            sign = 1.0f;
-        }
-        else {
-            sign = 0.0f; // Subgradient is 0 when weight is 0
-        }
+        float sign = OP_SIGN(current_weight);
 
         float l1_gradient = sign * lambda_l1;
 
         // Total gradient
-        float total_gradient = gweights[weight_idx] + l2_gradient + l1_gradient;
+        float total_gradient = gweights[i] + l2_gradient + l1_gradient;
 
-        weights[weight_idx] -= learning_rate * total_gradient;
+        weights[i] -= learning_rate * total_gradient;
     }
 }
 
 
 __kernel void kernelUpdateWeightsWithWeightDecay(__global float* weights,
                                                  __global float* gweights,
-                                                 int current_layer_size,
-                                                 int prev_layer_size,
+                                                 int totalElements,
                                                  float learning_rate,
                                                  float decay_rate)
 {
-    // Let global_id(0) be column (previous layer) and global_id(1) be row (current layer)
-    int i = get_global_id(0); // Index for previous layer size (column)
-    int j = get_global_id(1); // Index for current layer size (row)
+    int i = get_global_id(0);
+    if (i < totalElements) {
+        float current_weight = weights[i];
+        float gradient = gweights[i];
 
-    if (i < prev_layer_size && j < current_layer_size) {
-        int weight_idx = j * prev_layer_size + i; // Row-major index
-
-        float current_weight = weights[weight_idx];
-        float gradient = gweights[weight_idx];
-
-        weights[weight_idx] = current_weight * (1.0f - decay_rate) - learning_rate * gradient;
+        weights[i] = current_weight * (1.0f - decay_rate) - learning_rate * gradient;
     }
 }
 
 
 __kernel void kernelUpdateWeightsDropout(__global float* weights,
                                          __global float* gweights,
-                                         int current_layer_size,
-                                         int prev_layer_size,
+                                         int totalElements,
                                          float learning_rate,
                                          float dropout_rate,
                                          uint base_seed)
 {
-    // Let global_id(0) be column (previous layer) and global_id(1) be row (current layer)
-    int i = get_global_id(0); // Index for previous layer size (column)
-    int j = get_global_id(1); // Index for current layer size (row)
-
-    if (i < prev_layer_size && j < current_layer_size) {
-        int weight_idx = j * prev_layer_size + i; // Row-major index
-
+    int i = get_global_id(0);
+    if (i < totalElements) {
         // Create a unique seed for each work-item to ensure different random numbers.
         // The base_seed should be changed for each kernel call (e.g., based on time or iteration).
-        uint seed = base_seed + weight_idx;
+        uint seed = base_seed + i;
 
         // Simple Linear Congruential Generator (LCG) for pseudo-random numbers.
         seed = (seed * 1664525u + 1013904223u);
         float rand_val = (float)(seed) / (float)(0xFFFFFFFF); // Normalize to [0.0, 1.0]
 
         if (rand_val >= dropout_rate) {
-            weights[weight_idx] -= learning_rate * gweights[weight_idx];
+            weights[i] -= learning_rate * gweights[i];
         }
         // If rand_val < dropout_rate, the weight is "dropped" and remains unchanged.
     }

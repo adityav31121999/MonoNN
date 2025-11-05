@@ -37,7 +37,7 @@ void mnn::backprop(const std::vector<std::vector<float>>& expected)
     std::vector<std::vector<float>> output_error(expected.size(), std::vector<float>(outSize, 0.0f));
     for(int i = 0; i < expected.size(); i++) {
         for(int j = 0; j < outSize; j++) {
-            output_error[i][j] = activate[layers-1][i] - expected[i][j];
+            output_error[i][j] = outputBatch[i][j] - expected[i][j];
         }
     }
     std::vector<std::vector<float>> incoming_gradient = output_error;
@@ -47,7 +47,7 @@ void mnn::backprop(const std::vector<std::vector<float>>& expected)
         for(int i = 0; i < batchSize; i++) {
             origC[i] = cweights[layer];
             origB[i] = bweights[layer];
-            layerBackward(incoming_gradient[i], outgoing_gradient[i], activate[layer-1], 
+            layerBackward(incoming_gradient[i], outgoing_gradient[i], activateBatch[layer-1][i], 
                         origC[i], origB[i], cgradients[layer], bgradients[layer],
                         order, alpha, learningRate, type);
             incoming_gradient[i] = outgoing_gradient[i];
@@ -59,7 +59,7 @@ void mnn::backprop(const std::vector<std::vector<float>>& expected)
     for(int i = 0; i < batchSize; i++) {
         origC[i] = cweights[0];
         origB[i] = bweights[0];
-        layerBackward(incoming_gradient[i], input, origC[i], origB[i], cgradients[0], bgradients[0],
+        layerBackward(incoming_gradient[i], inputBatch[i], origC[i], origB[i], cgradients[0], bgradients[0],
                     order, alpha, learningRate, type);
     }
     cweights[0] = average(origC);
@@ -107,7 +107,7 @@ void mnn2d::backprop(const std::vector<std::vector<float>>& expected) {
     std::vector<std::vector<float>> output_error(expected.size(), std::vector<float>(expected[0].size(), 0.0f));
     for(int i = 0; i < expected.size(); i++) {
         for(int j = 0; j < expected[i].size(); j++)
-            output_error[i][j] = output[i] - expected[i][j];
+            output_error[i][j] = outputBatch[i][j] - expected[i][j];
     }
     std::vector<std::vector<std::vector<float>>> incoming_gradient(batchSize);
 
@@ -124,7 +124,7 @@ void mnn2d::backprop(const std::vector<std::vector<float>>& expected) {
         for(int i = 0; i < batchSize; i++) {
             origC[i] = cweights[layer];
             origB[i] = bweights[layer];
-            layerBackward(incoming_gradient[i], outgoing_gradient[i], dotProds[layer-1], activate[layer-1],
+            layerBackward(incoming_gradient[i], outgoing_gradient[i], dotProdsBatch[layer-1][i], activateBatch[layer-1][i],
                             cweights[layer], bweights[layer], cgradients[layer], bgradients[layer],
                             order, alpha, learningRate, type);
             incoming_gradient[i] = outgoing_gradient[i];
@@ -136,7 +136,7 @@ void mnn2d::backprop(const std::vector<std::vector<float>>& expected) {
     for(int i = 0; i < batchSize; i++) {
         origC[i] = cweights[0];
         origB[i] = bweights[0];
-        layerBackward(incoming_gradient[i], reshape(softmax(flatten(input)), input.size(), input[0].size()),
+        layerBackward(incoming_gradient[i], reshape(softmax(flatten(inputBatch[i])), inputBatch[0][i].size(), inputBatch[0][i].size()),
                         cweights[0], bweights[0], cgradients[0], bgradients[0],
                         order, alpha, learningRate, type);
     }
