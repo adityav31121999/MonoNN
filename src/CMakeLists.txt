@@ -29,6 +29,7 @@ elseif(USE_CUDA)
         mnn/cu/kernel.cu
         mnn/cu/forprop.cu
         mnn/cu/backprop.cu
+        mnn/cu/backBatch.cu
         mnn/cu/train.cu
         mnn/cu/bufTrain.cu
         mnn/cu/test.cu
@@ -39,6 +40,7 @@ elseif(USE_OPENCL)
         mnn/cl/kernels.cpp
         mnn/cl/clforprop.cpp
         mnn/cl/clbackprop.cpp
+        mnn/cl/clbackBatch.cpp
         mnn/cl/cltrain.cpp
         mnn/cl/clBufTrain.cpp
         mnn/cl/cltest.cpp

@@ -132,6 +132,22 @@ void layerBackward(const std::vector<std::vector<float>>& incoming, std::vector<
 #define WORKSIZE_2DX 16
 #define WORKSIZE_2DY 16
 
+#define CL_CHECK(call)                                                      \
+    do {                                                                        \
+        cl_int err_code_ = call;                                                \
+        if (err_code_ != CL_SUCCESS) {                                          \
+            std::string error_message_ = "OpenCL API Error in ";                \
+            error_message_ += __FILE__;                                         \
+            error_message_ += " at line " + std::to_string(__LINE__) + ": ";    \
+            error_message_ += oclErrorString(err_code_);                        \
+            error_message_ += " (" + std::to_string(err_code_) + ")";           \
+            throw std::runtime_error(error_message_);                           \
+        }                                                                       \
+    } while (0)
+
+    extern const std::vector<std::string> kernelNames;
+    void createKernelsFromFile(const cl::Context& context, const std::string& filePath, std::map<std::string, cl::Kernel>& kernelMap);
+
 inline auto calculate_global_1d = [&](size_t local_work_size_1d, size_t total_size) { 
     return ((total_size + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d; 
 };
@@ -217,47 +233,68 @@ inline const char* oclErrorString(cl_int error) {
     }
 }
 
-#define CL_CHECK(call)                                                      \
-    do {                                                                        \
-        cl_int err_code_ = call;                                                \
-        if (err_code_ != CL_SUCCESS) {                                          \
-            std::string error_message_ = "OpenCL API Error in ";                \
-            error_message_ += __FILE__;                                         \
-            error_message_ += " at line " + std::to_string(__LINE__) + ": ";    \
-            error_message_ += oclErrorString(err_code_);                        \
-            error_message_ += " (" + std::to_string(err_code_) + ")";           \
-            throw std::runtime_error(error_message_);                           \
-        }                                                                       \
-    } while (0)
-
-    // Declare kernelNames as an external constant.
-    // The actual definition will be in a .cpp file.
-    extern const std::vector<std::string> kernelNames;
-    void createKernelsFromFile(const cl::Context& context, const std::string& filePath, std::map<std::string, cl::Kernel>& kernelMap);
-
 #elif USE_CUDA
+
+    #include <cuda_runtime.h> // For cudaError_t, cudaGetErrorString, etc.
+    #include <stdexcept>      // For std::runtime_error
+
+    // --- CUDA Error Checking Macro ---
+    #define CUDA_CHECK(call)                                                    \
+        do {                                                                        \
+            cudaError_t err_code_ = call;                                           \
+            if (err_code_ != cudaSuccess) {                                         \
+                std::string error_message_ = "CUDA API Error in ";                  \
+                error_message_ += __FILE__;                                         \
+                error_message_ += " at line " + std::to_string(__LINE__) + ": ";    \
+                error_message_ += cudaGetErrorString(err_code_);                    \
+                error_message_ += " (" + std::to_string(err_code_) + ")";           \
+                throw std::runtime_error(error_message_);                           \
+            }                                                                       \
+        } while (0)
+
+
+    // actvations and derivative
+    __global__ void sigmoid(const float* x, float* out, int size);
+    __global__ void sigmoidDer(const float* x, float* out, int size);
+    __global__ void softmax(const float* x, float* out, float temp, int size);
+    __global__ void softmaxDer(const float* x, float* out, float temp, int size);
+    // maths
+    __global__ void add(const float* a, const float* b, float* out, int size);
+    __global__ void subtract(const float* a, const float* b, float* out, int size);
+    __global__ void scaleByValue(const float* x, float* out, float val, int size);
+    __global__ void power(const float* x, float* out, float n, int size);
+    __global__ void dPower(const float* x, float* out, float n, int size);
+    __global__ void meanPool(const float* in, float* out, int inRows, int inCols, int poolSize);
+    __global__ void maxPool(const float* in, float* out, int inRows, int inCols, int poolSize);
+    __global__ void transpose(const float* in, float* out, int rows, int cols);
+    __global__ void vecxvec2vec(const float* x1, const float* x2, float* result, int size);
+    __global__ void vecxvec2mat(const float* x1, const float* x2, float* result, int x1size, int x2size);
+    __global__ void vecxmat2vec(const float* vec, const float* mat, float* result, int matRows, int matCols);
+    __global__ void matxmat2mat(const float* mat1, const float* mat2, float* result, int mat1Rows, int mat1Cols, int mat2Cols);
+    __global__ void matxvec2vec(const float* mat, const float* vec, float* result, int matRows, int matCols);
+    __global__ void hadamard(const float* mat1, const float* mat2, float* result, int mat1Rows, int mat1Cols);
+    __global__ void hadamard2(const float* mat1, const float* mat2, const float* mat3, float* result, int mat1Rows, int mat1Cols);
+    __global__ void matrix_vector_average(const float* inputBuffer, float* outputBuffer, int N, int Rows, int Cols);
+    __global__ void matrix_vector_sum(const float* inputBuffer, float* outputBuffer, int Rows, int Cols);
 
     __global__ void kernelLayerForward1(float* input, float* weights, float* biases, float* output,
                                     int input_size, int output_size);
     __global__ void kernelLayerForward2(float* input, float* weights, float* biases, float* output,
                                     int input_size, int output_size, float n);
     __global__ void kernelLayerForward3(float* input, float* weights, float* biases, float* output,
-                                    int inHeigt, int inWidth, int output_size);
+                                    int inHeight, int inWidth, int output_size);
     __global__ void kernelLayerForward4(float* input, float* weights, float* biases, float* output,
-                                    int inHeigt, int inWidth, int output_size, float n);
+                                    int inHeight, int inWidth, int output_size, float n);
 
     __global__ void kernelUpdateWeights(float* weights, float* gweights, float learning_rate,
-                    int current_layer_size, int prev_layer_size);
-    __global__ void kernelUpdateWeightsL1(float* weights, float* gweights, float learning_rate, float lambda_l1,
-                    int current_layer_size, int prev_layer_size);
-    __global__ void kernelUpdateWeightsL2(float* weights, float* gweights, float learning_rate,
-                    float lambda_l2, int current_layer_size, int prev_layer_size);
+                                        int totalElements);
+    __global__ void kernelUpdateWeightsWithL1(float* weights, float* gweights, int totalElements, float learning_rate, float lambda_l1);
+    __global__ void kernelUpdateWeightsWithL2(float* weights, float* gweights, int totalElements, float learning_rate, float lambda_l2);
     __global__ void kernelUpdateWeightsElasticNet(float* weights, float* gweights, float learning_rate, float lambda_l1,
-                    float lambda_l2, int current_layer_size, int prev_layer_size);
-    __global__ void kernelUpdateWeightsWeightDecay(float* weights, float* gweights, float learning_rate,
-                    float decay_rate, int current_layer_size, int prev_layer_size);
+                                                  float lambda_l2, int totalElements);
+    __global__ void kernelUpdateWeightsWithWeightDecay(float* weights, float* gweights, int totalElements, float learning_rate, float decay_rate);
     __global__ void kernelUpdateWeightsDropout(float* weights, float* gweights, float learning_rate, float dropout_rate,
-                    int current_layer_size, int prev_layer_size);
+                                               int totalElements, unsigned int base_seed);
 
 #endif
 

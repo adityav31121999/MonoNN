@@ -390,6 +390,31 @@ __kernel void matrix_vector_average(
     outputBuffer[outputIndex] = sum / (float)N;
 }
 
+/**
+ * @brief Sums all elements of a matrix and stores the result in a single-element output buffer.
+ *
+ * @param inputBuffer   A flattened 1D buffer representing the input matrix.
+ * @param outputBuffer  A single-element buffer to store the sum.
+ * @param Rows          The number of rows in the matrix.
+ * @param Cols          The number of columns in the matrix.
+ */
+__kernel void matrix_vector_sum(
+    __global const float* inputBuffer,
+    __global float* outputBuffer,
+    const int Rows,
+    const int Cols)
+{
+    // This is a simple, non-parallelized sum for demonstration.
+    // For large matrices, a parallel reduction would be more efficient.
+    if (get_global_id(0) == 0 && get_global_id(1) == 0) {
+        float sum = 0.0f;
+        for (int i = 0; i < Rows * Cols; ++i) {
+            sum += inputBuffer[i];
+        }
+        outputBuffer[0] = sum;
+    }
+}
+
 
 /// ----------------- Forward Propagation ----------------- ///
 
