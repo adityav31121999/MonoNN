@@ -43,10 +43,10 @@ mnn2d::mnn2d(int inw, int inh, int outw, int layers, float order, std::string bi
     bgradients[0].resize(inh, std::vector<float>(width[0]));
     for (int i = 1; i < layers-1; i++) {
         // dimension = width[i-1] * width[i]
-        cweights[i].resize(width[i], std::vector<float>(width[i + 1]));
-        bweights[i].resize(width[i], std::vector<float>(width[i + 1]));
-        cgradients[i].resize(width[i], std::vector<float>(width[i + 1], 0.0f));
-        bgradients[i].resize(width[i], std::vector<float>(width[i + 1], 0.0f));
+        cweights[i].resize(width[i-1], std::vector<float>(width[i]));
+        bweights[i].resize(width[i-1], std::vector<float>(width[i]));
+        cgradients[i].resize(width[i-1], std::vector<float>(width[i], 0.0f));
+        bgradients[i].resize(width[i-1], std::vector<float>(width[i], 0.0f));
     }
     cweights[layers-1].resize(width[layers-1], std::vector<float>(outw));
     bweights[layers-1].resize(width[layers-1], std::vector<float>(outw));
@@ -110,10 +110,10 @@ mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::
     bgradients[0].resize(inh, std::vector<float>(width[0]));
     for (int i = 1; i < layers-1; i++) {
         // dimension = width[i-1] * width[i]
-        cweights[i].resize(width[i], std::vector<float>(width[i + 1]));
-        bweights[i].resize(width[i], std::vector<float>(width[i + 1]));
-        cgradients[i].resize(width[i], std::vector<float>(width[i + 1], 0.0f));
-        bgradients[i].resize(width[i], std::vector<float>(width[i + 1], 0.0f));
+        cweights[i].resize(width[i-1], std::vector<float>(width[i]));
+        bweights[i].resize(width[i-1], std::vector<float>(width[i]));
+        cgradients[i].resize(width[i-1], std::vector<float>(width[i], 0.0f));
+        bgradients[i].resize(width[i-1], std::vector<float>(width[i], 0.0f));
     }
     cweights[layers-1].resize(width[layers-1], std::vector<float>(outw));
     bweights[layers-1].resize(width[layers-1], std::vector<float>(outw));
@@ -171,10 +171,10 @@ mnn2d::mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, st
     bgradients[0].resize(inh, std::vector<float>(width[0]));
     for (int i = 1; i < layers-1; i++) {
         // dimension = width[i-1] * width[i]
-        cweights[i].resize(width[i], std::vector<float>(width[i + 1]));
-        bweights[i].resize(width[i], std::vector<float>(width[i + 1]));
-        cgradients[i].resize(width[i], std::vector<float>(width[i + 1], 0.0f));
-        bgradients[i].resize(width[i], std::vector<float>(width[i + 1], 0.0f));
+        cweights[i].resize(width[i-1], std::vector<float>(width[i]));
+        bweights[i].resize(width[i-1], std::vector<float>(width[i]));
+        cgradients[i].resize(width[i-1], std::vector<float>(width[i], 0.0f));
+        bgradients[i].resize(width[i-1], std::vector<float>(width[i], 0.0f));
     }
     cweights[layers-1].resize(width[layers-1], std::vector<float>(outw));
     bweights[layers-1].resize(width[layers-1], std::vector<float>(outw));

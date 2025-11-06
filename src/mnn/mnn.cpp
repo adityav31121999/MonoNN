@@ -38,16 +38,11 @@ mnn::mnn(int insize, int outsize, int layers, float order, std::string binFileAd
     bgradients[0].resize(insize, std::vector<float>(width[0]));
     for (int i = 1; i < layers; i++) {
         // dimension = width[i-1] * width[i]
-        cweights[i].resize(width[i], std::vector<float>(width[i + 1]));
-        bweights[i].resize(width[i], std::vector<float>(width[i + 1]));
-        cgradients[i].resize(width[i], std::vector<float>(width[i + 1], 0.0f));
-        bgradients[i].resize(width[i], std::vector<float>(width[i + 1], 0.0f));
+        cweights[i].resize(width[i-1], std::vector<float>(width[i]));
+        bweights[i].resize(width[i-1], std::vector<float>(width[i]));
+        cgradients[i].resize(width[i-1], std::vector<float>(width[i], 0.0f));
+        bgradients[i].resize(width[i-1], std::vector<float>(width[i], 0.0f));
     }
-    cweights[layers-1].resize(width[layers-1], std::vector<float>(outsize));
-    bweights[layers-1].resize(width[layers-1], std::vector<float>(outsize));
-    cgradients[layers-1].resize(width[layers-1], std::vector<float>(outsize));
-    bgradients[layers-1].resize(width[layers-1], std::vector<float>(outsize));
-
     param = 0;
     for(int i = 0; i < layers; i++) {
         // c-weights
@@ -107,18 +102,13 @@ mnn::mnn(int insize, int outsize, int dim, int layers, float order, std::string 
     bweights[0].resize(insize, std::vector<float>(width[0]));
     cgradients[0].resize(insize, std::vector<float>(width[0]));
     bgradients[0].resize(insize, std::vector<float>(width[0]));
-    for (int i = 1; i < layers-1; i++) {
+    for (int i = 1; i < layers; i++) {
         // dimension = width[i-1] * width[i]
-        cweights[i].resize(width[i], std::vector<float>(width[i + 1]));
-        bweights[i].resize(width[i], std::vector<float>(width[i + 1]));
-        cgradients[i].resize(width[i], std::vector<float>(width[i + 1], 0.0f));
-        bgradients[i].resize(width[i], std::vector<float>(width[i + 1], 0.0f));
+        cweights[i].resize(width[i-1], std::vector<float>(width[i]));
+        bweights[i].resize(width[i-1], std::vector<float>(width[i]));
+        cgradients[i].resize(width[i-1], std::vector<float>(width[i], 0.0f));
+        bgradients[i].resize(width[i-1], std::vector<float>(width[i], 0.0f));
     }
-    cweights[layers-1].resize(width[layers-1], std::vector<float>(outsize));
-    bweights[layers-1].resize(width[layers-1], std::vector<float>(outsize));
-    cgradients[layers-1].resize(width[layers-1], std::vector<float>(outsize));
-    bgradients[layers-1].resize(width[layers-1], std::vector<float>(outsize));
-
     param = 0;
     for(int i = 0; i < layers; i++) {
         // c-weights
@@ -187,18 +177,13 @@ mnn::mnn(int insize, int outsize, std::vector<int> width, float order, std::stri
     bweights[0].resize(insize, std::vector<float>(width[0]));
     cgradients[0].resize(insize, std::vector<float>(width[0]));
     bgradients[0].resize(insize, std::vector<float>(width[0]));
-    for (int i = 1; i < layers-1; i++) {
+    for (int i = 1; i < layers; i++) {
         // dimension = width[i-1] * width[i]
-        cweights[i].resize(width[i], std::vector<float>(width[i + 1]));
-        bweights[i].resize(width[i], std::vector<float>(width[i + 1]));
-        cgradients[i].resize(width[i], std::vector<float>(width[i + 1], 0.0f));
-        bgradients[i].resize(width[i], std::vector<float>(width[i + 1], 0.0f));
+        cweights[i].resize(width[i-1], std::vector<float>(width[i]));
+        bweights[i].resize(width[i-1], std::vector<float>(width[i]));
+        cgradients[i].resize(width[i-1], std::vector<float>(width[i], 0.0f));
+        bgradients[i].resize(width[i-1], std::vector<float>(width[i], 0.0f));
     }
-    cweights[layers-1].resize(width[layers-1], std::vector<float>(outsize));
-    bweights[layers-1].resize(width[layers-1], std::vector<float>(outsize));
-    cgradients[layers-1].resize(width[layers-1], std::vector<float>(outsize));
-    bgradients[layers-1].resize(width[layers-1], std::vector<float>(outsize));
-
     param = 0;
     for(int i = 0; i < layers; i++) {
         // c-weights

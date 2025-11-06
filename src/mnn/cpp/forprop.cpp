@@ -13,14 +13,11 @@ void mnn::forprop(const std::vector<float>& input)
     // first layer
     layerForward(input, dotProds[0], cweights[0], bweights[0], order);
     activate[0] = sigmoid(dotProds[0]);
-    std::cout << "layer 1 done" << std::endl;
 
     // from 2nd to last
     for(int i = 1; i < layers; i++) {
-        std::cout << "layer " << i+1 << " statrted" << std::endl;
         layerForward(activate[i-1], dotProds[i], cweights[i], bweights[i], order);
         activate[i] = sigmoid(dotProds[i]);
-        std::cout << "layer " << i+1 << " done" << std::endl;
     }
 
     output = activate[layers - 1];

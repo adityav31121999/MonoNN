@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <thread>
 #include <algorithm>
+#include <iostream>
 
 /**
  * @brief Overloaded operator for vector addition.
@@ -121,10 +122,11 @@ std::vector<float> multiply(const std::vector<float>& a, const std::vector<float
  */
 std::vector<float> multiply(const std::vector<float>& a, const std::vector<std::vector<float>>& b)
 {
-    if (b.empty() || a.size() != b[0].size()) {
-        throw std::invalid_argument("Incompatible dimensions for element-wise multiplication. Vector size must match matrix column size.");
+    if (b.empty() || a.size() != b.size()) {
+        throw std::invalid_argument("Incompatible dimensions for vector-matrix multiplication. Vector size must match matrix row count.");
     }
- 
+
+/**
     std::vector<float> result(b.size(), 0.0f);
     unsigned int num_threads = std::thread::hardware_concurrency();
     std::vector<std::thread> threads;
@@ -148,7 +150,14 @@ std::vector<float> multiply(const std::vector<float>& a, const std::vector<std::
     for (auto& t : threads) {
         t.join();
     }
- 
+ */
+    // vector to store result
+    std::vector<float> result(b[0].size(), 0.0f);
+    for(size_t j = 0; j < b[0].size(); j++) {
+        for(size_t i = 0; i < b.size(); i++) { // or a.size()
+            result[j] += a[i] * b[i][j];
+        }
+    }
     return result;
 }
 
@@ -164,7 +173,7 @@ std::vector<std::vector<float>> multiply(const std::vector<std::vector<float>>& 
     if (a.size() != b.size() || a.empty() || (!a.empty() && a[0].size() != b[0].size())) {
         throw std::invalid_argument("Incompatible dimensions for element-wise multiplication. Matrices must have the same dimensions.");
     }
- 
+/*
     std::vector<std::vector<float>> result(a.size(), std::vector<float>(a[0].size()));
     unsigned int num_threads = std::thread::hardware_concurrency();
     std::vector<std::thread> threads;
@@ -188,7 +197,16 @@ std::vector<std::vector<float>> multiply(const std::vector<std::vector<float>>& 
     for (auto& t : threads) {
         t.join();
     }
- 
+*/
+    // matrix to store result
+    std::vector<std::vector<float>> result(a.size(), std::vector<float>(b[0].size(), 0.0f));
+    for(size_t i = 0; i < a.size(); i++) {
+        for(size_t j = 0; j < b[0].size(); j++) {
+            for(size_t k = 0; k < a[0].size(); k++) {
+                result[i][j] += a[i][k] * b[k][j];
+            }
+        }
+    }
     return result;
 }
 

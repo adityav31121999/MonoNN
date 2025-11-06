@@ -60,9 +60,7 @@ void layerForward(const std::vector<float>& input, std::vector<float>& output, c
     if(output.size() != bweights[0].size()) {
         throw std::runtime_error("output size and bweights columns mismatch :)");
     }
-    std::cout << "Layer forward started" << std::endl;
     std::vector<float> powerIn = power(input, n);
-    std::cout << "Powered up" << std::endl;
     for(int i = 0; i < cweights.size(); i++) {
         for(int j = 0; j < cweights[0].size(); j++) {
             output[j] += (powerIn[i]*cweights[i][j]) + bweights[i][j];
@@ -266,11 +264,11 @@ void layerBackward(const std::vector<float>& incoming, std::vector<float>& outgo
 
     std::vector<float> v1(B.size(), 1.0f);          // dz_l/dB_l
     std::vector<float> prev_p = power(prevAct, m);  // dz_l/dC_l
-    // derivative of prev_p
-    std::vector<float> dprev_p(prevAct.size(), 0.0f);
-    std::transform(prev_p.begin(), prev_p.end(), dprev_p.begin(), 
+    // derivative of (prevAct^m) w.r.t prevAct
+    std::vector<float> dprev_p(prevAct.size(), 0.0f); // This is dz_l/da_{l-1} part 1
+    std::transform(prevAct.begin(), prevAct.end(), dprev_p.begin(), 
                     [&m](float x) { 
-                        return m * std::pow(x, m-1.0f); 
+                        return m * std::pow(x, m - 1.0f); 
                     });
     // derivativ of prevAct
     std::vector<float> dprevAct(prevAct.size(), 0.0f);
@@ -279,14 +277,6 @@ void layerBackward(const std::vector<float>& incoming, std::vector<float>& outgo
                         return x*(1.0f - x); 
                     });
 
-    // outgoing gradient = (dl/dz_l x C^T) . dprev_p . dprevAct
-    // incoming gradient x C^T
-    std::vector<std::vector<float>> C_T = transpose(C);
-    outgoing.clear();
-    outgoing.resize(dprev_p.size(), 0.0f);
-    outgoing = multiply(incoming, C_T);
-    outgoing = multiply(outgoing, dprev_p);
-    outgoing = multiply(outgoing, dprevAct);
 
     // gradc = alpha * prev_p^T x dl/dz_l, gradb = (1 - alpha) * v1^T x dl/dz_l
     for(int i = 0; i < prev_p.size(); i++) {
@@ -299,6 +289,16 @@ void layerBackward(const std::vector<float>& incoming, std::vector<float>& outgo
     updateWeights(new_C, gradc, learning, typeOfUpdate);
     updateWeights(new_B, gradb, learning, typeOfUpdate);
     C = new_C, B = new_B;
+
+    // outgoing gradient = (dl/dz_l x C^T) . dprev_p . dprevAct
+    // incoming gradient x C^T
+    std::vector<std::vector<float>> C_T(C[0].size(), std::vector<float>(C.size(), 0.0f));
+    C_T = transpose(C);
+    outgoing.clear();
+    outgoing.resize(dprev_p.size(), 0.0f);
+    outgoing = multiply(incoming, C_T);
+    outgoing = multiply(outgoing, dprev_p);
+    outgoing = multiply(outgoing, dprevAct);
 }
 
 

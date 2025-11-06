@@ -2,6 +2,7 @@
 #include "mnn.hpp"
 #include <numeric>
 #include <vector>
+#include <iostream>
 
 /**
  * @brief Backpropagation for the mnn class (1D data).
@@ -43,7 +44,7 @@ void mnn::backprop(const std::vector<std::vector<float>>& expected)
     std::vector<std::vector<float>> incoming_gradient = output_error;
     for(int layer = layers - 1; layer >= 1; layer--) {
         std::vector<std::vector<std::vector<float>>> origC(batchSize), origB(batchSize);
-        std::vector<std::vector<float>> outgoing_gradient;
+        std::vector<std::vector<float>> outgoing_gradient(batchSize);
         for(int i = 0; i < batchSize; i++) {
             origC[i] = cweights[layer];
             origB[i] = bweights[layer];
@@ -120,7 +121,7 @@ void mnn2d::backprop(const std::vector<std::vector<float>>& expected) {
     // Backpropagate the error
     for(int layer = layers - 1; layer >= 1; layer--) {
         std::vector<std::vector<std::vector<float>>> origC(batchSize), origB(batchSize);
-        std::vector<std::vector<std::vector<float>>> outgoing_gradient;
+        std::vector<std::vector<std::vector<float>>> outgoing_gradient(batchSize);
         for(int i = 0; i < batchSize; i++) {
             origC[i] = cweights[layer];
             origB[i] = bweights[layer];
