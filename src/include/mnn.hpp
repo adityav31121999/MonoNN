@@ -13,6 +13,8 @@
 #define DROPOUT_RATE 0.6f           // dropout rate
 #define DECAY_RATE 0.001f           // weight decay rate
 #define WEIGHT_DECAY 0.001f         // weight decay parameter
+#define SOTMAX_TEMP 1.025f          // softmax temperature
+#define EPOCH 100                   // epochs for single set training
 
 /**
  * @brief Class representing a Monomial Neural Network (MNN).
@@ -24,7 +26,7 @@
  *          - Both c and b are trainable parameters.
  */
 class mnn {
-private:
+public:
     float order;                // order of neurons
     int inSize;                 // input size
     int outSize;                // output size
@@ -53,13 +55,12 @@ private:
     std::vector<std::vector<float>> dotProds;       // (activation^n) * cweights + bweights = dot products
     std::vector<std::vector<float>> activate;       // activations of the network
 
-public:
 
     std::vector<std::vector<float>> inputBatch;     // input vector
     std::vector<std::vector<float>> outputBatch;    // output vector
     std::vector<std::vector<float>> targetBatch;    // target vector
-    std::vector<std::vector<std::vector<float>>> dotProdsBatch; // for batch
-    std::vector<std::vector<std::vector<float>>> activateBatch; // for batch
+    std::vector<std::vector<std::vector<float>>> dotBatch; // for batch
+    std::vector<std::vector<std::vector<float>>> actBatch; // for batch
 
 // constructors
 
@@ -68,36 +69,9 @@ public:
     mnn(int insize, int outsize, int dim, int layers, float order, std::string binFileAddress);
     mnn(int insize, int outsize, std::vector<int> width, float order, std::string binFileAddress);
 
-    void setbatch(int batchsize) { this->batchSize = batchSize; }
-    void setepochs(int epochs) { this->epochs = epochs; }
-    void setiterations(int iterations) { this->iterations = iterations; }
-    void setlearningrate(float learningrate) { this->learningRate = learningRate; }
-    void setCWeights(std::vector<std::vector<float>>& cweight, int layerNumber) { cweights[layerNumber - 1] = cweight; }
-    void setBWeights(std::vector<std::vector<float>>& bweight, int layerNumber) { bweights[layerNumber - 1] = bweight; }
-    void setCGradients(std::vector<std::vector<float>>& cgradient, int layerNumber) { cgradients[layerNumber - 1] = cgradient; }
-    void setBGradients(std::vector<std::vector<float>>& bgradient, int layerNumber) { bgradients[layerNumber - 1] = bgradient; }
-    void setActivate(std::vector<float>& act, int layerNumber) { activate[layerNumber - 1] = act; }
-    void setDotProds(std::vector<float>& dot, int layerNumber) { dotProds[layerNumber - 1] = dot; }
-    // access C weight layer (1-based index)
-    std::vector<std::vector<float>> getCWeights(int layerNumber) { return cweights[layerNumber-1]; }
-    std::vector<std::vector<float>> getBWeights(int layerNumber) { return bweights[layerNumber-1]; }
-    std::vector<std::vector<float>> getCGradients(int layerNumber) { return cgradients[layerNumber-1]; }
-    std::vector<std::vector<float>> getBGradients(int layerNumber) { return bgradients[layerNumber-1]; }
-    std::vector<float> getActivate(int layerNumber) { return activate[layerNumber-1]; }
-    std::vector<float> getDotProds(int layerNumber) { return dotProds[layerNumber-1]; }
-    // get rows and columns
-    int getCWrows(int layerNumber) { return cweights[layerNumber].size(); }
-    int getCWcols(int layerNumber) { return cweights[layerNumber][0].size(); }
-    int getBWrows(int layerNumber) { return bweights[layerNumber].size(); }
-    int getBWcols(int layerNumber) { return bweights[layerNumber][0].size(); }
-    int getCGrows(int layerNumber) { return cgradients[layerNumber].size(); }
-    int getCGcols(int layerNumber) { return cgradients[layerNumber][0].size(); }
-    int getBGrows(int layerNumber) { return bgradients[layerNumber].size(); }
-    int getBGcols(int layerNumber) { return bgradients[layerNumber][0].size(); }
-    int getArows(int layerNumber) { return activate[layerNumber].size(); }
-    int getDrows(int layerNumber) { return dotProds[layerNumber].size(); }
 
     void makeBinFile(const std::string& fileAddress);
+    void initiateWeights(int type);
 
     #ifdef USE_CPU
 
@@ -113,6 +87,7 @@ public:
     #elif USE_CUDA
 
         void cuForprop(const std::vector<float>& input);
+        void cuForprop(const std::vector<std::vector<float>>& input);
         void cuBackprop(const std::vector<float>& target);
         void cuBackprop(const std::vector<std::vector<float>>& target);
         void cuTrain(const std::vector<float>& input, const std::vector<float>& target);
@@ -128,6 +103,7 @@ public:
         std::map<std::string, cl::Kernel> kernels; // Map to store kernel objects by name
 
         void clForprop(const std::vector<float>& input);
+        void clForprop(const std::vector<std::vector<float>>& input);
         void clBackprop(const std::vector<float>& target);
         void clBackprop(const std::vector<std::vector<float>>& target);
         void clTrain(const std::vector<float>& input, const std::vector<float>& target);
@@ -155,7 +131,7 @@ public:
  *          - Both c and b are trainable parameters.
  */
 class mnn2d {
-private:
+public:
     float order;                    // order of neurons
     int inWidth;                    // input matrix width
     int inHeight;                   // input matrix height
@@ -185,13 +161,11 @@ private:
     std::vector<std::vector<std::vector<float>>> dotProds;      // (activation^n) * clayers + blayers = dot products
     std::vector<std::vector<std::vector<float>>> activate;      // activations of the network
 
-public:
-
     std::vector<std::vector<std::vector<float>>> inputBatch;    // input vector
     std::vector<std::vector<float>> outputBatch;                // output vector
     std::vector<std::vector<float>> targetBatch;                // target vector
-    std::vector<std::vector<std::vector<std::vector<float>>>> dotProdsBatch;    // for batch
-    std::vector<std::vector<std::vector<std::vector<float>>>> activateBatch;    // for batch
+    std::vector<std::vector<std::vector<std::vector<float>>>> dotBatch;    // for batch
+    std::vector<std::vector<std::vector<std::vector<float>>>> actBatch;    // for batch
 
 // constructors
 
@@ -200,38 +174,8 @@ public:
     mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::string binFileAddress);
     mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, std::string binFileAddress);
 
-    void setbatch(int batchsize) { this->batchSize = batchsize; }
-    void setepochs(int epochs) { this->epochs = epochs; }
-    void setiterations(int iterations) { this->iterations = iterations; }
-    void setlearningrate(float learningrate) { this->learningRate = learningrate; }
-    void setCWeights(std::vector<std::vector<float>>& cweight, int layerNumber) { cweights[layerNumber - 1] = cweight; }
-    void setBWeights(std::vector<std::vector<float>>& bweight, int layerNumber) { bweights[layerNumber - 1] = bweight; }
-    void setCGradients(std::vector<std::vector<float>>& cgradient, int layerNumber) { cgradients[layerNumber - 1] = cgradient; }
-    void setBGradients(std::vector<std::vector<float>>& bgradient, int layerNumber) { bgradients[layerNumber - 1] = bgradient; }
-    void setActivate(std::vector<std::vector<float>>& act, int layerNumber) { activate[layerNumber - 1] = act; }
-    void setDotProds(std::vector<std::vector<float>>& dot, int layerNumber) { dotProds[layerNumber - 1] = dot; }
-    // access C weight layer (1-based index)
-    std::vector<std::vector<float>> getCWeights(int layerNumber) { return cweights[layerNumber-1]; }
-    std::vector<std::vector<float>> getBWeights(int layerNumber) { return bweights[layerNumber-1]; }
-    std::vector<std::vector<float>> getCGradients(int layerNumber) { return cgradients[layerNumber-1]; }
-    std::vector<std::vector<float>> getBGradients(int layerNumber) { return bgradients[layerNumber-1]; }
-    std::vector<std::vector<float>> getActivate(int layerNumber) { return activate[layerNumber-1]; }
-    std::vector<std::vector<float>> getDotProds(int layerNumber) { return dotProds[layerNumber-1]; }
-    // get rows and columns
-    int getCWrows(int layerNumber) { return cweights[layerNumber].size(); }
-    int getCWcols(int layerNumber) { return cweights[layerNumber][0].size(); }
-    int getBWrows(int layerNumber) { return bweights[layerNumber].size(); }
-    int getBWcols(int layerNumber) { return bweights[layerNumber][0].size(); }
-    int getCGrows(int layerNumber) { return cgradients[layerNumber].size(); }
-    int getCGcols(int layerNumber) { return cgradients[layerNumber][0].size(); }
-    int getBGrows(int layerNumber) { return bgradients[layerNumber].size(); }
-    int getBGcols(int layerNumber) { return bgradients[layerNumber][0].size(); }
-    int getArows(int layerNumber) { return activate[layerNumber].size(); }
-    int getAcols(int layerNumber) { return activate[layerNumber][0].size(); }
-    int getDrows(int layerNumber) { return dotProds[layerNumber].size(); }
-    int getDcols(int layerNumber) { return dotProds[layerNumber][0].size(); }
-
     void makeBinFile(const std::string& fileAddress);
+    void initiateWeights(int type);
 
     #ifdef USE_CPU
 

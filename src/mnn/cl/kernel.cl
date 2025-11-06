@@ -200,25 +200,19 @@ __kernel void dPower(__global float* x, __global float* out, float n, int size)
     }
 }
 
-__kernel void meanPool(__global float* in, __global float* out, int inRows, int inCols, int poolSize) {
-    int r = get_global_id(0); // Current row in the output
-    int c = get_global_id(1); // Current column in the output
 
-    int outRows = inRows / poolSize;
-    int outCols = inCols / poolSize;
-
-    if (r < outRows && c < outCols) {
+__kernel void meanPool(__global float* in, __global float* out, int inRows, int inCols, int poolSize)
+{
+    int c = get_global_id(0); // c is the column index.
+    if (c < inCols) {
         float sum = 0.0f;
-        for (int i = 0; i < poolSize; ++i) {
-            for (int j = 0; j < poolSize; ++j) {
-                int in_row = r * poolSize + i;
-                int in_col = c * poolSize + j;
-                sum += in[in_row * inCols + in_col];
-            }
+        for (int r = 0; r < inRows; ++r) {
+            sum += in[r * inCols + c];
         }
-        out[r * outCols + c] = sum / (poolSize * poolSize);
+        out[c] = sum / (float)inRows;
     }
 }
+
 
 __kernel void maxPool(__global float* in, __global float* out, int inRows, int inCols, int poolSize) {
     int r = get_global_id(0); // Current row in the output

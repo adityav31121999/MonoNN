@@ -39,7 +39,7 @@ elseif(USE_OPENCL)
         mnn/cl/kernel.cl
         mnn/cl/kernels.cpp
         mnn/cl/clforprop.cpp
-        mnn/cl/clbackprop.cpp
+        mnn/cl/clBackprop.cpp
         mnn/cl/clbackBatch.cpp
         mnn/cl/cltrain.cpp
         mnn/cl/clBufTrain.cpp

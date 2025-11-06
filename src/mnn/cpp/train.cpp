@@ -10,11 +10,13 @@
  * @param target The target output vector.
  */
 void mnn::train(const std::vector<float>& input, const std::vector<float>& target) {
+    std::cout << "Training on single input-output pair.\n";
     int i = 0;
     while (1) {
         // 1. Forward propagation
         this->input = input;
         forprop(this->input);
+        std::cout << "Forprop done" << std::endl;
 
         if(maxIndex(output) != maxIndex(target)) {
             std::cout << "Correct output predicted :) at epoch " << i << "." << std::endl;
@@ -161,7 +163,8 @@ void mnn2d::trainBatch(const std::vector<std::vector<std::vector<float>>>& input
         if (correct_predictions == inputs.size()) {
             std::cout << "All " << inputs.size() << " outputs in the batch are correct after " << totalEpochs << " epochs. Training complete." << std::endl;
             break;
-        } else {
+        }
+        else {
             std::cout << correct_predictions << "/" << inputs.size() << " correct. Increasing epochs by 10 and continuing training." << std::endl;
             this->epochs += 10;
         }

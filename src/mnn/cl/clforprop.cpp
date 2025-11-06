@@ -90,7 +90,8 @@ void mnn::clForprop(const std::vector<float>& input)
 
         // Read the final activation back to the host output vector
         CL_CHECK(clCommandQueue.enqueueReadBuffer(d_activate[layers - 1], CL_TRUE, 0, sizeof(float) * output.size(), output.data()));
-    } catch (const std::runtime_error& e) {
+    }
+    catch (const std::runtime_error& e) {
         throw std::runtime_error(std::string("Exception in mnn::clForprop: ") + e.what());
     }
 }
@@ -160,10 +161,10 @@ void mnn2d::clForprop(const std::vector<std::vector<float>>& input)
         }
         kernelSoftMax.setArg(0, d_dotProds[0]);
         kernelSoftMax.setArg(1, d_activate[0]);
-        kernelSoftMax.setArg(2, 1.1f); // Temperature
+        kernelSoftMax.setArg(2, SOTMAX_TEMP);
         kernelSoftMax.setArg(3, (int)dotprod_size);
         cl::NDRange globalSoftmax(dotprod_size);
-        cl::NDRange localSoftmax(dotprod_size); // The kernel requires the entire vector to be in one work-group
+        cl::NDRange localSoftmax(dotprod_size);
         CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSoftMax, cl::NullRange, globalSoftmax, localSoftmax));
 
         // Copy results back to host vectors
@@ -206,15 +207,21 @@ void mnn2d::clForprop(const std::vector<std::vector<float>>& input)
             CL_CHECK(clCommandQueue.enqueueReadBuffer(d_activate[i], CL_TRUE, 0, sizeof(float) * activate_size, (void*)flatten(activate[i]).data()));
         }
 
+        int last_layer_rows = activate[layers - 1].size();
+        int last_layer_cols = activate[layers - 1][0].size();
+        d_output = cl::Buffer(clContext, CL_MEM_WRITE_ONLY, sizeof(float) * last_layer_cols);
         kernelMeanPool.setArg(0, d_activate[layers - 1]);
         kernelMeanPool.setArg(1, d_output);
-        kernelMeanPool.setArg(2, (int)activate[layers - 1].size());
-        kernelMeanPool.setArg(3, (int)activate[layers - 1][0].size());
-        cl::NDRange globalMeanPool(activate[layers - 1].size());
-        cl::NDRange localMeanPool(activate[layers - 1].size());
-        CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelMeanPool, cl::NullRange, globalMeanPool, localMeanPool));
+        kernelMeanPool.setArg(2, last_layer_rows);
+        kernelMeanPool.setArg(3, last_layer_cols);
+        kernelMeanPool.setArg(4, 1);
+        cl::NDRange globalPool = calculate_global_1d(WORKSIZE_1D, last_layer_cols);
+        CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelMeanPool, cl::NullRange, globalPool, local_1d));
+
+        // Read the final pooled output back to the host output vector
         CL_CHECK(clCommandQueue.enqueueReadBuffer(d_output, CL_TRUE, 0, sizeof(float) * output.size(), output.data()));
-    } catch (const std::runtime_error& e) {
+    }
+    catch (const std::runtime_error& e) {
         throw std::runtime_error(std::string("Exception in mnn2d::clForprop: ") + e.what());
     }
 }

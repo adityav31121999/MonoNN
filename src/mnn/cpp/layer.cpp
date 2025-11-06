@@ -60,8 +60,9 @@ void layerForward(const std::vector<float>& input, std::vector<float>& output, c
     if(output.size() != bweights[0].size()) {
         throw std::runtime_error("output size and bweights columns mismatch :)");
     }
-    
+    std::cout << "Layer forward started" << std::endl;
     std::vector<float> powerIn = power(input, n);
+    std::cout << "Powered up" << std::endl;
     for(int i = 0; i < cweights.size(); i++) {
         for(int j = 0; j < cweights[0].size(); j++) {
             output[j] += (powerIn[i]*cweights[i][j]) + bweights[i][j];
