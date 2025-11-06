@@ -96,24 +96,18 @@ void layerForward(const std::vector<std::vector<float>>& input, std::vector<std:
 
 // single layer backprop (with direct weights update)
 
-void layerBackward(const std::vector<float>& incoming, const std::vector<float>& prevAct, 
-                    std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& B, 
-                    std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb, 
-                    float m, float alpha, float learning, int typeOfUpdate);
-void layerBackward(const std::vector<float>& incoming, std::vector<float>& outgoing, const std::vector<float>& prevAct, 
-                    std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& B, 
-                    std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb,
-                    float m, float alpha, float learning, int typeOfUpdate);
+void layerBackward(const std::vector<float>& incoming, const std::vector<float>& prevAct, std::vector<std::vector<float>>& C,
+                    std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb, float m, float alpha);
+void layerBackward(const std::vector<float>& incoming, std::vector<float>& outgoing, const std::vector<float>& prevAct,
+                    std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& gradc,
+                    std::vector<std::vector<float>>& gradb, float m, float alpha);
 void layerBackward(const std::vector<std::vector<float>>& incoming, const std::vector<std::vector<float>>& prevAct,
-                    std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& B,
-                    std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb,
-                    float m, float alpha, float learning, int typeOfUpdate);
+                    std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& gradc,
+                    std::vector<std::vector<float>>& gradb, float m, float alpha);
 void layerBackward(const std::vector<std::vector<float>>& incoming, std::vector<std::vector<float>>& outgoing,
                     const std::vector<std::vector<float>>& dotProds, const std::vector<std::vector<float>>& prevAct,
-                    std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& B,
-                    std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb,
-                    float m, float alpha, float learning, int typeOfUpdate);
-
+                    std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& gradc,
+                    std::vector<std::vector<float>>& gradb, float m, float alpha);
 
 #ifdef USE_OPENCL
 

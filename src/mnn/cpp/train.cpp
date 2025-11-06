@@ -96,24 +96,27 @@ void mnn::trainBatch(const std::vector<std::vector<float>>& inputs, const std::v
  * @param target The target vector (corresponding to the pooled output).
  */
 void mnn2d::train(const std::vector<std::vector<float>>& input, const std::vector<float>& target) {
+    std::cout << "Training on single input-output pair.\n";
+    this->target = target;
     int i = 0;
     while (1) {
         // 1. Forward propagation
         this->input = input;
         forprop(this->input);
+        std::cout << i << " forward done\n";
 
-        if(maxIndex(output) != maxIndex(target)) {
+        std::cout << "TargetIndex: " << maxIndex(target) << " OutputIndex: " << maxIndex(output) << std::endl;
+        if(maxIndex(output) == maxIndex(target)) {
             std::cout << "Correct output predicted :) at epoch " << i << "." << std::endl;
             break;
         }
         i++;
-
         // check for error and break if acceptable
         float loss = crossEntropy(output, target);
         std::cout << "Current CE Loss at epoch " << i << ": " <<loss << std::endl;
+        if(i == 10) break;
 
         // 2. Backward propagation
-        this->target = target;
         backprop(this->target);
     }
 

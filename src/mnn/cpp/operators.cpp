@@ -126,35 +126,11 @@ std::vector<float> multiply(const std::vector<float>& a, const std::vector<std::
         throw std::invalid_argument("Incompatible dimensions for vector-matrix multiplication. Vector size must match matrix row count.");
     }
 
-/**
-    std::vector<float> result(b.size(), 0.0f);
-    unsigned int num_threads = std::thread::hardware_concurrency();
-    std::vector<std::thread> threads;
-    num_threads = std::min<unsigned int>((unsigned int)b.size(), num_threads > 0 ? num_threads : 1);
- 
-    auto worker = [&](size_t start_row, size_t end_row) {
-        for (size_t i = start_row; i < end_row; ++i) {
-            for (size_t j = 0; j < a.size(); ++j) {
-                result[i] += a[j] * b[i][j];
-            }
-        }
-    };
- 
-    size_t rows_per_thread = b.size() / num_threads;
-    for (unsigned int i = 0; i < num_threads; ++i) {
-        size_t start = i * rows_per_thread;
-        size_t end = (i == num_threads - 1) ? b.size() : start + rows_per_thread;
-        threads.emplace_back(worker, start, end);
-    }
- 
-    for (auto& t : threads) {
-        t.join();
-    }
- */
     // vector to store result
     std::vector<float> result(b[0].size(), 0.0f);
     for(size_t j = 0; j < b[0].size(); j++) {
-        for(size_t i = 0; i < b.size(); i++) { // or a.size()
+        // result(j) = a x jth column of b
+        for(size_t i = 0; i < b.size(); i++) {
             result[j] += a[i] * b[i][j];
         }
     }
@@ -173,31 +149,7 @@ std::vector<std::vector<float>> multiply(const std::vector<std::vector<float>>& 
     if (a.size() != b.size() || a.empty() || (!a.empty() && a[0].size() != b[0].size())) {
         throw std::invalid_argument("Incompatible dimensions for element-wise multiplication. Matrices must have the same dimensions.");
     }
-/*
-    std::vector<std::vector<float>> result(a.size(), std::vector<float>(a[0].size()));
-    unsigned int num_threads = std::thread::hardware_concurrency();
-    std::vector<std::thread> threads;
-    num_threads = std::min<unsigned int>((unsigned int)a.size(), num_threads > 0 ? num_threads : 1);
- 
-    auto worker = [&](size_t start_row, size_t end_row) {
-        for (size_t i = start_row; i < end_row; ++i) {
-            for (size_t j = 0; j < a[0].size(); ++j) {
-                result[i][j] = a[i][j] * b[i][j];
-            }
-        }
-    };
- 
-    size_t rows_per_thread = a.size() / num_threads;
-    for (unsigned int i = 0; i < num_threads; ++i) {
-        size_t start = i * rows_per_thread;
-        size_t end = (i == num_threads - 1) ? a.size() : start + rows_per_thread;
-        threads.emplace_back(worker, start, end);
-    }
- 
-    for (auto& t : threads) {
-        t.join();
-    }
-*/
+
     // matrix to store result
     std::vector<std::vector<float>> result(a.size(), std::vector<float>(b[0].size(), 0.0f));
     for(size_t i = 0; i < a.size(); i++) {
@@ -342,7 +294,7 @@ std::vector<std::vector<float>> reshape(const std::vector<float>& input, int row
  * @param input Input matrix.
  * @return Transposed matrix.
  */
-std::vector<std::vector<float>> transpose(const std::vector<std::vector<float>> &input)
+std::vector<std::vector<float>> transpose(const std::vector<std::vector<float>>& input)
 {
     std::vector<std::vector<float>> result(input[0].size(), std::vector<float>(input.size()));
     for (size_t i = 0; i < input.size(); ++i) {
@@ -358,7 +310,7 @@ std::vector<std::vector<float>> transpose(const std::vector<std::vector<float>> 
  * @param input matrix vector
  * @return average matrix
  */
-std::vector<std::vector<float>> average(const std::vector<std::vector<std::vector<float>>> &input)
+std::vector<std::vector<float>> average(const std::vector<std::vector<std::vector<float>>>& input)
 {
     int n = input.size();
     std::vector<std::vector<float>> result(input[0].size(), std::vector<float>(input[0][0].size()));

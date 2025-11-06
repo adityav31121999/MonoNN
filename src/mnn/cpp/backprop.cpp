@@ -20,12 +20,17 @@ void mnn::backprop(const std::vector<float>& expected) {
     for(int layer = layers - 1; layer >= 1; layer--) {
         std::vector<float> outgoing_gradient;
         layerBackward(incoming_gradient, outgoing_gradient, activate[layer-1], 
-                        cweights[layer], bweights[layer], cgradients[layer], bgradients[layer],
-                        order, alpha, learningRate, type);
+                        cweights[layer], cgradients[layer], bgradients[layer],
+                        order, alpha);
         incoming_gradient = outgoing_gradient;
     }
-    layerBackward(incoming_gradient, input, cweights[0], bweights[0], cgradients[0], bgradients[0],
-                    order, alpha, learningRate, type);
+    layerBackward(incoming_gradient, input, cweights[0], cgradients[0], bgradients[0],
+                    order, alpha);
+    // update weights
+    for(int i = 0; i < layers; i++) {
+        updateWeights(cweights[i], cgradients[i], learningRate, type);
+        updateWeights(bweights[i], bgradients[i], learningRate, type);
+    }
 }
 
 /**
@@ -43,28 +48,32 @@ void mnn::backprop(const std::vector<std::vector<float>>& expected)
     }
     std::vector<std::vector<float>> incoming_gradient = output_error;
     for(int layer = layers - 1; layer >= 1; layer--) {
-        std::vector<std::vector<std::vector<float>>> origC(batchSize), origB(batchSize);
+        std::vector<std::vector<std::vector<float>>> cgrads, bgrads;
+        cgrads.resize(layers, std::vector<std::vector<float>>(cgradients[layer].size(), std::vector<float>(cgradients[layer][0].size(), 0.0f)));
+        bgrads.resize(layers, std::vector<std::vector<float>>(bgradients[layer].size(), std::vector<float>(bgradients[layer][0].size(), 0.0f)));
         std::vector<std::vector<float>> outgoing_gradient(batchSize);
         for(int i = 0; i < batchSize; i++) {
-            origC[i] = cweights[layer];
-            origB[i] = bweights[layer];
             layerBackward(incoming_gradient[i], outgoing_gradient[i], actBatch[layer-1][i], 
-                        origC[i], origB[i], cgradients[layer], bgradients[layer],
-                        order, alpha, learningRate, type);
+                        cweights[layer], cgrads[i], bgrads[i], order, alpha);
             incoming_gradient[i] = outgoing_gradient[i];
         }
-        cweights[layer] = average(origC);
-        bweights[layer] = average(origB);
+        cgradients[layer] = average(cgrads);
+        bgradients[layer] = average(bgrads);
     }
-    std::vector<std::vector<std::vector<float>>> origC(batchSize), origB(batchSize);
+    std::vector<std::vector<std::vector<float>>> cgrads(batchSize), bgrads(batchSize);
+    cgrads.resize(layers, std::vector<std::vector<float>>(cgradients[0].size(), std::vector<float>(cgradients[0][0].size(), 0.0f)));
+    bgrads.resize(layers, std::vector<std::vector<float>>(bgradients[0].size(), std::vector<float>(bgradients[0][0].size(), 0.0f)));
     for(int i = 0; i < batchSize; i++) {
-        origC[i] = cweights[0];
-        origB[i] = bweights[0];
-        layerBackward(incoming_gradient[i], inputBatch[i], origC[i], origB[i], cgradients[0], bgradients[0],
-                    order, alpha, learningRate, type);
+        layerBackward(incoming_gradient[i], inputBatch[i], cweights[0], cgrads[0], bgrads[0],
+                    order, alpha);
     }
-    cweights[0] = average(origC);
-    bweights[0] = average(origB);
+    cgradients[0] = average(cgrads);
+    bgradients[0] = average(bgrads);
+    // update weights
+    for(int i = 0; i < layers; i++) {
+        updateWeights(cweights[i], cgradients[i], learningRate, type);
+        updateWeights(bweights[i], bgradients[i], learningRate, type);
+    }
 }
 
 /**
@@ -72,6 +81,7 @@ void mnn::backprop(const std::vector<std::vector<float>>& expected)
  * @param expected The expected output vector (after pooling).
  */
 void mnn2d::backprop(const std::vector<float>& expected) {
+    std::cout << "Back\n";
     int type = 3;
     this->target = expected;
     std::vector<float> output_error(target.size(), 0.0f);
@@ -88,14 +98,18 @@ void mnn2d::backprop(const std::vector<float>& expected) {
     std::vector<std::vector<float>> outgoing_gradient;
     // Backpropagate the error
     for(int layer = layers - 1; layer >= 1; layer--) {
+        std::cout << "layer " << layer << "\n";
         layerBackward(incoming_gradient, outgoing_gradient, dotProds[layer-1], activate[layer-1],
-                        cweights[layer], bweights[layer], cgradients[layer], bgradients[layer],
-                        order, alpha, learningRate, type);
+                        cweights[layer], cgradients[layer], bgradients[layer], order, alpha);
         incoming_gradient = outgoing_gradient;
     }
     layerBackward(incoming_gradient, reshape(softmax(flatten(input)), input.size(), input[0].size()),
-                    cweights[0], bweights[0], cgradients[0], bgradients[0],
-                    order, alpha, learningRate, type);
+                    cweights[0], cgradients[0], bgradients[0], order, alpha);
+    // update weights
+    for(int i = 0; i < layers; i++) {
+        updateWeights(cweights[i], cgradients[i], learningRate, type);
+        updateWeights(bweights[i], bgradients[i], learningRate, type);
+    }
 }
 
 
@@ -120,29 +134,32 @@ void mnn2d::backprop(const std::vector<std::vector<float>>& expected) {
     }
     // Backpropagate the error
     for(int layer = layers - 1; layer >= 1; layer--) {
-        std::vector<std::vector<std::vector<float>>> origC(batchSize), origB(batchSize);
+        std::vector<std::vector<std::vector<float>>> cgrads, bgrads;
+        cgrads.resize(layers, std::vector<std::vector<float>>(cgradients[layer].size(), std::vector<float>(cgradients[layer][0].size(), 0.0f)));
+        bgrads.resize(layers, std::vector<std::vector<float>>(bgradients[layer].size(), std::vector<float>(bgradients[layer][0].size(), 0.0f)));
         std::vector<std::vector<std::vector<float>>> outgoing_gradient(batchSize);
         for(int i = 0; i < batchSize; i++) {
-            origC[i] = cweights[layer];
-            origB[i] = bweights[layer];
             layerBackward(incoming_gradient[i], outgoing_gradient[i], dotBatch[layer-1][i], actBatch[layer-1][i],
-                            cweights[layer], bweights[layer], cgradients[layer], bgradients[layer],
-                            order, alpha, learningRate, type);
+                            cweights[layer], cgrads[i], bgrads[i], order, alpha);
             incoming_gradient[i] = outgoing_gradient[i];
         }
-        cweights[layer] = average(origC);
-        bweights[layer] = average(origB);
+        cgradients[layer] = average(cgrads);
+        bgradients[layer] = average(bgrads);
     }
-    std::vector<std::vector<std::vector<float>>> origC(batchSize), origB(batchSize);
+    std::vector<std::vector<std::vector<float>>> cgrads(batchSize), bgrads(batchSize);
+    cgrads.resize(layers, std::vector<std::vector<float>>(cgradients[0].size(), std::vector<float>(cgradients[0][0].size(), 0.0f)));
+    bgrads.resize(layers, std::vector<std::vector<float>>(bgradients[0].size(), std::vector<float>(bgradients[0][0].size(), 0.0f)));
     for(int i = 0; i < batchSize; i++) {
-        origC[i] = cweights[0];
-        origB[i] = bweights[0];
         layerBackward(incoming_gradient[i], reshape(softmax(flatten(inputBatch[i])), inputBatch[0][i].size(), inputBatch[0][i].size()),
-                        cweights[0], bweights[0], cgradients[0], bgradients[0],
-                        order, alpha, learningRate, type);
+                        cweights[0], cgrads[i], bgrads[i], order, alpha);
     }
-    cweights[0] = average(origC);
-    bweights[0] = average(origB);
+    cgradients[0] = average(cgrads);
+    bgradients[0] = average(bgrads);
+    // update weights
+    for(int i = 0; i < layers; i++) {
+        updateWeights(cweights[i], cgradients[i], learningRate, type);
+        updateWeights(bweights[i], bgradients[i], learningRate, type);
+    }
 }
 
 #endif

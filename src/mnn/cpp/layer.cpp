@@ -147,29 +147,20 @@ void layerForward(const std::vector<std::vector<float>>& input, std::vector<std:
  * @brief single layer backprop for mnn for first layer
  * @param[in] incoming incoming gradient (dL/dz_l) vector
  * @param[in] prevAct activation of previous layer vector
- * @param[in, out] C current layers coefficients weights matrix
- * @param[in, out] B current layers bias weights matrix
+ * @param[in] C current layers coefficients weights matrix
  * @param[out] gradc gradients for C matrix
  * @param[out] gradb gradeitns for B matrix
  * @param[in] m order of monomial
- * @param[in] learning learning rate
  * @param[in] alpha major gradient for C
- * @param[in] typeOfUpdate type of weight update method
  */
 void layerBackward(const std::vector<float>& incoming,
                     const std::vector<float>& prevAct, 
                     std::vector<std::vector<float>>& C,
-                    std::vector<std::vector<float>>& B,
                     std::vector<std::vector<float>>& gradc,
                     std::vector<std::vector<float>>& gradb,
-                    float m, float alpha, float learning, int typeOfUpdate)
+                    float m, float alpha)
 {
-    // store final updates here
-    std::vector<std::vector<float>> new_C(C.size(), std::vector<float>(C[0].size(), 0.0f));
-    std::vector<std::vector<float>> new_B(B.size(), std::vector<float>(B[0].size(), 0.0f));
-    new_C = C, new_B = B;
-
-    std::vector<float> v1(B.size(), 1.0f);          // dz_l/dB_l
+    std::vector<float> v1(gradb.size(), 1.0f);          // dz_l/dB_l
     std::vector<float> prev_p = power(prevAct, m);  // dz_l/dC_l
     // derivativ of prevAct (no sigmoid applied)
     std::vector<float> dprevAct(prevAct.size(), 1.0f);
@@ -181,10 +172,6 @@ void layerBackward(const std::vector<float>& incoming,
             gradb[i][j] = (1.0f - alpha) * incoming[j];
         }
     }
-
-    updateWeights(new_C, gradc, learning, typeOfUpdate);
-    updateWeights(new_B, gradb, learning, typeOfUpdate);
-    C = new_C, B = new_B;
 }
 
 
@@ -192,28 +179,19 @@ void layerBackward(const std::vector<float>& incoming,
  * @brief single layer backprop for mnn2d for first layer
  * @param[in] incoming incoming gradient (dL/dz_l) matrix
  * @param[in] prevAct activation of previous layer matrix
- * @param[in, out] C current layers coefficients weights matrix
- * @param[in, out] B current layers bias weights matrix
+ * @param[in] C current layers coefficients weights matrix
  * @param[out] gradc gradients for C matrix
  * @param[out] gradb gradeitns for B matrix
  * @param[in] m order of monomial
- * @param[in] learning learning rate
  * @param[in] alpha major gradient for C
- * @param[in] typeOfUpdate type of weight update method
  */
 void layerBackward(const std::vector<std::vector<float>>& incoming,
                     const std::vector<std::vector<float>>& prevAct,
                     std::vector<std::vector<float>>& C,
-                    std::vector<std::vector<float>>& B,
                     std::vector<std::vector<float>>& gradc,
                     std::vector<std::vector<float>>& gradb,
-                    float m, float alpha, float learning, int typeOfUpdate)
+                    float m, float alpha)
 {
-    // store final updates here
-    std::vector<std::vector<float>> new_C(C.size(), std::vector<float>(C[0].size(), 0.0f));
-    std::vector<std::vector<float>> new_B(B.size(), std::vector<float>(B[0].size(), 0.0f));
-    new_C = C, new_B = B;
-
     // dz_l/dB_l
     std::vector<std::vector<float>> v1(prevAct.size(), std::vector<float>(prevAct[0].size(), 1.0f));
     // dz_l/dC_l
@@ -227,10 +205,6 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
             gradb[i][j] = (1 - alpha) * gradb[i][j];
         }
     }
-
-    updateWeights(new_C, gradc, learning, typeOfUpdate);
-    updateWeights(new_B, gradb, learning, typeOfUpdate);
-    C = new_C, B = new_B;
 }
 
 //// Backprop -> last to second layer ////
@@ -240,32 +214,23 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
  * @param[in] incoming incoming gradient (dL/dz_l) vector
  * @param[out] outgoing outgoing gradient (dL/dz_(l-1)) vector
  * @param[in] prevAct activation of previous layer vector
- * @param[in, out] C current layers coefficients weights matrix
- * @param[in, out] B current layers bias weights matrix
+ * @param[in] C current layers coefficients weights matrix
  * @param[out] gradc gradients for C matrix
  * @param[out] gradb gradeitns for B matrix
  * @param[in] m order of monomial
- * @param[in] learning learning rate
  * @param[in] alpha major gradient for C
- * @param[in] typeOfUpdate type of weight update method
  */
-void layerBackward(const std::vector<float>& incoming, std::vector<float>& outgoing,
-                    const std::vector<float>& prevAct, 
-                    std::vector<std::vector<float>>& C,
-                    std::vector<std::vector<float>>& B,
-                    std::vector<std::vector<float>>& gradc,
-                    std::vector<std::vector<float>>& gradb,
-                    float m, float alpha, float learning, int typeOfUpdate)
+void layerBackward(const std::vector<float>& incoming,          // width[l]
+                    std::vector<float>& outgoing,               // width[l-1]
+                    const std::vector<float>& prevAct,          // width[l-1]
+                    std::vector<std::vector<float>>& C,         // width[l-1] x width[l]
+                    std::vector<std::vector<float>>& gradc,     // width[l-1] x width[l] 
+                    std::vector<std::vector<float>>& gradb,     // width[l-1] x width[l]
+                    float m, float alpha)
 {
-    // store final updates here
-    std::vector<std::vector<float>> new_C(C.size(), std::vector<float>(C[0].size(), 0.0f));
-    std::vector<std::vector<float>> new_B(B.size(), std::vector<float>(B[0].size(), 0.0f));
-    new_C = C, new_B = B;
-
-    std::vector<float> v1(B.size(), 1.0f);          // dz_l/dB_l
-    std::vector<float> prev_p = power(prevAct, m);  // dz_l/dC_l
+    std::vector<float> prev_p = power(prevAct, m);      // dz_l/dC_l
     // derivative of (prevAct^m) w.r.t prevAct
-    std::vector<float> dprev_p(prevAct.size(), 0.0f); // This is dz_l/da_{l-1} part 1
+    std::vector<float> dprev_p(prevAct.size(), 0.0f);   // This is dz_l/da_{l-1} part 1
     std::transform(prevAct.begin(), prevAct.end(), dprev_p.begin(), 
                     [&m](float x) { 
                         return m * std::pow(x, m - 1.0f); 
@@ -277,7 +242,6 @@ void layerBackward(const std::vector<float>& incoming, std::vector<float>& outgo
                         return x*(1.0f - x); 
                     });
 
-
     // gradc = alpha * prev_p^T x dl/dz_l, gradb = (1 - alpha) * v1^T x dl/dz_l
     for(int i = 0; i < prev_p.size(); i++) {
         for(int j = 0; j < incoming.size(); j++) {
@@ -286,19 +250,14 @@ void layerBackward(const std::vector<float>& incoming, std::vector<float>& outgo
         }
     }
 
-    updateWeights(new_C, gradc, learning, typeOfUpdate);
-    updateWeights(new_B, gradb, learning, typeOfUpdate);
-    C = new_C, B = new_B;
-
     // outgoing gradient = (dl/dz_l x C^T) . dprev_p . dprevAct
-    // incoming gradient x C^T
+    // incoming gradient x C^T, C = width[l-1] * width[l]
     std::vector<std::vector<float>> C_T(C[0].size(), std::vector<float>(C.size(), 0.0f));
-    C_T = transpose(C);
-    outgoing.clear();
-    outgoing.resize(dprev_p.size(), 0.0f);
-    outgoing = multiply(incoming, C_T);
-    outgoing = multiply(outgoing, dprev_p);
-    outgoing = multiply(outgoing, dprevAct);
+    C_T = transpose(C);     // width[l] * width[l-1], l = layer count
+    outgoing.clear(); outgoing.resize(prevAct.size(), 0.0f);
+    outgoing = multiply(incoming, C_T);         // width[l-1]
+    outgoing = multiply(outgoing, dprev_p);     // width[l-1]
+    outgoing = multiply(outgoing, dprevAct);    // width[l-1]
 }
 
 
@@ -308,30 +267,21 @@ void layerBackward(const std::vector<float>& incoming, std::vector<float>& outgo
  * @param[out] outgoing outgoing gradient (dL/dz_(l-1)) matrix
  * @param[in] dotProds previous layers dot product
  * @param[in] prevAct activation of previous layer dot product
- * @param[in, out] C current layers coefficients weights matrix
- * @param[in, out] B current layers bias weights matrix
+ * @param[in] C current layers coefficients weights matrix
  * @param[out] gradc gradients for C matrix
  * @param[out] gradb gradeitns for B matrix
  * @param[in] m order of monomial
- * @param[in] learning learning rate
  * @param[in] alpha major gradient for C
- * @param[in] typeOfUpdate type of weight update method
  */
 void layerBackward(const std::vector<std::vector<float>>& incoming,
                     std::vector<std::vector<float>>& outgoing,
                     const std::vector<std::vector<float>>& dotProds,
                     const std::vector<std::vector<float>>& prevAct,
                     std::vector<std::vector<float>>& C,
-                    std::vector<std::vector<float>>& B,
                     std::vector<std::vector<float>>& gradc,
                     std::vector<std::vector<float>>& gradb,
-                    float m, float alpha, float learning, int typeOfUpdate)
+                    float m, float alpha)
 {
-    // store final updates here
-    std::vector<std::vector<float>> new_C(C.size(), std::vector<float>(C[0].size(), 0.0f));
-    std::vector<std::vector<float>> new_B(B.size(), std::vector<float>(B[0].size(), 0.0f));
-    new_C = C, new_B = B;
-
     // dz_l/dB_l
     std::vector<std::vector<float>> v1(prevAct.size(), std::vector<float>(prevAct[0].size(), 1.0f));
     // dz_l/dC_l
@@ -367,10 +317,6 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
             gradb[i][j] = (1 - alpha) * gradb[i][j];
         }
     }
-
-    updateWeights(new_C, gradc, learning, typeOfUpdate);
-    updateWeights(new_B, gradb, learning, typeOfUpdate);
-    C = new_C, B = new_B;
 }
 
 #endif

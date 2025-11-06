@@ -2,20 +2,25 @@
 #include <stdexcept>
 #include <iostream>
 
+/**
+ * @brief train network on given dataset
+ */
 void mnn::train(const std::string &dataSetPath, int batchSize)
 {
     // access all images from the file
     int totalFiles = 0;
     // train network using file one-by-one
     if (batchSize == 1) {
+        std::vector<float> in;
+        std::vector<float> exp;
         for(int i = 0; i < totalFiles; i++) {
-            std::vector<float> input;
-            std::vector<float> target;
-            // extract label from name
-            // convert image to flat vector as input
-            #ifdef USE_CPU      // use C++ function
-            #elif USE_CUDA      // use CUDA host-side function
-            #elif USE_OPENCL    // use OpenCL host-side function
+            // make input and target
+            #ifdef USE_CPU
+                train(in, exp);
+            #elif USE_CUDA
+                cuTrain(in, exp);
+            #elif USE_OPENCL
+                clTrain(in, exp);
             #endif
         }
     }
@@ -23,16 +28,19 @@ void mnn::train(const std::string &dataSetPath, int batchSize)
     else if (batchSize > 1) {
         // total batches
         int totalBatches = totalFiles / batchSize;
-        std::vector<std::vector<float>> input;
-        std::vector<std::vector<float>> target;
+        std::vector<std::vector<float>> in;
+        std::vector<std::vector<float>> exp;
         for(int i = 0; i < totalFiles; i += batchSize) {
             for(int j = 0; j < batchSize; j++) {
                 // extract label from name
                 // convert image to flat vector as input
             }
-            #ifdef USE_CPU      // use C++ function
-            #elif USE_CUDA      // use CUDA host-side function
-            #elif USE_OPENCL    // use OpenCL host-side function
+            #ifdef USE_CPU
+                trainBatch(in, exp);
+            #elif USE_CUDA
+                cuTrainBatch(in, exp);
+            #elif USE_OPENCL
+                clTrainBatch(in, exp);
             #endif
         }
     }
@@ -41,6 +49,9 @@ void mnn::train(const std::string &dataSetPath, int batchSize)
     }
 }
 
+/**
+ * @brief train network on given dataset
+ */
 void mnn2d::train(const std::string &dataSetPath, int batchSize)
 {
     // access all images from the file
@@ -48,13 +59,15 @@ void mnn2d::train(const std::string &dataSetPath, int batchSize)
     // train network using file one-by-one
     if (batchSize == 1) {
         for(int i = 0; i < totalFiles; i++) {
-            std::vector<std::vector<float>> input;
-            std::vector<float> target;
-            // extract label from name
-            // convert image to flat vector as input
-            #ifdef USE_CPU      // use C++ function
-            #elif USE_CUDA      // use CUDA host-side function
-            #elif USE_OPENCL    // use OpenCL host-side function
+            std::vector<std::vector<float>> in;
+            std::vector<float> exp;
+            // make input and target
+            #ifdef USE_CPU
+                train(in, exp);
+            #elif USE_CUDA
+                cuTrain(in, exp);
+            #elif USE_OPENCL
+                clTrain(in, exp);
             #endif
         }
     }
@@ -62,16 +75,20 @@ void mnn2d::train(const std::string &dataSetPath, int batchSize)
     else if (batchSize > 1) {
         // total batches
         int totalBatches = totalFiles / batchSize;
-        std::vector<std::vector<std::vector<float>>> input;
-        std::vector<std::vector<float>> target;
+        std::vector<std::vector<std::vector<float>>> in;
+        std::vector<std::vector<float>> exp;
         for(int i = 0; i < totalFiles; i += batchSize) {
             for(int j = 0; j < batchSize; j++) {
                 // extract label from name
                 // convert image to flat vector as input
             }
-            #ifdef USE_CPU      // use C++ function
-            #elif USE_CUDA      // use CUDA host-side function
-            #elif USE_OPENCL    // use OpenCL host-side function
+            // make input and target
+            #ifdef USE_CPU
+                trainBatch(in, exp);
+            #elif USE_CUDA
+                cuTrainBatch(in, exp);
+            #elif USE_OPENCL
+                clTrainBatch(in, exp);
             #endif
         }
     }

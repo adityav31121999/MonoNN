@@ -148,6 +148,9 @@ mnn2d::mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, st
     order(order), inWidth(inw), inHeight(inh), outWidth(outw), layers(width.size()),
     width(width), batchSize(1), binFileAddress(binFileAddress)
 {
+    input.resize(inh, std::vector<float>(inw, 0.0f));
+    target.resize(outw, 0.0f);
+    output.resize(outw, 0.0f);
     // initialize weights
     cweights.resize(layers);
     bweights.resize(layers);
