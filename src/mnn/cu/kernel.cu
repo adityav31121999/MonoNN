@@ -4,9 +4,9 @@
 #include <cuda_runtime.h>
 #include <cuda.h>
 
+#include <cfloat> // For FLT_MAX
+
 // Helper macro/function for parallel reduction within a thread block.
-// This is a common pattern for block-level reductions.
-// Note: This pattern assumes blockDim.x is a power of 2.
 #define WORK_GROUP_REDUCE(OP, INIT_VAL) \
     for (unsigned int s = blockDim.x / 2; s > 0; s /= 2) { \
         __syncthreads(); \
@@ -15,17 +15,16 @@
         } \
     }
 
-// CUDA device functions must be prefixed with __device__
-
-__device__ inline float OP_MAX(float a, float b) { return max(a, b); }
-__device__ inline float OP_MIN(float a, float b) { return min(a, b); }
-__device__ inline float OP_SUM(float a, float b) { return a + b; }
-__device__ inline float OP_SUB(float a, float b) { return a - b; }
-__device__ inline float OP_MUL(float a, float b) { return a * b; }
-__device__ inline float OP_DIV(float a, float b) { return a / b; }
-__device__ inline float OP_POW(float a, float b) { return pow(a, b); }
-__device__ inline float OP_EXP(float a) { return exp(a); }
-__device__ inline float OP_SIGN(float a) {
+// CUDA device-side math functions
+__device__ __forceinline__ float OP_MAX(float a, float b) { return fmaxf(a, b); }
+__device__ __forceinline__ float OP_MIN(float a, float b) { return fminf(a, b); }
+__device__ __forceinline__ float OP_SUM(float a, float b) { return a + b; }
+__device__ __forceinline__ float OP_SUB(float a, float b) { return a - b; }
+__device__ __forceinline__ float OP_MUL(float a, float b) { return a * b; }
+__device__ __forceinline__ float OP_DIV(float a, float b) { return a / b; }
+__device__ __forceinline__ float OP_POW(float a, float b) { return powf(a, b); }
+__device__ __forceinline__ float OP_EXP(float a) { return expf(a); }
+__device__ __forceinline__ float OP_SIGN(float a) {
     if (a == 0.0f)
         return 0.0f;
     else
@@ -38,7 +37,7 @@ extern "C" __global__ void sigmoid(float* x, float* out, int size)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < size) {
-        out[i] = 1.0f / (1.0f + exp(-x[i]));
+        out[i] = 1.0f / (1.0f + expf(-x[i]));
     }
 }
 
@@ -46,55 +45,135 @@ extern "C" __global__ void sigmoidDer(float* x, float* out, int size)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < size) {
-        float sigmoid_x = 1.0f / (1.0f + exp(-x[i]));
+        float sigmoid_x = 1.0f / (1.0f + expf(-x[i]));
         out[i] = sigmoid_x * (1.0f - sigmoid_x);
+    }
+}
+
+extern "C" __global__ void softmax_reduce(const float* input, float* partial_results,
+                                         float* local_max_dummy, // Dummy, not used
+                                         float* local_sum_dummy, // Dummy, not used
+                                         int size, float temp)
+{
+    extern __shared__ float shared_mem[];       // dynamic memory, divided into two part
+    float* local_max = shared_mem;
+    float* local_sum = &shared_mem[blockDim.x];
+
+    int global_id = blockIdx.x * blockDim.x + threadIdx.x;
+    int local_id = threadIdx.x;
+    int group_id = blockIdx.x;
+    int local_size = blockDim.x;
+    int global_size = gridDim.x * blockDim.x;
+
+    // maximim value in work group
+    float my_max = -FLT_MAX;
+    for (int i = global_id; i < size; i += global_size) {
+        my_max = fmaxf(my_max, input[i]);
+    }
+    local_max[local_id] = my_max;
+
+    __syncthreads();
+
+    // Parallel reduction to find the single max for the entire work-group
+    for (int offset = local_size / 2; offset > 0; offset /= 2) {
+        if (local_id < offset) {
+            local_max[local_id] = fmaxf(local_max[local_id], local_max[local_id + offset]);
+        }
+        __syncthreads();
+    }
+
+    //sum of exponentials
+    float group_max = local_max[0];
+    float my_sum = 0.0f;
+    for (int i = global_id; i < size; i += global_size) {
+        my_sum += expf((input[i] - group_max) / temp);
+    }
+    local_sum[local_id] = my_sum;
+
+    __syncthreads();
+
+    // Parallel reduction to find the single sum for the entire work-group
+    for (int offset = local_size / 2; offset > 0; offset /= 2) {
+        if (local_id < offset) {
+            local_sum[local_id] = local_sum[local_id] + local_sum[local_id + offset];
+        }
+        __syncthreads();
+    }
+
+    // write partial results
+    if (local_id == 0) {
+        partial_results[2 * group_id] = local_sum[0];
+        partial_results[2 * group_id + 1] = group_max;
+    }
+}
+
+
+extern "C" __global__ void softmax_normalize(const float* input,
+                                float* output,
+                                int size,
+                                float temp,
+                                float global_max, // The final max value
+                                float global_sum) // The final sum value
+{
+    int global_id = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (global_id < size) {
+        float val = expf((input[global_id] - global_max) / temp);
+        output[global_id] = val / global_sum;
+    }
+}
+
+
+extern "C" __global__ void softmaxDer_normalize(const float* input,
+                                   float* output,
+                                   int size,
+                                   float temp,
+                                   float global_max,
+                                   float global_sum)
+{
+    int global_id = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (global_id < size) {
+        float val = expf((input[global_id] - global_max) / temp);
+        float s_i = val / global_sum;
+        // The derivative is s_i * (1 - s_i)
+        output[global_id] = s_i * (1.0f - s_i);
     }
 }
 
 extern "C" __global__ void softmax(float* x, float* out, float temp, int size)
 {
-    int global_id = blockIdx.x * blockDim.x + threadIdx.x; // For global data access (linear index)
-    int local_id = threadIdx.x;                           // For shared memory access
-    unsigned int local_size = blockDim.x;                 // Thread block size
+    int global_id = blockIdx.x * blockDim.x + threadIdx.x;
+    int local_id = threadIdx.x;
 
-    // Assuming a max block size of 256 for the shared buffer
     __shared__ float local_buffer[256];
 
     // --- Step 1: Find max value using parallel reduction ---
-
-    // Load data into shared memory. Elements outside 'size' get a safe identity value.
     float my_val = (global_id < size) ? x[global_id] : -FLT_MAX;
     local_buffer[local_id] = my_val;
 
-    __syncthreads(); // Wait for all threads to load their data
+    __syncthreads();
 
-    // Perform parallel max reduction (using the defined macro)
+    // Perform parallel max reduction
     WORK_GROUP_REDUCE(OP_MAX, -FLT_MAX)
 
-    // Thread 0 now has the max value for the block
     float max_val = local_buffer[0];
-
-    __syncthreads(); // Wait for max_val to be visible to all threads
+    __syncthreads();
 
     // --- Step 2: Compute exponentials and sum using parallel reduction ---
-
-    // Compute shifted exponential. Elements outside 'size' get 0.0f (identity for sum).
     float shifted_exp = 0.0f;
     if (global_id < size) {
-        shifted_exp = exp((x[global_id] - max_val) / temp);
+        shifted_exp = expf((x[global_id] - max_val) / temp);
     }
-
     local_buffer[local_id] = shifted_exp;
 
-    __syncthreads(); // Wait for all threads to compute exponentials
+    __syncthreads();
 
     // Perform parallel sum reduction
     WORK_GROUP_REDUCE(OP_SUM, 0.0f)
 
-    // Thread 0 now has the sum of exponentials for the block
     float sum_val = local_buffer[0];
-
-    __syncthreads(); // Wait for sum_val to be visible
+    __syncthreads();
 
     // --- Step 3: Normalize elements and write output ---
     if (global_id < size) {
@@ -106,18 +185,14 @@ extern "C" __global__ void softmax(float* x, float* out, float temp, int size)
     }
 }
 
-
-// Softmax Derivative Kernel
 extern "C" __global__ void softmaxDer(float* x, float* out, float temp, int size)
 {
     int global_id = blockIdx.x * blockDim.x + threadIdx.x;
     int local_id = threadIdx.x;
-    unsigned int local_size = blockDim.x;
 
-    __shared__ float local_buffer[256]; // Must be large enough for max blockDim.x
+    __shared__ float local_buffer[256];
 
     // --- Step 1 & 2: Identical to Softmax kernel to get max_val and sum_val ---
-
     float my_val = (global_id < size) ? x[global_id] : -FLT_MAX;
     local_buffer[local_id] = my_val;
     __syncthreads();
@@ -127,9 +202,8 @@ extern "C" __global__ void softmaxDer(float* x, float* out, float temp, int size
 
     float shifted_exp = 0.0f;
     if (global_id < size) {
-        shifted_exp = exp((x[global_id] - max_val) / temp);
+        shifted_exp = expf((x[global_id] - max_val) / temp);
     }
-
     local_buffer[local_id] = shifted_exp;
     __syncthreads();
     WORK_GROUP_REDUCE(OP_SUM, 0.0f)
@@ -142,10 +216,10 @@ extern "C" __global__ void softmaxDer(float* x, float* out, float temp, int size
         if (sum_val > 0.0f) {
             s_i = shifted_exp / sum_val;
         }
-
         out[global_id] = s_i * (1.0f - s_i);
     }
 }
+
 
 /// ----------------- Math Functions ----------------- ///
 
@@ -177,7 +251,7 @@ extern "C" __global__ void power(float* x, float* out, float n, int size)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < size) {
-        out[i] = pow(x[i], n);
+        out[i] = powf(x[i], n);
     }
 }
 
@@ -185,13 +259,13 @@ extern "C" __global__ void dPower(float* x, float* out, float n, int size)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < size) {
-        out[i] = n * pow(x[i], n - 1.0f);
+        out[i] = n * powf(x[i], n - 1.0f);
     }
 }
 
 extern "C" __global__ void meanPool(float* in, float* out, int inRows, int inCols, int poolSize)
 {
-    int c = blockIdx.x * blockDim.x + threadIdx.x; // c is the column index.
+    int c = blockIdx.x * blockDim.x + threadIdx.x;
     if (c < inCols) {
         float sum = 0.0f;
         for (int r = 0; r < inRows; ++r) {
@@ -201,27 +275,29 @@ extern "C" __global__ void meanPool(float* in, float* out, int inRows, int inCol
     }
 }
 
-extern "C" __global__ void maxPool(float* in, float* out, int inRows, int inCols, int poolSize) {
-    int r = blockIdx.y * blockDim.y + threadIdx.y; // Current row in the output
-    int c = blockIdx.x * blockDim.x + threadIdx.x; // Current column in the output
+extern "C" __global__ void maxPool(float* in, float* out, int inRows, int inCols, int poolSize)
+{
+    int r = blockIdx.y * blockDim.y + threadIdx.y;
+    int c = blockIdx.x * blockDim.x + threadIdx.x;
 
     int outRows = inRows / poolSize;
     int outCols = inCols / poolSize;
 
     if (r < outRows && c < outCols) {
-        float max_val = -FLT_MAX; // Initialize with a very small number
+        float max_val = -FLT_MAX;
         for (int i = 0; i < poolSize; ++i) {
             for (int j = 0; j < poolSize; ++j) {
                 int in_row = r * poolSize + i;
                 int in_col = c * poolSize + j;
-                max_val = max(max_val, in[in_row * inCols + in_col]);
+                max_val = fmaxf(max_val, in[in_row * inCols + in_col]);
             }
         }
         out[r * outCols + c] = max_val;
     }
 }
 
-extern "C" __global__ void transpose(const float* in, float* out, int rows, int cols) {
+extern "C" __global__ void transpose(const float* in, float* out, int rows, int cols)
+{
     int i = blockIdx.y * blockDim.y + threadIdx.y;
     int j = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < rows && j < cols) {
@@ -229,14 +305,16 @@ extern "C" __global__ void transpose(const float* in, float* out, int rows, int 
     }
 }
 
-extern "C" __global__ void vecxvec2vec(const float* x1, const float* x2, float* result, int size) {
+extern "C" __global__ void vecxvec2vec(const float* x1, const float* x2, float* result, int size)
+{
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < size) {
         result[i] = x1[i] * x2[i];
     }
 }
 
-extern "C" __global__ void vecxvec2mat(const float* x1, const float* x2, float* result, int x1size, int x2size) {
+extern "C" __global__ void vecxvec2mat(const float* x1, const float* x2, float* result, int x1size, int x2size)
+{
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     int resultSize = x1size * x2size;
     if (i < resultSize) {
@@ -246,14 +324,12 @@ extern "C" __global__ void vecxvec2mat(const float* x1, const float* x2, float* 
     }
 }
 
-extern "C" __global__ void vecxmat2vec(const float* vec, const float* mat, float* result, int matRows, int matCols) {
+extern "C" __global__ void vecxmat2vec(const float* vec, const float* mat, float* result, int matRows, int matCols)
+{
     int i = blockIdx.x * blockDim.x + threadIdx.x;
-    // i is the column index of the result vector (0 to matCols-1)
     if (i < matCols) {
-        float sum = 0.0f; // Initialize accumulator
-        // j is the index of vec / row index of mat (0 to matRows-1)
+        float sum = 0.0f;
         for (int j = 0; j < matRows; j++) {
-            // mat[j][i] index is j * matCols + i
             sum += vec[j] * mat[j * matCols + i];
         }
         result[i] = sum;
@@ -261,59 +337,52 @@ extern "C" __global__ void vecxmat2vec(const float* vec, const float* mat, float
 }
 
 extern "C" __global__ void matxmat2mat(const float* mat1, const float* mat2,
-                                       float* result, int mat1Rows, int mat1Cols, int mat2cols)
+                            float* result, int mat1Rows, int mat1Cols, int mat2cols)
 {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int resultSize = mat1Rows * mat2cols; // Total size of the result matrix (M x N)
+    int c = blockIdx.x * blockDim.x + threadIdx.x; // Column of result matrix
+    int r = blockIdx.y * blockDim.y + threadIdx.y; // Row of result matrix
 
-    if (i < resultSize) {
-        int r = i / mat2cols; // Row index in mat1 and result (M)
-        int c = i % mat2cols; // Col index in mat2 and result (N)
-        int K = mat1Cols;     // Inner dimension (K)
+    if (r < mat1Rows && c < mat2cols) {
+        int i = r * mat2cols + c; // Linear index for the result matrix
+        int K = mat1Cols; // Inner dimension for multiplication
 
-        float sum = 0.0f; // Initialize accumulator
+        float sum = 0.0f;
         for (int k = 0; k < K; k++) {
-            // result[r][c] = sum(mat1[r][k] * mat2[k][c])
-            // mat1[r][k] index: r * mat1Cols + k
-            // mat2[k][c] index: k * mat2cols + c
             sum += mat1[r * mat1Cols + k] * mat2[k * mat2cols + c];
         }
         result[i] = sum;
     }
 }
 
-extern "C" __global__ void matxvec2vec(const float* mat, const float* vec, float* result, int matRows, int matCols) {
+extern "C" __global__ void matxvec2vec(const float* mat, const float* vec, float* result, int matRows, int matCols)
+{
     int i = blockIdx.x * blockDim.x + threadIdx.x;
-    // i is the row index of mat / element index of result (0 to matRows-1)
     if (i < matRows) {
-        float sum = 0.0f; // Initialize accumulator
-        // j is the column index of mat / element index of vec (0 to matCols-1)
+        float sum = 0.0f;
         for (int j = 0; j < matCols; j++) {
-            // mat[i][j] index: i * matCols + j
             sum += mat[i * matCols + j] * vec[j];
         }
         result[i] = sum;
     }
 }
 
-extern "C" __global__ void hadamard(const float* mat1, const float* mat2, float* result, int mat1Rows, int mat1Cols) {
+extern "C" __global__ void hadamard(const float* mat1, const float* mat2, float* result, int mat1Rows, int mat1Cols)
+{
     int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int totalSize = mat1Rows * mat1Cols; // Total number of elements in the matrix
+    int totalSize = mat1Rows * mat1Cols;
 
     if (i < totalSize) {
-        // Element-wise multiplication (Hadamard product)
         result[i] = mat1[i] * mat2[i];
     }
 }
 
 extern "C" __global__ void hadamard2(const float* mat1, const float* mat2, const float* mat3,
-                                     float* result, int mat1Rows, int mat1Cols)
+        float* result, int mat1Rows, int mat1Cols)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int totalSize = mat1Rows * mat1Cols; // Total number of elements in the matrix
+    int totalSize = mat1Rows * mat1Cols;
 
     if (i < totalSize) {
-        // Element-wise multiplication (Hadamard product)
         result[i] = mat1[i] * mat2[i] * mat3[i];
     }
 }
@@ -341,7 +410,6 @@ extern "C" __global__ void matrix_vector_average(
     }
 
     int outputIndex = j * Cols + k;
-
     outputBuffer[outputIndex] = sum / (float)N;
 }
 
@@ -351,9 +419,8 @@ extern "C" __global__ void matrix_vector_sum(
     const int Rows,
     const int Cols)
 {
-    // Note: This remains a serial implementation on a single thread.
-    // For large matrices, a parallel reduction would be more efficient.
-    if ((blockIdx.x * blockDim.x + threadIdx.x) == 0 && (blockIdx.y * blockDim.y + threadIdx.y) == 0) {
+    // This is a simple, non-parallelized sum for demonstration.
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
         float sum = 0.0f;
         for (int i = 0; i < Rows * Cols; ++i) {
             sum += inputBuffer[i];
@@ -365,74 +432,108 @@ extern "C" __global__ void matrix_vector_sum(
 /// ----------------- Forward Propagation ----------------- ///
 
 extern "C" __global__ void kernelLayerForward1(const float* input, float* output,
-                                               const float* cweights, const float* bweights,
-                                               int inSize, int outSize)
+                                  const float* cweights, const float* bweights,
+                                  int inSize, int outSize)
 {
     int j = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (j < outSize) {
         float sum = 0.0f;
         for (int i = 0; i < inSize; ++i) {
-            sum += (input[i] * cweights[i * outSize + j]) + bweights[i * outSize + j];
+            int weight_idx = i * outSize + j;
+            sum += (input[i] * cweights[weight_idx]) + bweights[weight_idx];
         }
-        output[j] += sum;
+
+        float final_val = output[j] + sum;
+
+        if (isnan(final_val)) {
+            final_val = 0.0f;
+        } else if (isinf(final_val)) {
+            final_val = 1.0f;
+        }
+        
+        output[j] = final_val;
     }
 }
 
 extern "C" __global__ void kernelLayerForward2(const float* input, float* output,
-                                               const float* cweights, const float* bweights,
-                                               int inSize, int outSize, float n)
+                                  const float* cweights, const float* bweights,
+                                  int inSize, int outSize, float n)
 {
     int j = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (j < outSize) {
         float sum = 0.0f;
         for (int i = 0; i < inSize; ++i) {
-            float powered_input_i = pow(input[i], n);
-            sum += (powered_input_i * cweights[i * outSize + j]) + bweights[i * outSize + j];
+            float powered_input_i = powf(input[i], n);
+            int weight_idx = i * outSize + j;
+            sum += (powered_input_i * cweights[weight_idx]) + bweights[weight_idx];
         }
-        output[j] += sum;
+
+        float final_val = output[j] + sum;
+
+        if (isnan(final_val)) {
+            final_val = 0.0f;
+        } else if (isinf(final_val)) {
+            final_val = 1.0f;
+        }
+        
+        output[j] = final_val;
     }
 }
 
 extern "C" __global__ void kernelLayerForward3(const float* input, float* output,
-                                               const float* cweights, const float* bweights,
-                                               int inHeight, int inWidth, int outSize)
+                                  const float* cweights, const float* bweights,
+                                  int inHeight, int inWidth, int outSize)
 {
-    int i = blockIdx.y * blockDim.y + threadIdx.y; // Row index
-    int j = blockIdx.x * blockDim.x + threadIdx.x; // Column index
+    int i = blockIdx.y * blockDim.y + threadIdx.y;
+    int j = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (i < inHeight && j < outSize) {
         float dotProd_ij = 0.0f;
         for (int k = 0; k < inWidth; ++k) {
-            dotProd_ij += input[i * inWidth + k] * cweights[k * outSize + j];
+            dotProd_ij += (input[i * inWidth + k] * cweights[k * outSize + j]) + bweights[k * outSize + j];
         }
-        output[i * outSize + j] = dotProd_ij + bweights[i * outSize + j];
+
+        if (isnan(dotProd_ij)) {
+            dotProd_ij = 0.0f;
+        } else if (isinf(dotProd_ij)) {
+            dotProd_ij = 1.0f;
+        }
+
+        output[i * outSize + j] = dotProd_ij;
     }
 }
 
 extern "C" __global__ void kernelLayerForward4(const float* input, float* output,
-                                               const float* cweights, const float* bweights,
-                                               int inHeight, int inWidth, int outSize, float n)
+                                  const float* cweights, const float* bweights,
+                                  int inHeight, int inWidth, int outSize, float n)
 {
-    int i = blockIdx.y * blockDim.y + threadIdx.y; // Row index
-    int j = blockIdx.x * blockDim.x + threadIdx.x; // Column index
+    int i = blockIdx.y * blockDim.y + threadIdx.y;
+    int j = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (i < inHeight && j < outSize) {
         float dotProd_ij = 0.0f;
         for (int k = 0; k < inWidth; ++k) {
-            dotProd_ij += pow(input[i * inWidth + k], n) * cweights[k * outSize + j];
+            dotProd_ij += (powf(input[i * inWidth + k], n) * cweights[k * outSize + j]) + bweights[k * outSize + j];
         }
-        output[i * outSize + j] = dotProd_ij + bweights[i * outSize + j];
+
+        if (isnan(dotProd_ij)) {
+            dotProd_ij = 0.0f;
+        } else if (isinf(dotProd_ij)) {
+            dotProd_ij = 1.0f;
+        }
+
+        output[i * outSize + j] = dotProd_ij;
     }
 }
 
 /// ----------------- Update Weights ----------------- ///
 
 extern "C" __global__ void kernelUpdateWeights(float* weights,
-                                               float* gweights,
-                                               float learning_rate,
-                                               int totalElements)
+                                float* gweights,
+                                float learning_rate,
+                                int totalElements)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < totalElements) {
@@ -441,10 +542,10 @@ extern "C" __global__ void kernelUpdateWeights(float* weights,
 }
 
 extern "C" __global__ void kernelUpdateWeightsWithL1(float* weights,
-                                                     float* gweights,
-                                                     int totalElements,
-                                                     float learning_rate,
-                                                     float lambda_l1)
+                                        float* gweights,
+                                        int totalElements,
+                                        float learning_rate,
+                                        float lambda_l1)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < totalElements) {
@@ -457,10 +558,10 @@ extern "C" __global__ void kernelUpdateWeightsWithL1(float* weights,
 }
 
 extern "C" __global__ void kernelUpdateWeightsWithL2(float* weights,
-                                                     float* gweights,
-                                                     int totalElements,
-                                                     float learning_rate,
-                                                     float lambda_l2)
+                                        float* gweights,
+                                        int totalElements,
+                                        float learning_rate,
+                                        float lambda_l2)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < totalElements) {
@@ -472,11 +573,11 @@ extern "C" __global__ void kernelUpdateWeightsWithL2(float* weights,
 }
 
 extern "C" __global__ void kernelUpdateWeightsElasticNet(float* weights,
-                                                         float* gweights,
-                                                         int totalElements,
-                                                         float learning_rate,
-                                                         float lambda_l1,
-                                                         float lambda_l2)
+                                            float* gweights,
+                                            int totalElements,
+                                            float learning_rate,
+                                            float lambda_l1,
+                                            float lambda_l2)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < totalElements) {
@@ -490,10 +591,10 @@ extern "C" __global__ void kernelUpdateWeightsElasticNet(float* weights,
 }
 
 extern "C" __global__ void kernelUpdateWeightsWithWeightDecay(float* weights,
-                                                              float* gweights,
-                                                              int totalElements,
-                                                              float learning_rate,
-                                                              float decay_rate)
+                                                 float* gweights,
+                                                 int totalElements,
+                                                 float learning_rate,
+                                                 float decay_rate)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < totalElements) {
@@ -503,27 +604,24 @@ extern "C" __global__ void kernelUpdateWeightsWithWeightDecay(float* weights,
     }
 }
 
+// NOTE: For robust random number generation in CUDA, the cuRAND library is recommended.
+// This is a direct translation of the simple LCG for demonstration.
 extern "C" __global__ void kernelUpdateWeightsDropout(float* weights,
-                                                      float* gweights,
-                                                      int totalElements,
-                                                      float learning_rate,
-                                                      float dropout_rate,
-                                                      unsigned int base_seed)
+                                         float* gweights,
+                                         int totalElements,
+                                         float learning_rate,
+                                         float dropout_rate,
+                                         unsigned int base_seed)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < totalElements) {
-        // Create a unique seed for each thread.
-        // Note: For robust applications, using the cuRAND library is recommended.
         unsigned int seed = base_seed + i;
-
-        // Simple Linear Congruential Generator (LCG) for pseudo-random numbers.
         seed = (seed * 1664525u + 1013904223u);
-        float rand_val = (float)(seed) / (float)(0xFFFFFFFF); // Normalize to [0.0, 1.0]
+        float rand_val = (float)(seed) / (float)(0xFFFFFFFF);
 
         if (rand_val >= dropout_rate) {
             weights[i] -= learning_rate * gweights[i];
         }
-        // If rand_val < dropout_rate, the weight is "dropped" and remains unchanged.
     }
 }
 

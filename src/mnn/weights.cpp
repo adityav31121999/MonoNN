@@ -262,6 +262,7 @@ void mnn::initiateWeights(int type)
             std::cin >> mean;
             std::cin >> stddev;
             setWeightsByNormalDist(cweights, mean, stddev);
+            setWeightsByNormalDist(bweights, mean, stddev);
             break;
         }
         case 1: {
@@ -272,6 +273,7 @@ void mnn::initiateWeights(int type)
             std::cin >> lower;
             std::cin >> upper;
             setWeightsByUniformDist(cweights, lower, upper);
+            setWeightsByUniformDist(bweights, lower, upper);
             break;
         }
         case 2: {
@@ -280,16 +282,19 @@ void mnn::initiateWeights(int type)
             bool uni;
             std::cin >> uni;
             setWeightsByXavier(cweights, inSize, outSize, uni);
+            setWeightsByXavier(bweights, inSize, outSize, uni);
             break;
         }
         case 3: {
             std::cout << "Set weights using He initialization." << std::endl;
             setWeightsByHe(cweights, inSize, outSize);
+            setWeightsByHe(bweights, inSize, outSize);
             break;
         }
         case 4: {
             std::cout << "Set weights using LeCun initialization." << std::endl;
             setWeightsByLeCunn(cweights, inSize, outSize);
+            setWeightsByLeCunn(bweights, inSize, outSize);
             break;
         }
         default: {
@@ -297,6 +302,7 @@ void mnn::initiateWeights(int type)
             break;
         }
     }
+    // serializeWeights(cweights, bweights, binFileAddress);
 }
 
 
@@ -312,6 +318,7 @@ void mnn2d::initiateWeights(int type)
             std::cin >> mean;
             std::cin >> stddev;
             setWeightsByNormalDist(cweights, mean, stddev);
+            setWeightsByNormalDist(bweights, mean, stddev);
             break;
         }
         case 1: {
@@ -322,6 +329,7 @@ void mnn2d::initiateWeights(int type)
             std::cin >> lower;
             std::cin >> upper;
             setWeightsByUniformDist(cweights, lower, upper);
+            setWeightsByUniformDist(bweights, lower, upper);
             break;
         }
         case 2: {
@@ -330,16 +338,19 @@ void mnn2d::initiateWeights(int type)
             bool uni;
             std::cin >> uni;
             setWeightsByXavier(cweights, inHeight * inWidth, outWidth, uni);
+            setWeightsByXavier(bweights, inHeight * inWidth, outWidth, uni);
             break;
         }
         case 3: {
             std::cout << "Set weights using He initialization." << std::endl;
             setWeightsByHe(cweights, inHeight * inWidth, outWidth);
+            setWeightsByHe(bweights, inHeight * inWidth, outWidth);
             break;
         }
         case 4: {
             std::cout << "Set weights using LeCun initialization." << std::endl;
             setWeightsByLeCunn(cweights, inHeight * inWidth, outWidth);
+            setWeightsByLeCunn(bweights, inHeight * inWidth, outWidth);
             break;
         }
         default: {
@@ -347,4 +358,5 @@ void mnn2d::initiateWeights(int type)
             break;
         }
     }
+    // serializeWeights(cweights, bweights, binFileAddress);
 }

@@ -228,30 +228,53 @@ mnn::mnn(int insize, int outsize, std::vector<int> width, float order, std::stri
  */
 void mnn::makeBinFile(const std::string &fileAddress)
 {
-    this->binFileAddress = fileAddress;
+   this->binFileAddress = fileAddress;
 
 #ifdef _MSC_VER
-    fopen_s(&this->binFile, fileAddress.c_str(), "rb+");
+   fopen_s(&this->binFile, fileAddress.c_str(), "rb+");
 #else
-    this->binFile = fopen(fileAddress.c_str(), "rb+");
+   this->binFile = fopen(fileAddress.c_str(), "rb+");
 #endif
 
-    if (this->binFile) { // File exists
-        fseek(this->binFile, 0, SEEK_END);
-        long fileSize = ftell(this->binFile);
-        rewind(this->binFile);
+   if (this->binFile) { // File exists
+       fseek(this->binFile, 0, SEEK_END);
+       long fileSize = ftell(this->binFile);
+       rewind(this->binFile);
 
-        if (fileSize == (long)(this->param * sizeof(float))) {
-            // Parameters match, read weights and biases
-            for (int i = 0; i < layers; ++i) {
-                for (auto& row : cweights[i]) {
-                    fread(row.data(), sizeof(float), row.size(), this->binFile);
-                }
-                for (auto& row : bweights[i]) {
-                    fread(row.data(), sizeof(float), row.size(), this->binFile);
-                }
-            }
-        } else {
+       long expectedFileSize = (long)(this->param * sizeof(float));
+
+       if (fileSize == expectedFileSize) {
+           // Parameters match, read weights and biases
+           for (int i = 0; i < layers; ++i) {
+               for (auto& row : cweights[i]) {
+                   size_t read_count = fread(row.data(), sizeof(float), row.size(), this->binFile);
+                   if (read_count != row.size()) {
+                       std::cerr << "Error reading cweights[" << i << "]" << std::endl;
+                       // Handle error (e.g., close file, throw exception)
+                       fclose(this->binFile);
+                       throw std::runtime_error("Error reading weights from file.");
+                   }
+               }
+               for (auto& row : bweights[i]) {
+                   size_t read_count = fread(row.data(), sizeof(float), row.size(), this->binFile);
+                   if (read_count != row.size()) {
+                       std::cerr << "Error reading bweights[" << i << "]" << std::endl;
+                       // Handle error (e.g., close file, throw exception)
+                       fclose(this->binFile);
+                       throw std::runtime_error("Error reading weights from file.");
+                   }
+               }
+           }
+           std::cout << "Loaded weights from existing file." << std::endl;
+       } else {
+           std::cout << "File size mismatch. Expected " << expectedFileSize << ", found " << fileSize << ". Re-creating the file." << std::endl;
+           fclose(this->binFile);
+#ifdef _MSC_VER
+           fopen_s(&this->binFile, fileAddress.c_str(), "wb+");
+#else
+           this->binFile = fopen(fileAddress.c_str(), "wb+");
+#endif
+
             // Size does not match, re-create the file
             fclose(this->binFile);
 #ifdef _MSC_VER
@@ -266,7 +289,8 @@ void mnn::makeBinFile(const std::string &fileAddress)
                 }
             }
         }
-    } else {
+    }
+    else {
         // File does not exist, create it
 #ifdef _MSC_VER
         fopen_s(&this->binFile, fileAddress.c_str(), "wb+");

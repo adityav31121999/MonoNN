@@ -101,7 +101,7 @@ void mnn2d::clTrain(const std::vector<std::vector<float>>& input, const std::vec
         this->input = input;
         clForprop(this->input);
 
-        if(maxIndex(output) != maxIndex(target)) {
+        if(maxIndex(output) == maxIndex(target)) {
             std::cout << "Correct output predicted :) at epoch " << i << "." << std::endl;
             break;
         }

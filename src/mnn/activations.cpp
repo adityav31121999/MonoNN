@@ -166,12 +166,29 @@ std::vector<std::vector<float>> reluDer(const std::vector<std::vector<float>>& x
  */
 std::vector<float> softmax(const std::vector<float>& x) {
     std::vector<float> result(x.size());
+    
+    // Find max value for numerical stability
+    float max_val = *std::max_element(x.begin(), x.end());
+    
     float sumExp = 0.0f;
-    sumExp = std::accumulate(x.begin(), x.end(), 0.0f, [](float acc, float val) {
-        return acc + std::exp(val);
-    });
+    for (float val : x) {
+        sumExp += std::exp(val - max_val);
+    }
+    
+    // Prevent division by zero
+    if (sumExp == 0.0f || std::isnan(sumExp) || std::isinf(sumExp)) {
+        // Return uniform distribution
+        float uniform_val = 1.0f / x.size();
+        std::fill(result.begin(), result.end(), uniform_val);
+        return result;
+    }
+    
     for (size_t i = 0; i < x.size(); ++i) {
-        result[i] = std::exp(x[i]) / sumExp;
+        result[i] = std::exp(x[i] - max_val) / sumExp;
+        // Additional safety check
+        if (std::isnan(result[i]) || std::isinf(result[i])) {
+            result[i] = 1.0f / x.size();
+        }
     }
     return result;
 }

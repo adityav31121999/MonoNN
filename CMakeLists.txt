@@ -27,8 +27,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${FullOutputDir}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${FullOutputDir}")
 
 set(USE_OPENCL OFF)
-set(USE_CUDA OFF)
-set(USE_CPU ON)
+set(USE_CUDA ON)
+set(USE_CPU OFF)
 
 # set compile definitions
 if(USE_CUDA)
@@ -74,6 +74,8 @@ target_link_libraries(monoNN PRIVATE mnn)
 # Link libraries based on the selected backend
 if(USE_OPENCL)
     target_link_libraries(monoNN PRIVATE OpenCL::OpenCL)
+elseif(USE_CUDA)
+    target_link_libraries(monoNN PRIVATE cudart)
 endif()
 
 # Explicitly set runtime library for the executable target (redundant if global variable works, but safer)

@@ -31,9 +31,11 @@ float crossEntropy(const std::vector<float>& output, const std::vector<float>& t
         throw std::invalid_argument("Output and target vectors must have the same, non-zero size for Cross-Entropy.");
     }
     float loss = 0.0f;
+    const float epsilon = 1e-7f;  // Increased epsilon for better stability
     for (size_t i = 0; i < output.size(); ++i) {
-        // Add a small epsilon to prevent log(0)
-        loss += target[i] * std::log(output[i] + 1e-9f);
+        // Clamp output to prevent log(0) and log(1)
+        float clamped_output = std::max<float>(epsilon, std::min<float>(1.0f - epsilon, output[i]));
+        loss += target[i] * std::log(clamped_output);
     }
     return -loss;
 }

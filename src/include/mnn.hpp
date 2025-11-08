@@ -13,7 +13,7 @@
 #define DROPOUT_RATE 0.6f           // dropout rate
 #define DECAY_RATE 0.001f           // weight decay rate
 #define WEIGHT_DECAY 0.001f         // weight decay parameter
-#define SOTMAX_TEMP 1.025f          // softmax temperature
+#define SOFTMAX_TEMP 1.025f          // softmax temperature
 #define EPOCH 10                    // epochs for single set training
 
 /**
@@ -72,6 +72,8 @@ public:
 
     void makeBinFile(const std::string& fileAddress);
     void initiateWeights(int type);
+    friend void serializeWeights(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights, const std::string& fileAddress);
+    friend void deserializeWeights(std::vector<std::vector<std::vector<float>>>& cweights, std::vector<std::vector<std::vector<float>>>& bweights, const std::vector<int>& width, const std::vector<int>& height, const std::string& fileAddress);
 
     #ifdef USE_CPU
 

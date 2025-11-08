@@ -3,7 +3,7 @@
 #include <vector>
 #include <stdexcept>
 
-void mnn::clBufTrainBatch(const std::vector<float>& in, const std::vector<float>& exp)
+void mnn::clBufTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets)
 {
     // buffers for mlp
 
@@ -15,7 +15,7 @@ void mnn::clBufTrainBatch(const std::vector<float>& in, const std::vector<float>
 }
 
 
-void mnn2d::clBufTrainBatch(const std::vector<std::vector<float>>& in, const std::vector<float>& exp)
+void mnn2d::clBufTrainBatch(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets)
 {
     // buffers for mlp
 

@@ -117,7 +117,7 @@ std::vector<float> multiply(const std::vector<float>& a, const std::vector<float
  * Each row of matrix 'b' is multiplied element-wise by vector 'a'.
  * @param a Input vector.
  * @param b Input matrix.
- * @return Resulting matrix after element-wise multiplication.
+ * @return Resulting vector after element-wise multiplication.
  * @throws std::invalid_argument if dimensions are incompatible.
  */
 std::vector<float> multiply(const std::vector<float>& a, const std::vector<std::vector<float>>& b)
@@ -138,28 +138,40 @@ std::vector<float> multiply(const std::vector<float>& a, const std::vector<std::
 }
 
 /**
- * @brief Function for matrix product using threads.
+ * @brief Function for matrix multiplication (standard matrix product).
  * @param a Input matrix A.
  * @param b Input matrix B.
- * @return Resulting matrix after element-wise multiplication.
+ * @return Resulting matrix after matrix multiplication.
  * @throws std::invalid_argument if dimensions are incompatible.
  */
 std::vector<std::vector<float>> multiply(const std::vector<std::vector<float>>& a, const std::vector<std::vector<float>>& b)
 {
-    if (a.size() != b.size() || a.empty() || (!a.empty() && a[0].size() != b[0].size())) {
-        throw std::invalid_argument("Incompatible dimensions for element-wise multiplication. Matrices must have the same dimensions.");
-    }
-
-    // matrix to store result
-    std::vector<std::vector<float>> result(a.size(), std::vector<float>(b[0].size(), 0.0f));
-    for(size_t i = 0; i < a.size(); i++) {
-        for(size_t j = 0; j < b[0].size(); j++) {
-            for(size_t k = 0; k < a[0].size(); k++) {
-                result[i][j] += a[i][k] * b[k][j];
+    // Check if this is element-wise multiplication (same dimensions)
+    if (a.size() == b.size() && !a.empty() && a[0].size() == b[0].size()) {
+        // Element-wise multiplication
+        std::vector<std::vector<float>> result(a.size(), std::vector<float>(a[0].size()));
+        for (size_t i = 0; i < a.size(); ++i) {
+            for (size_t j = 0; j < a[0].size(); ++j) {
+                result[i][j] = a[i][j] * b[i][j];
             }
         }
+        return result;
     }
-    return result;
+    // Standard matrix multiplication
+    else if (a[0].size() == b.size()) {
+        std::vector<std::vector<float>> result(a.size(), std::vector<float>(b[0].size(), 0.0f));
+        for(size_t i = 0; i < a.size(); i++) {
+            for(size_t j = 0; j < b[0].size(); j++) {
+                for(size_t k = 0; k < a[0].size(); k++) {
+                    result[i][j] += a[i][k] * b[k][j];
+                }
+            }
+        }
+        return result;
+    }
+    else {
+        throw std::invalid_argument("Incompatible dimensions for matrix multiplication.");
+    }
 }
 
 /**
@@ -174,7 +186,12 @@ std::vector<float> power(const std::vector<float>& input, const float& powerOfVa
     // each element of input is raised to powerOfValues
     std::transform(input.begin(), input.end(), result.begin(),
                    [powerOfValues](float val) {
-                       return std::pow(val, powerOfValues);
+                       float pow_result = std::pow(val, powerOfValues);
+                       // Check for NaN or infinity
+                       if (std::isnan(pow_result) || std::isinf(pow_result)) {
+                           return 0.0f;
+                       }
+                       return pow_result;
                    });
     return result;
 }
@@ -193,7 +210,14 @@ std::vector<std::vector<float>> power(const std::vector<std::vector<float>>& inp
                    [powerOfValues](const std::vector<float>& row) {
                        std::vector<float> new_row(row.size());
                        std::transform(row.begin(), row.end(), new_row.begin(),
-                                      [powerOfValues](float val) { return std::pow(val, powerOfValues); });
+                                      [powerOfValues](float val) { 
+                                          float pow_result = std::pow(val, powerOfValues);
+                                          // Check for NaN or infinity
+                                          if (std::isnan(pow_result) || std::isinf(pow_result)) {
+                                              return 0.0f;
+                                          }
+                                          return pow_result;
+                                      });
                        return new_row;
                    });
     return result;
@@ -206,9 +230,9 @@ std::vector<std::vector<float>> power(const std::vector<std::vector<float>>& inp
  */
 std::vector<float> meanPool(const std::vector<std::vector<float>>& input) {
     std::vector<float> result(input[0].size(), 0.0f);
-    for (const auto& row : input) {
-        for (size_t i = 0; i < row.size(); ++i) {
-            result[i] += row[i];
+    for(int i = 0; i < input.size(); i++) {
+        for(int j = 0; j < input[i].size(); j++) {
+            result[j] += input[i][j];
         }
     }
     for (auto& val : result) {
@@ -312,8 +336,12 @@ std::vector<std::vector<float>> transpose(const std::vector<std::vector<float>>&
  */
 std::vector<std::vector<float>> average(const std::vector<std::vector<std::vector<float>>>& input)
 {
+    if (input.empty()) {
+        return std::vector<std::vector<float>>();
+    }
+    
     int n = input.size();
-    std::vector<std::vector<float>> result(input[0].size(), std::vector<float>(input[0][0].size()));
+    std::vector<std::vector<float>> result(input[0].size(), std::vector<float>(input[0][0].size(), 0.0f));
     for(int i = 0; i < n; i++) {
         for(int j = 0; j < input[i].size(); j++) {
             for(int k = 0; k < input[i][j].size(); k++) {

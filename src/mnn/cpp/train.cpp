@@ -18,16 +18,16 @@ void mnn::train(const std::vector<float>& input, const std::vector<float>& targe
         this->input = input;
         forprop(this->input);
 
-        std::cout << "TargetIndex: " << maxIndex(target) << " OutputIndex: " << maxIndex(output) << std::endl;
+        // check for error and break if acceptable
+        float loss = crossEntropy(output, target);
+        std::cout << "Current CE Loss at epoch " << i << ": " <<loss << " with prediction at index: " << maxIndex(output) << std::endl;
+
         if(maxIndex(output) == maxIndex(target)) {
             std::cout << "Correct output predicted :) at epoch " << i << "." << std::endl;
             break;
         }
         i++;
-        // check for error and break if acceptable
-        float loss = crossEntropy(output, target);
-        std::cout << "Current CE Loss at epoch " << i << ": " <<loss << std::endl;
-        if(i == 10) break;
+        // if(i == 10) break;
 
         // 2. Backward propagation
         backprop(this->target);
@@ -100,23 +100,19 @@ void mnn2d::train(const std::vector<std::vector<float>>& input, const std::vecto
     this->target = target;
     int i = 0;
     while (1) {
-        // 1. Forward propagation
         this->input = input;
         forprop(this->input);
-        std::cout << i << " forward done\n";
 
-        std::cout << "TargetIndex: " << maxIndex(target) << " OutputIndex: " << maxIndex(output) << std::endl;
+        // check for error and break if acceptable
+        float loss = crossEntropy(output, target);
+        std::cout << "Current CE Loss at epoch " << i << ": " <<loss << " with prediction at index: " << maxIndex(output) << std::endl;
         if(maxIndex(output) == maxIndex(target)) {
             std::cout << "Correct output predicted :) at epoch " << i << "." << std::endl;
             break;
         }
         i++;
-        // check for error and break if acceptable
-        float loss = crossEntropy(output, target);
-        std::cout << "Current CE Loss at epoch " << i << ": " <<loss << std::endl;
-        if(i == 10) break;
+        // if(i == 10) break;
 
-        // 2. Backward propagation
         backprop(this->target);
     }
 

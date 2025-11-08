@@ -397,14 +397,54 @@ void mnn2d::clBackprop(const std::vector<std::vector<float>>& expected) {
                 // Calculate d(prev_act)
                 cl::Buffer d_dprev_act(clContext, CL_MEM_READ_WRITE, prev_rows * prev_cols * sizeof(float));
                 size_t prev_dot_size = dotBatch[layer-1][0].size() * dotBatch[layer-1][0][0].size();
-                if (prev_dot_size > WORKSIZE_1D) {
-                    throw std::runtime_error("Softmax derivative kernel cannot process size > WORKSIZE_1D.");
+
+                if (prev_dot_size <= WORKSIZE_1D) {
+                    // Use single-work-group kernel for small sizes
+                    kernelSoftmaxDer.setArg(0, d_dotProds[layer-1][i]);
+                    kernelSoftmaxDer.setArg(1, d_dprev_act);
+                    kernelSoftmaxDer.setArg(2, SOFTMAX_TEMP);
+                    kernelSoftmaxDer.setArg(3, (int)prev_dot_size);
+                    CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSoftmaxDer, cl::NullRange, cl::NDRange(prev_dot_size), cl::NDRange(prev_dot_size)));
+                } else {
+                    // Use multi-work-group approach for large sizes
+                    cl::Kernel kernelSoftMaxReduce = kernels.at("softmax_reduce");
+                    cl::Kernel kernelSoftMaxDerNormalize = kernels.at("softmaxDer_normalize");
+
+                    size_t num_work_groups = (prev_dot_size + WORKSIZE_1D - 1) / WORKSIZE_1D;
+                    size_t partial_results_buffer_size = num_work_groups * 2;
+
+                    cl::Buffer d_partial_results(clContext, CL_MEM_READ_WRITE, sizeof(float) * partial_results_buffer_size, nullptr, &err); CL_CHECK(err);
+
+                    // Launch softmax_reduce kernel
+                    kernelSoftMaxReduce.setArg(0, d_dotProds[layer-1][i]);
+                    kernelSoftMaxReduce.setArg(1, d_partial_results);
+                    kernelSoftMaxReduce.setArg(2, cl::Local(sizeof(float) * WORKSIZE_1D));
+                    kernelSoftMaxReduce.setArg(3, cl::Local(sizeof(float) * WORKSIZE_1D));
+                    kernelSoftMaxReduce.setArg(4, (int)prev_dot_size);
+                    kernelSoftMaxReduce.setArg(5, SOFTMAX_TEMP);
+                    cl::NDRange globalReduce = calculate_global_1d(WORKSIZE_1D, prev_dot_size);
+                    cl::NDRange localReduce(WORKSIZE_1D);
+                    CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSoftMaxReduce, cl::NullRange, globalReduce, localReduce));
+
+                    std::vector<float> h_partial_results(partial_results_buffer_size);
+                    CL_CHECK(clCommandQueue.enqueueReadBuffer(d_partial_results, CL_TRUE, 0, sizeof(float) * partial_results_buffer_size, h_partial_results.data()));
+
+                    float global_max = -(std::numeric_limits<float>::max)();
+                    float global_sum = 0.0f;
+                    for (size_t k = 0; k < num_work_groups; ++k) {
+                        global_sum += h_partial_results[2 * k];
+                        global_max = (std::max)(global_max, h_partial_results[2 * k + 1]);
+                    }
+
+                    // Launch the softmaxDer_normalize kernel
+                    kernelSoftMaxDerNormalize.setArg(0, d_dotProds[layer-1][i]);
+                    kernelSoftMaxDerNormalize.setArg(1, d_dprev_act);
+                    kernelSoftMaxDerNormalize.setArg(2, (int)prev_dot_size);
+                    kernelSoftMaxDerNormalize.setArg(3, SOFTMAX_TEMP);
+                    kernelSoftMaxDerNormalize.setArg(4, global_max);
+                    kernelSoftMaxDerNormalize.setArg(5, global_sum);
+                    CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSoftMaxDerNormalize, cl::NullRange, globalReduce, localReduce));
                 }
-                kernelSoftmaxDer.setArg(0, dotBatch[layer-1][0]);
-                kernelSoftmaxDer.setArg(1, d_dprev_act);
-                kernelSoftmaxDer.setArg(2, SOTMAX_TEMP);
-                kernelSoftmaxDer.setArg(3, (int)prev_dot_size);
-                CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSoftmaxDer, cl::NullRange, cl::NDRange(prev_dot_size), cl::NDRange(prev_dot_size)));
 
                 // outgoing = (dL/dz_l * C^T) .* d(prev_p) .* d(prev_act)
                 kernelHadamard2.setArg(0, d_grad_x_CT);

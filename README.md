@@ -11,11 +11,14 @@
 
 ## Project Structure
 
-The core logic is planned within the `src` directory. The implementation defines two main classes in `src/mnn.hpp`:
+- The core logic is planned within the `src` directory. The implementation defines two main classes in `src/mnn.hpp`:
   - **`mnn`**: A class designed to represent a Monomial Neural Network for 1-dimensional input and output data (vectors).
   - **`mnn2d`**: A class designed to represent a Monomial Neural Network for 2-dimensional input and output data (matrices/images).
   - Headers for loss, activations and class definitions are provided separately.
   - Source files are provided for functions of specific purpose.
+- `src` directory has `C++`, `OpenCL` and `CUDA` support subdirectory.
+- Certain common functions are commonly used in all code for data access and modification.
+- Binary files are used for weights storage (serialisation and deserialisation).
 
 ### _MonoNN structure_
 - Both MonoNN have similar mechanism and weight structure, with gradient storing also per hidden layer.

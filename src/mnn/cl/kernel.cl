@@ -46,6 +46,111 @@ __kernel void sigmoidDer(__global float* x, __global float* out, int size)
     }
 }
 
+/*
+ * KERNEL 1: REDUCTION STEP
+ * This kernel finds the max value and the sum of exponentials.
+ * It takes a large input array and produces a small output array containing
+ * the partial results from each work-group.
+ */
+__kernel void softmax_reduce(__global const float* input,
+                             __global float* partial_results, // Intermediate buffer
+                             __local float* local_max,         // Local scratchpad for max
+                             __local float* local_sum,         // Local scratchpad for sum
+                             int size,
+                             float temp)
+{
+    int global_id = get_global_id(0);
+    int local_id = get_local_id(0);
+    int group_id = get_group_id(0);
+    int local_size = get_local_size(0);
+
+    // --- Part 1: Find the max value in the work-group ---
+    float my_max = -FLT_MAX;
+    for (int i = global_id; i < size; i += get_global_size(0)) {
+        my_max = max(my_max, input[i]);
+    }
+    local_max[local_id] = my_max;
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    // Parallel reduction to find the single max for the entire work-group
+    for (int offset = local_size / 2; offset > 0; offset /= 2) {
+        if (local_id < offset) {
+            local_max[local_id] = max(local_max[local_id], local_max[local_id + offset]);
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+    // The group's max value is now in local_max[0]
+
+    // --- Part 2: Find the sum of exponentials in the work-group ---
+    float group_max = local_max[0];
+    float my_sum = 0.0f;
+    for (int i = global_id; i < size; i += get_global_size(0)) {
+        my_sum += exp((input[i] - group_max) / temp);
+    }
+    local_sum[local_id] = my_sum;
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    // Parallel reduction to find the single sum for the entire work-group
+    for (int offset = local_size / 2; offset > 0; offset /= 2) {
+        if (local_id < offset) {
+            local_sum[local_id] = local_sum[local_id] + local_sum[local_id + offset];
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+
+    // --- Part 3: Write partial results ---
+    // Each work-group writes its own max and sum to the intermediate buffer.
+    if (local_id == 0) {
+        partial_results[2 * group_id] = local_sum[0];
+        partial_results[2 * group_id + 1] = group_max;
+    }
+}
+
+
+/*
+ * KERNEL 2: NORMALIZATION STEP
+ * This is a simple kernel that applies the final global max and sum
+ * to normalize every element of the input array.
+ */
+__kernel void softmax_normalize(__global const float* input,
+                                __global float* output,
+                                int size,
+                                float temp,
+                                float global_max, // The final max value
+                                float global_sum) // The final sum value
+{
+    int global_id = get_global_id(0);
+
+    if (global_id < size) {
+        float val = exp((input[global_id] - global_max) / temp);
+        output[global_id] = val / global_sum;
+    }
+}
+
+/*
+ * KERNEL 3: SOFTMAX DERIVATIVE NORMALIZATION STEP
+ * This kernel calculates the derivative s_i * (1 - s_i) after computing
+ * the softmax value s_i using the global max and sum.
+ */
+__kernel void softmaxDer_normalize(__global const float* input,
+                                   __global float* output,
+                                   int size,
+                                   float temp,
+                                   float global_max,
+                                   float global_sum)
+{
+    int global_id = get_global_id(0);
+
+    if (global_id < size) {
+        float val = exp((input[global_id] - global_max) / temp);
+        float s_i = val / global_sum;
+        // The derivative is s_i * (1 - s_i)
+        output[global_id] = s_i * (1.0f - s_i);
+    }
+}
+
 __kernel void softmax(__global float* x, __global float* out, float temp, int size)
 {
     int global_id = get_global_id(0); // For global data access (linear index)
@@ -417,19 +522,27 @@ __kernel void kernelLayerForward1(__global const float* input, __global float* o
                                   int inSize, int outSize)
 {
     // Each work-item computes one element of the output vector.
-    int j = get_global_id(0); // Index for the output vector (column index for cweights/bweights)
+    int j = get_global_id(0); // Index for the output vector
 
     if (j < outSize) {
         float sum = 0.0f;
         for (int i = 0; i < inSize; ++i) {
-            // cweights[i][j] -> cweights[i * outSize + j]
-            // bweights[i][j] -> bweights[i * outSize + j]
-            sum += (input[i] * cweights[i * outSize + j]) + bweights[i * outSize + j];
+            // Index for cweights[i][j] and bweights[i][j]
+            int weight_idx = i * outSize + j;
+            sum += (input[i] * cweights[weight_idx]) + bweights[weight_idx];
         }
-        // The C++ layerForward uses `output[j] += ...`, implying accumulation.
-        // We assume 'output' is pre-initialized (e.g., to zeros) on the host
-        // or that this kernel is meant to accumulate into existing values.
-        output[j] += sum;
+
+        // Accumulate into the existing output value, as per the C++ code's `output[j] += ...`
+        float final_val = output[j] + sum;
+
+        // Check for NaN and infinity, as done in the C++ code
+        if (isnan(final_val)) {
+            final_val = 0.0f;
+        } else if (isinf(final_val)) {
+            final_val = 1.0f;
+        }
+        
+        output[j] = final_val;
     }
 }
 
@@ -438,21 +551,28 @@ __kernel void kernelLayerForward2(__global const float* input, __global float* o
                                   int inSize, int outSize, float n)
 {
     // Each work-item computes one element of the output vector.
-    int j = get_global_id(0); // Index for the output vector (column index for cweights/bweights)
+    int j = get_global_id(0); // Index for the output vector
 
     if (j < outSize) {
         float sum = 0.0f;
         for (int i = 0; i < inSize; ++i) {
-            // Calculate powerIn[i] = pow(input[i], n)
             float powered_input_i = pow(input[i], n);
-            // cweights[i][j] -> cweights[i * outSize + j]
-            // bweights[i][j] -> bweights[i * outSize + j]
-            sum += (powered_input_i * cweights[i * outSize + j]) + bweights[i * outSize + j];
+            // Index for cweights[i][j] and bweights[i][j]
+            int weight_idx = i * outSize + j;
+            sum += (powered_input_i * cweights[weight_idx]) + bweights[weight_idx];
         }
-        // The C++ layerForward uses `output[j] += ...`, implying accumulation.
-        // We assume 'output' is pre-initialized (e.g., to zeros) on the host
-        // or that this kernel is meant to accumulate into existing values.
-        output[j] += sum;
+
+        // Accumulate into the existing output value
+        float final_val = output[j] + sum;
+
+        // Check for NaN and infinity
+        if (isnan(final_val)) {
+            final_val = 0.0f;
+        } else if (isinf(final_val)) {
+            final_val = 1.0f;
+        }
+        
+        output[j] = final_val;
     }
 }
 
@@ -461,27 +581,23 @@ __kernel void kernelLayerForward3(__global const float* input, __global float* o
                                   int inHeight, int inWidth, int outSize)
 {
     // Each work-item computes one element of the output matrix.
-    // Global ID 0 for row index, Global ID 1 for column index.
-    int i = get_global_id(0); // Row index for input, output, bweights
-    int j = get_global_id(1); // Column index for output, cweights, bweights
-
-    // The C++ code's error checks and usage for bweights are inconsistent.
-    // Following the usage `output[i][j] = ... + bweights[i][j]`,
-    // we assume bweights is an `inHeight x outSize` matrix.
-    // cweights is `inWidth x outSize`.
-    // input is `inHeight x inWidth`.
-    // output is `inHeight x outSize`.
+    int i = get_global_id(0); // Row index (0 to inHeight-1)
+    int j = get_global_id(1); // Column index (0 to outSize-1)
 
     if (i < inHeight && j < outSize) {
         float dotProd_ij = 0.0f;
-        for (int k = 0; k < inWidth; ++k) { // k iterates over inWidth (cweights_rows)
-            // input[i][k] -> input[i * inWidth + k]
-            // cweights[k][j] -> cweights[k * outSize + j]
-            dotProd_ij += input[i * inWidth + k] * cweights[k * outSize + j];
+        for (int k = 0; k < inWidth; ++k) {
+            dotProd_ij += (input[i * inWidth + k] * cweights[k * outSize + j]) + bweights[k * outSize + j];
         }
-        // bweights[i][j] -> bweights[i * outSize + j]
-        // The C++ layerForward uses `output[i][j] = ...`, implying assignment.
-        output[i * outSize + j] = dotProd_ij + bweights[i * outSize + j];
+
+        // Check for NaN and infinity
+        if (isnan(dotProd_ij)) {
+            dotProd_ij = 0.0f;
+        } else if (isinf(dotProd_ij)) {
+            dotProd_ij = 1.0f;
+        }
+
+        output[i * outSize + j] = dotProd_ij;
     }
 }
 
@@ -490,28 +606,23 @@ __kernel void kernelLayerForward4(__global const float* input, __global float* o
                                   int inHeight, int inWidth, int outSize, float n)
 {
     // Each work-item computes one element of the output matrix.
-    // Global ID 0 for row index, Global ID 1 for column index.
-    int i = get_global_id(0); // Row index for input, output, bweights
-    int j = get_global_id(1); // Column index for output, cweights, bweights
-
-    // The C++ code's error checks and usage for bweights are inconsistent.
-    // Following the usage `output[i][j] = ... + bweights[i][j]`,
-    // we assume bweights is an `inHeight x outSize` matrix.
-    // cweights is `inWidth x outSize`.
-    // input is `inHeight x inWidth`.
-    // output is `inHeight x outSize`.
+    int i = get_global_id(0);
+    int j = get_global_id(1);
 
     if (i < inHeight && j < outSize) {
         float dotProd_ij = 0.0f;
-        for (int k = 0; k < inWidth; ++k) { // k iterates over inWidth (cweights_rows)
-            // input[i][k] -> input[i * inWidth + k]
-            // powerIn[i][k] is pow(input[i * inWidth + k], n)
-            // cweights[k][j] -> cweights[k * outSize + j]
-            dotProd_ij += pow(input[i * inWidth + k], n) * cweights[k * outSize + j];
+        for (int k = 0; k < inWidth; ++k) {
+            dotProd_ij += (pow(input[i * inWidth + k], n) * cweights[k * outSize + j]) + bweights[k * outSize + j];
         }
-        // bweights[i][j] -> bweights[i * outSize + j]
-        // The C++ layerForward uses `output[i][j] = ...`, implying assignment.
-        output[i * outSize + j] = dotProd_ij + bweights[i * outSize + j];
+
+        // Check for NaN and infinity
+        if (isnan(dotProd_ij)) {
+            dotProd_ij = 0.0f;
+        } else if (isinf(dotProd_ij)) {
+            dotProd_ij = 1.0f;
+        }
+
+        output[i * outSize + j] = dotProd_ij;
     }
 }
 

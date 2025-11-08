@@ -34,6 +34,14 @@ void layerForward(const std::vector<float>& input, std::vector<float>& output, c
             output[j] += (input[i]*cweights[i][j]) + bweights[i][j];
         }
     }
+    for(int i = 0; i < output.size(); i++) {
+        if (std::isnan(output[i])) {
+            output[i] = 0.0f;
+        }
+        else if (std::isinf(output[i])) {
+            output[i] = 1.0f;
+        }
+    }
 }
 
 
@@ -64,6 +72,14 @@ void layerForward(const std::vector<float>& input, std::vector<float>& output, c
     for(int i = 0; i < cweights.size(); i++) {
         for(int j = 0; j < cweights[0].size(); j++) {
             output[j] += (powerIn[i]*cweights[i][j]) + bweights[i][j];
+        }
+    }
+    for(int i = 0; i < output.size(); i++) {
+        if (std::isnan(output[i])) {
+            output[i] = 0.0f;
+        }
+        else if (std::isinf(output[i])) {
+            output[i] = 1.0f;
         }
     }
 }
@@ -97,6 +113,12 @@ void layerForward(const std::vector<std::vector<float>>& input, std::vector<std:
         for (size_t j = 0; j < cweights[0].size(); ++j) {
             for (size_t k = 0; k < cweights.size(); ++k) {
                 output[i][j] += (input[i][k] * cweights[k][j]) + bweights[i][j];
+            }
+            if (std::isnan(output[i][j])) {
+                output[i][j] = 0.0f;
+            }
+            if (std::isinf(output[i][j])) {
+                output[i][j] = 1.0f;
             }
         }
     }
@@ -135,7 +157,13 @@ void layerForward(const std::vector<std::vector<float>>& input, std::vector<std:
     for (size_t i = 0; i < input.size(); ++i) {
         for (size_t j = 0; j < cweights[0].size(); ++j) {
             for (size_t k = 0; k < cweights.size(); ++k) {
-                output[i][j] += (powerIn[i][k] * cweights[k][j]) + bweights[i][j];
+                output[i][j] += (powerIn[i][k] * cweights[k][j]) + bweights[k][j];
+            }
+            if (std::isnan(output[i][j])) {
+                output[i][j] = 0.0f;
+            }
+            if (std::isinf(output[i][j])) {
+                output[i][j] = 1.0f;
             }
         }
     }
@@ -233,7 +261,12 @@ void layerBackward(const std::vector<float>& incoming,          // width[l]
     std::vector<float> dprev_p(prevAct.size(), 0.0f);   // This is dz_l/da_{l-1} part 1
     std::transform(prevAct.begin(), prevAct.end(), dprev_p.begin(), 
                     [&m](float x) { 
-                        return m * std::pow(x, m - 1.0f); 
+                        float result = m * std::pow(x, m - 1.0f);
+                        // Check for NaN or infinity
+                        if (std::isnan(result) || std::isinf(result)) {
+                            return 0.0f;
+                        }
+                        return result;
                     });
     // derivativ of prevAct
     std::vector<float> dprevAct(prevAct.size(), 0.0f);
@@ -246,7 +279,7 @@ void layerBackward(const std::vector<float>& incoming,          // width[l]
     for(int i = 0; i < prev_p.size(); i++) {
         for(int j = 0; j < incoming.size(); j++) {
             gradc[i][j] = alpha * prev_p[i] * incoming[j];
-            gradb[i][j] = (1.0f - alpha) * incoming[j];
+            gradb[i][j] = (1.0f - (1.1f * alpha)) * incoming[j];
         }
     }
 
@@ -291,7 +324,12 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
     for (size_t i = 0; i < prev_p.size(); ++i) {
         std::transform(prev_p[i].begin(), prev_p[i].end(), dprev_p[i].begin(),
                     [&m](float x) {
-                        return m * std::pow(x, m - 1.0f);
+                        float result = m * std::pow(x, m - 1.0f);
+                        // Check for NaN or infinity
+                        if (std::isnan(result) || std::isinf(result)) {
+                            return 0.0f;
+                        }
+                        return result;
                     });
     }
     // derivativ of prevAct (activation is softmax)
@@ -301,6 +339,7 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
     std::vector<std::vector<float>> C_T = transpose(C);
     outgoing.clear();
     outgoing.resize(dprev_p.size(), std::vector<float>(dprev_p[0].size(), 0.0f));
+
     outgoing = multiply(incoming, C_T);         // incoming gradient x C^T
     for(int i = 0; i < outgoing.size(); i++) {
         for(int j = 0; j < outgoing[0].size(); j++) {
@@ -314,7 +353,7 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
     for(int i = 0; i < gradc.size(); i++) {
         for(int j = 0; j < gradc[0].size(); j++) {
             gradc[i][j] = alpha * gradc[i][j];
-            gradb[i][j] = (1 - alpha) * gradb[i][j];
+            gradb[i][j] = (1.0f - (1.1f * alpha)) * gradb[i][j];
         }
     }
 }

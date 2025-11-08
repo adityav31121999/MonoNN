@@ -81,7 +81,6 @@ void mnn::backprop(const std::vector<std::vector<float>>& expected)
  * @param expected The expected output vector (after pooling).
  */
 void mnn2d::backprop(const std::vector<float>& expected) {
-    std::cout << "Back\n";
     int type = 3;
     this->target = expected;
     std::vector<float> output_error(target.size(), 0.0f);
@@ -98,7 +97,6 @@ void mnn2d::backprop(const std::vector<float>& expected) {
     std::vector<std::vector<float>> outgoing_gradient;
     // Backpropagate the error
     for(int layer = layers - 1; layer >= 1; layer--) {
-        std::cout << "layer " << layer << "\n";
         layerBackward(incoming_gradient, outgoing_gradient, dotProds[layer-1], activate[layer-1],
                         cweights[layer], cgradients[layer], bgradients[layer], order, alpha);
         incoming_gradient = outgoing_gradient;

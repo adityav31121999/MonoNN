@@ -13,31 +13,36 @@ int main() {
     float order = 2.0f;
     std::string binFileAddress1 = "D:\\monoNN\\weights1.bin";
     std::string binFileAddress2 = "D:\\monoNN\\weights2.bin";
- 
-    mnn network(inSize, outSize, hidden_layers1, order, binFileAddress1);
-    mnn2d network2(inh, inw, outSize, hidden_layers2, order, binFileAddress2);
-
-    std::vector<float> input1(inSize, 0.0f);
-    std::vector<std::vector<float>> input2(inh, std::vector<float>(inw, 0.0f));
-    std::vector<float> output2(outSize);
     std::vector<float> target = { 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
-
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<> dis(0.0f, 1.0f);
+
     std::cout << "---------------------MNN---------------------" << std::endl;
+    mnn network(inSize, outSize, hidden_layers1, order, binFileAddress1);
+    network.initiateWeights(3);
+    std::vector<float> input1(inSize, 0.0f);
     for (int i = 0; i < inSize; ++i) {
         input1[i] = static_cast<float>(dis(gen));
     }
-    network.train(input1, target);
+    network.cuTrain(input1, target);
 
     std::cout << "--------------------MNN2D--------------------" << std::endl;
-    for(int i = 0; i < inh; i++) {
-        for(int j = 0; j < inw; j++) {
-            input2[i][j] = static_cast<float>(dis(gen));
+    try {
+        std::vector<std::vector<float>> input2(inh, std::vector<float>(inw, 0.0f));
+        mnn2d network2(inh, inw, outSize, hidden_layers2, order, binFileAddress2);
+        network2.initiateWeights(3);
+        for(int i = 0; i < inh; i++) {
+            for(int j = 0; j < inw; j++) {
+                input2[i][j] = static_cast<float>(dis(gen));
+            }
         }
+        network2.cuTrain(input2, target);
     }
-    network2.train(input2, target);
+    catch (const std::exception& e) {
+        std::cerr << "An exception occurred in main: " << e.what() << std::endl;
+        return 1; // Indicate failure
+    }
 
     return 0;
 }

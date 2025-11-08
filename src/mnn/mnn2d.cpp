@@ -37,21 +37,23 @@ mnn2d::mnn2d(int inw, int inh, int outw, int layers, float order, std::string bi
     activate[layers-1].resize(inh, std::vector<float>(outw, 0.0f));
 
     // c,b-weights
-    cweights[0].resize(inh, std::vector<float>(width[0]));
-    bweights[0].resize(inh, std::vector<float>(width[0]));
-    cgradients[0].resize(inh, std::vector<float>(width[0]));
-    bgradients[0].resize(inh, std::vector<float>(width[0]));
+    // dimension = inh * width[0]
+    cweights[0].resize(inw, std::vector<float>(width[0], 0.0f));
+    bweights[0].resize(inw, std::vector<float>(width[0], 0.0f));
+    cgradients[0].resize(inw, std::vector<float>(width[0], 0.0f));
+    bgradients[0].resize(inw, std::vector<float>(width[0], 0.0f));
     for (int i = 1; i < layers-1; i++) {
         // dimension = width[i-1] * width[i]
-        cweights[i].resize(width[i-1], std::vector<float>(width[i]));
-        bweights[i].resize(width[i-1], std::vector<float>(width[i]));
+        cweights[i].resize(width[i-1], std::vector<float>(width[i], 0.0f));
+        bweights[i].resize(width[i-1], std::vector<float>(width[i], 0.0f));
         cgradients[i].resize(width[i-1], std::vector<float>(width[i], 0.0f));
         bgradients[i].resize(width[i-1], std::vector<float>(width[i], 0.0f));
     }
-    cweights[layers-1].resize(width[layers-1], std::vector<float>(outw));
-    bweights[layers-1].resize(width[layers-1], std::vector<float>(outw));
-    cgradients[layers-1].resize(width[layers-1], std::vector<float>(outw));
-    bgradients[layers-1].resize(width[layers-1], std::vector<float>(outw));
+    // dimension = width[i] * outw
+    cweights[layers-1].resize(width[layers-1], std::vector<float>(outw, 0.0f));
+    bweights[layers-1].resize(width[layers-1], std::vector<float>(outw, 0.0f));
+    cgradients[layers-1].resize(width[layers-1], std::vector<float>(outw, 0.0f));
+    bgradients[layers-1].resize(width[layers-1], std::vector<float>(outw, 0.0f));
 
     param = 0;
     for(int i = 0; i < layers; i++) {
@@ -64,8 +66,17 @@ mnn2d::mnn2d(int inw, int inh, int outw, int layers, float order, std::string bi
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
     #ifdef USE_OPENCL
     // Initialize OpenCL context and command queue
-        clContext = cl::Context(CL_DEVICE_TYPE_ALL, nullptr, nullptr, nullptr, &err);
+    try {
+        clContext = cl::Context(CL_DEVICE_TYPE_DEFAULT, nullptr, nullptr, nullptr, &err); CL_CHECK(err);
+        auto devices = clContext.getInfo<CL_CONTEXT_DEVICES>();
+        clCommandQueue = cl::CommandQueue(clContext, devices[0], 0, &err); CL_CHECK(err);
         createKernelsFromFile(clContext, "D:\\monoNN\\src\\mnn\\cl\\kernel.cl", kernels);
+        std::cout << "OpenCL kernels created successfully for mnn2d." << std::endl;
+    } catch (const std::runtime_error& e) {
+        std::cerr << "\n!! FATAL OPENCL INITIALIZATION ERROR (mnn2d) !!" << std::endl;
+        std::cerr << e.what() << std::endl;
+        throw;
+    }
     #endif
 }
 
@@ -104,21 +115,23 @@ mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::
     activate[layers-1].resize(inh, std::vector<float>(outw, 0.0f));
 
     // c,b-weights
-    cweights[0].resize(inh, std::vector<float>(width[0]));
-    bweights[0].resize(inh, std::vector<float>(width[0]));
-    cgradients[0].resize(inh, std::vector<float>(width[0]));
-    bgradients[0].resize(inh, std::vector<float>(width[0]));
+    // dimension = inh * width[0]
+    cweights[0].resize(inw, std::vector<float>(width[0], 0.0f));
+    bweights[0].resize(inw, std::vector<float>(width[0], 0.0f));
+    cgradients[0].resize(inw, std::vector<float>(width[0], 0.0f));
+    bgradients[0].resize(inw, std::vector<float>(width[0], 0.0f));
     for (int i = 1; i < layers-1; i++) {
         // dimension = width[i-1] * width[i]
-        cweights[i].resize(width[i-1], std::vector<float>(width[i]));
-        bweights[i].resize(width[i-1], std::vector<float>(width[i]));
+        cweights[i].resize(width[i-1], std::vector<float>(width[i], 0.0f));
+        bweights[i].resize(width[i-1], std::vector<float>(width[i], 0.0f));
         cgradients[i].resize(width[i-1], std::vector<float>(width[i], 0.0f));
         bgradients[i].resize(width[i-1], std::vector<float>(width[i], 0.0f));
     }
-    cweights[layers-1].resize(width[layers-1], std::vector<float>(outw));
-    bweights[layers-1].resize(width[layers-1], std::vector<float>(outw));
-    cgradients[layers-1].resize(width[layers-1], std::vector<float>(outw));
-    bgradients[layers-1].resize(width[layers-1], std::vector<float>(outw));
+    // dimension = width[i] * outw
+    cweights[layers-1].resize(width[layers-1], std::vector<float>(outw, 0.0f));
+    bweights[layers-1].resize(width[layers-1], std::vector<float>(outw, 0.0f));
+    cgradients[layers-1].resize(width[layers-1], std::vector<float>(outw, 0.0f));
+    bgradients[layers-1].resize(width[layers-1], std::vector<float>(outw, 0.0f));
 
     param = 0;
     for(int i = 0; i < layers; i++) {
@@ -131,8 +144,17 @@ mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
     #ifdef USE_OPENCL
     // Initialize OpenCL context and command queue
-        clContext = cl::Context(CL_DEVICE_TYPE_ALL, nullptr, nullptr, nullptr, &err);
+    try {
+        clContext = cl::Context(CL_DEVICE_TYPE_DEFAULT, nullptr, nullptr, nullptr, &err); CL_CHECK(err);
+        auto devices = clContext.getInfo<CL_CONTEXT_DEVICES>();
+        clCommandQueue = cl::CommandQueue(clContext, devices[0], 0, &err); CL_CHECK(err);
         createKernelsFromFile(clContext, "D:\\monoNN\\src\\mnn\\cl\\kernel.cl", kernels);
+        std::cout << "OpenCL kernels created successfully for mnn2d." << std::endl;
+    } catch (const std::runtime_error& e) {
+        std::cerr << "\n!! FATAL OPENCL INITIALIZATION ERROR (mnn2d) !!" << std::endl;
+        std::cerr << e.what() << std::endl;
+        throw;
+    }
     #endif
 }
 
@@ -168,21 +190,23 @@ mnn2d::mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, st
     activate[layers-1].resize(inh, std::vector<float>(outw, 0.0f));
 
     // c,b-weights
-    cweights[0].resize(inh, std::vector<float>(width[0]));
-    bweights[0].resize(inh, std::vector<float>(width[0]));
-    cgradients[0].resize(inh, std::vector<float>(width[0]));
-    bgradients[0].resize(inh, std::vector<float>(width[0]));
+    // dimension = inw * width[0]
+    cweights[0].resize(inw, std::vector<float>(width[0], 0.0f));
+    bweights[0].resize(inw, std::vector<float>(width[0], 0.0f));
+    cgradients[0].resize(inw, std::vector<float>(width[0], 0.0f));
+    bgradients[0].resize(inw, std::vector<float>(width[0], 0.0f));
     for (int i = 1; i < layers-1; i++) {
         // dimension = width[i-1] * width[i]
-        cweights[i].resize(width[i-1], std::vector<float>(width[i]));
-        bweights[i].resize(width[i-1], std::vector<float>(width[i]));
+        cweights[i].resize(width[i-1], std::vector<float>(width[i], 0.0f));
+        bweights[i].resize(width[i-1], std::vector<float>(width[i], 0.0f));
         cgradients[i].resize(width[i-1], std::vector<float>(width[i], 0.0f));
         bgradients[i].resize(width[i-1], std::vector<float>(width[i], 0.0f));
     }
-    cweights[layers-1].resize(width[layers-1], std::vector<float>(outw));
-    bweights[layers-1].resize(width[layers-1], std::vector<float>(outw));
-    cgradients[layers-1].resize(width[layers-1], std::vector<float>(outw));
-    bgradients[layers-1].resize(width[layers-1], std::vector<float>(outw));
+    // dimension = width[i] * outw
+    cweights[layers-1].resize(width[layers-2], std::vector<float>(outw, 0.0f));
+    bweights[layers-1].resize(width[layers-2], std::vector<float>(outw, 0.0f));
+    cgradients[layers-1].resize(width[layers-2], std::vector<float>(outw, 0.0f));
+    bgradients[layers-1].resize(width[layers-2], std::vector<float>(outw, 0.0f));
 
     param = 0;
     for(int i = 0; i < layers; i++) {
@@ -195,8 +219,17 @@ mnn2d::mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, st
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
     #ifdef USE_OPENCL
     // Initialize OpenCL context and command queue
-        clContext = cl::Context(CL_DEVICE_TYPE_ALL, nullptr, nullptr, nullptr, &err);
+    try {
+        clContext = cl::Context(CL_DEVICE_TYPE_DEFAULT, nullptr, nullptr, nullptr, &err); CL_CHECK(err);
+        auto devices = clContext.getInfo<CL_CONTEXT_DEVICES>();
+        clCommandQueue = cl::CommandQueue(clContext, devices[0], 0, &err); CL_CHECK(err);
         createKernelsFromFile(clContext, "D:\\monoNN\\src\\mnn\\cl\\kernel.cl", kernels);
+        std::cout << "OpenCL kernels created successfully for mnn2d." << std::endl;
+    } catch (const std::runtime_error& e) {
+        std::cerr << "\n!! FATAL OPENCL INITIALIZATION ERROR (mnn2d) !!" << std::endl;
+        std::cerr << e.what() << std::endl;
+        throw;
+    }
     #endif
 }
 
@@ -219,13 +252,31 @@ void mnn2d::makeBinFile(const std::string &fileAddress)
         long fileSize = ftell(this->binFile);
         rewind(this->binFile);
 
-        if (fileSize == (long)(this->param * sizeof(float))) {
-            // File size matches, read weights and biases
+        long expectedFileSize = (long)(this->param * sizeof(float));
+
+        if (fileSize == expectedFileSize) {
+            // Parameters match, read weights and biases
             for (int i = 0; i < layers; ++i) {
-                for (auto& row : cweights[i]) fread(row.data(), sizeof(float), row.size(), this->binFile);
-                for (auto& row : bweights[i]) fread(row.data(), sizeof(float), row.size(), this->binFile);
+                for (auto& row : cweights[i]) {
+                    size_t read_count = fread(row.data(), sizeof(float), row.size(), this->binFile);
+                    if (read_count != row.size()) {
+                        std::cerr << "Error reading cweights[" << i << "]" << std::endl;
+                        fclose(this->binFile);
+                        throw std::runtime_error("Error reading weights from file.");
+                    }
+                }
+                for (auto& row : bweights[i]) {
+                    size_t read_count = fread(row.data(), sizeof(float), row.size(), this->binFile);
+                    if (read_count != row.size()) {
+                        std::cerr << "Error reading bweights[" << i << "]" << std::endl;
+                        fclose(this->binFile);
+                        throw std::runtime_error("Error reading weights from file.");
+                    }
+                }
             }
+            std::cout << "Loaded weights from existing file." << std::endl;
         } else {
+            std::cout << "File size mismatch. Expected " << expectedFileSize << ", found " << fileSize << ". Re-creating the file." << std::endl;
             // Size does not match, re-create the file
             fclose(this->binFile);
 #ifdef _MSC_VER
@@ -233,22 +284,21 @@ void mnn2d::makeBinFile(const std::string &fileAddress)
 #else
             this->binFile = fopen(fileAddress.c_str(), "wb+");
 #endif
-            if (this->binFile) {
-                for (int i = 0; i < layers; ++i) {
-                    for (auto& row : cweights[i]) fwrite(row.data(), sizeof(float), row.size(), this->binFile);
-                    for (auto& row : bweights[i]) fwrite(row.data(), sizeof(float), row.size(), this->binFile);
-                }
-            }
         }
-    } else {
-        // File does not exist, create it
+    }
+
+    // This block handles both file creation and re-creation after a size mismatch
+    if (!this->binFile || (ftell(this->binFile) == 0 && this->param > 0)) {
+        if (!this->binFile) { // File didn't exist
+            std::cout << "File does not exist. Creating new file." << std::endl;
 #ifdef _MSC_VER
-        fopen_s(&this->binFile, fileAddress.c_str(), "wb+");
+            fopen_s(&this->binFile, fileAddress.c_str(), "wb+");
 #else
-        this->binFile = fopen(fileAddress.c_str(), "wb+");
+            this->binFile = fopen(fileAddress.c_str(), "wb+");
 #endif
-        if (this->binFile) {
-            for (int i = 0; i < layers; ++i) {
+        }
+        if (this->binFile) { // Write initial weights
+            for (int i = 0; i < layers; i++) {
                 for (auto& row : cweights[i]) fwrite(row.data(), sizeof(float), row.size(), this->binFile);
                 for (auto& row : bweights[i]) fwrite(row.data(), sizeof(float), row.size(), this->binFile);
             }

@@ -3,8 +3,9 @@ cmake_minimum_required(VERSION 3.30.0 FATAL_ERROR)
 include_directories(include)
 
 set(MNN_SOURCES
-    mnn/activations.cpp # Should be #include "operators.hpp"
-    mnn/loss.cpp        # Should be #include "loss.hpp"
+    mnn/cpp/operators.cpp
+    mnn/activations.cpp
+    mnn/loss.cpp
     mnn/weights.cpp
     mnn/mnn.cpp
     mnn/mnn2d.cpp
@@ -16,7 +17,6 @@ set(MNN_SOURCES
 
 if(USE_CPU)
     list(APPEND MNN_SOURCES
-        mnn/cpp/operators.cpp   # etc.
         mnn/cpp/layer.cpp
         mnn/cpp/forprop.cpp
         mnn/cpp/backprop.cpp
