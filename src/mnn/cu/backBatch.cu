@@ -43,10 +43,10 @@ void mnn::cuBackprop(const std::vector<std::vector<float>>& expected) {
             size_t batch_input_size = inputBatch[i].size();
             size_t batch_output_size = outputBatch[i].size();
 
-            CUDA_CHECK(cudaMalloc((void**)&d_in[i], sizeof(float) * batch_input_size));
-            CUDA_CHECK(cudaMalloc((void**)&d_exp[i], sizeof(float) * batch_output_size));
-            CUDA_CHECK(cudaMalloc((void**)&d_out[i], sizeof(float) * batch_output_size));
-            CUDA_CHECK(cudaMalloc((void**)&d_err[i], sizeof(float) * batch_output_size));
+            CUDA_CHECK(cudaMalloc(&d_in[i], sizeof(float) * batch_input_size));
+            CUDA_CHECK(cudaMalloc(&d_exp[i], sizeof(float) * batch_output_size));
+            CUDA_CHECK(cudaMalloc(&d_out[i], sizeof(float) * batch_output_size));
+            CUDA_CHECK(cudaMalloc(&d_err[i], sizeof(float) * batch_output_size));
 
             CUDA_CHECK(cudaMemcpy(d_in[i], inputBatch[i].data(), sizeof(float) * batch_input_size, cudaMemcpyHostToDevice));
             CUDA_CHECK(cudaMemcpy(d_exp[i], expected[i].data(), sizeof(float) * batch_output_size, cudaMemcpyHostToDevice));
@@ -65,18 +65,18 @@ void mnn::cuBackprop(const std::vector<std::vector<float>>& expected) {
             size_t c_size = flat_c.size();
             max_total_grad_size = std::max(max_total_grad_size, c_size);
 
-            CUDA_CHECK(cudaMalloc((void**)&d_cweights[i], sizeof(float) * c_size));
-            CUDA_CHECK(cudaMalloc((void**)&d_bweights[i], sizeof(float) * flat_b.size()));
-            CUDA_CHECK(cudaMalloc((void**)&d_gradC[i], sizeof(float) * c_size));
-            CUDA_CHECK(cudaMalloc((void**)&d_gradB[i], sizeof(float) * flat_b.size()));
+            CUDA_CHECK(cudaMalloc(&d_cweights[i], sizeof(float) * c_size));
+            CUDA_CHECK(cudaMalloc(&d_bweights[i], sizeof(float) * flat_b.size()));
+            CUDA_CHECK(cudaMalloc(&d_gradC[i], sizeof(float) * c_size));
+            CUDA_CHECK(cudaMalloc(&d_gradB[i], sizeof(float) * flat_b.size()));
             CUDA_CHECK(cudaMemcpy(d_cweights[i], flat_c.data(), sizeof(float) * c_size, cudaMemcpyHostToDevice));
             CUDA_CHECK(cudaMemcpy(d_bweights[i], flat_b.data(), sizeof(float) * flat_b.size(), cudaMemcpyHostToDevice));
 
             for(int j = 0; j < batchSize; j++) {
                 size_t act_size = actBatch[i][j].size();
-                CUDA_CHECK(cudaMalloc((void**)&d_activate[i][j], sizeof(float) * act_size));
-                CUDA_CHECK(cudaMalloc((void**)&d_dotProds[i][j], sizeof(float) * act_size));
-                CUDA_CHECK(cudaMalloc((void**)&d_incoming[i][j], sizeof(float) * act_size));
+                CUDA_CHECK(cudaMalloc(&d_activate[i][j], sizeof(float) * act_size));
+                CUDA_CHECK(cudaMalloc(&d_dotProds[i][j], sizeof(float) * act_size));
+                CUDA_CHECK(cudaMalloc(&d_incoming[i][j], sizeof(float) * act_size));
                 CUDA_CHECK(cudaMemcpy(d_activate[i][j], actBatch[i][j].data(), sizeof(float) * act_size, cudaMemcpyHostToDevice));
                 CUDA_CHECK(cudaMemcpy(d_dotProds[i][j], dotBatch[i][j].data(), sizeof(float) * act_size, cudaMemcpyHostToDevice));
                 if (i == layers - 1) { // Copy initial error to last layer's incoming gradient
@@ -87,20 +87,20 @@ void mnn::cuBackprop(const std::vector<std::vector<float>>& expected) {
 
         // Allocate buffers for average gradient accumulation (Total size = max_total_grad_size * batchSize)
         float *d_totalCgrad = nullptr, *d_totalBgrad = nullptr;
-        CUDA_CHECK(cudaMalloc((void**)&d_totalCgrad, max_total_grad_size * batchSize * sizeof(float)));
-        CUDA_CHECK(cudaMalloc((void**)&d_totalBgrad, max_total_grad_size * batchSize * sizeof(float)));
+        CUDA_CHECK(cudaMalloc(&d_totalCgrad, max_total_grad_size * batchSize * sizeof(float)));
+        CUDA_CHECK(cudaMalloc(&d_totalBgrad, max_total_grad_size * batchSize * sizeof(float)));
 
         // Allocate shared intermediate buffers for outgoing gradient calculation
         float *d_preoutgoing_l = nullptr, *d_outgoing_l = nullptr;
         float *d_dpow_l = nullptr, *d_dact_l = nullptr;
-        CUDA_CHECK(cudaMalloc((void**)&d_preoutgoing_l, max_layer_width * sizeof(float)));
-        CUDA_CHECK(cudaMalloc((void**)&d_outgoing_l, max_layer_width * sizeof(float)));
-        CUDA_CHECK(cudaMalloc((void**)&d_dpow_l, max_layer_width * sizeof(float)));
-        CUDA_CHECK(cudaMalloc((void**)&d_dact_l, max_layer_width * sizeof(float)));
+        CUDA_CHECK(cudaMalloc(&d_preoutgoing_l, max_layer_width * sizeof(float)));
+        CUDA_CHECK(cudaMalloc(&d_outgoing_l, max_layer_width * sizeof(float)));
+        CUDA_CHECK(cudaMalloc(&d_dpow_l, max_layer_width * sizeof(float)));
+        CUDA_CHECK(cudaMalloc(&d_dact_l, max_layer_width * sizeof(float)));
 
         // Allocate and copy ones vector
         std::vector<float> v1(max_layer_width, 1.0f);
-        CUDA_CHECK(cudaMalloc((void**)&d_ones, sizeof(float) * max_layer_width));
+        CUDA_CHECK(cudaMalloc(&d_ones, sizeof(float) * max_layer_width));
         CUDA_CHECK(cudaMemcpy(d_ones, v1.data(), sizeof(float) * max_layer_width, cudaMemcpyHostToDevice));
 
 
@@ -131,7 +131,7 @@ void mnn::cuBackprop(const std::vector<std::vector<float>>& expected) {
 
                 // 3. Outgoing Gradient Calculation
                 float *d_C_T = nullptr;
-                CUDA_CHECK(cudaMalloc((void**)&d_C_T, sizeof(float) * cweight_flat_size));
+                CUDA_CHECK(cudaMalloc(&d_C_T, sizeof(float) * cweight_flat_size));
                 transpose<<<calculate_grid_2d(cweight_cols, cweight_rows, CUDA_BLOCK_SIZE_2D_X, CUDA_BLOCK_SIZE_2D_Y), dim3(CUDA_BLOCK_SIZE_2D_X, CUDA_BLOCK_SIZE_2D_Y)>>>(
                     d_cweights[layer], d_C_T, cweight_rows, cweight_cols
                 );
@@ -291,10 +291,10 @@ void mnn2d::cuBackprop(const std::vector<std::vector<float>>& expected) {
             size_t batch_input_size = inHeight * inWidth;
             size_t batch_output_size = outputBatch[i].size();
 
-            CUDA_CHECK(cudaMalloc((void**)&d_in[i], sizeof(float) * batch_input_size));
-            CUDA_CHECK(cudaMalloc((void**)&d_exp[i], sizeof(float) * batch_output_size));
-            CUDA_CHECK(cudaMalloc((void**)&d_out[i], sizeof(float) * batch_output_size));
-            CUDA_CHECK(cudaMalloc((void**)&d_err[i], sizeof(float) * batch_output_size));
+            CUDA_CHECK(cudaMalloc(&d_in[i], sizeof(float) * batch_input_size));
+            CUDA_CHECK(cudaMalloc(&d_exp[i], sizeof(float) * batch_output_size));
+            CUDA_CHECK(cudaMalloc(&d_out[i], sizeof(float) * batch_output_size));
+            CUDA_CHECK(cudaMalloc(&d_err[i], sizeof(float) * batch_output_size));
 
             CUDA_CHECK(cudaMemcpy(d_in[i], flatten(inputBatch[i]).data(), sizeof(float) * batch_input_size, cudaMemcpyHostToDevice));
             CUDA_CHECK(cudaMemcpy(d_exp[i], expected[i].data(), sizeof(float) * batch_output_size, cudaMemcpyHostToDevice));
@@ -319,9 +319,9 @@ void mnn2d::cuBackprop(const std::vector<std::vector<float>>& expected) {
             // Allocate activation buffers and copy data
             for(int l = 0; l < layers; ++l) {
                 size_t act_size = actBatch[l][i].size() * actBatch[l][i][0].size();
-                CUDA_CHECK(cudaMalloc((void**)&d_activate[l][i], sizeof(float) * act_size));
-                CUDA_CHECK(cudaMalloc((void**)&d_dotProds[l][i], sizeof(float) * act_size));
-                CUDA_CHECK(cudaMalloc((void**)&d_incoming[l][i], sizeof(float) * act_size));
+                CUDA_CHECK(cudaMalloc(&d_activate[l][i], sizeof(float) * act_size));
+                CUDA_CHECK(cudaMalloc(&d_dotProds[l][i], sizeof(float) * act_size));
+                CUDA_CHECK(cudaMalloc(&d_incoming[l][i], sizeof(float) * act_size));
                 CUDA_CHECK(cudaMemcpy(d_activate[l][i], flatten(actBatch[l][i]).data(), sizeof(float) * act_size, cudaMemcpyHostToDevice));
                 CUDA_CHECK(cudaMemcpy(d_dotProds[l][i], flatten(dotBatch[l][i]).data(), sizeof(float) * act_size, cudaMemcpyHostToDevice));
             }
@@ -336,18 +336,18 @@ void mnn2d::cuBackprop(const std::vector<std::vector<float>>& expected) {
             size_t c_size = flat_c.size();
             max_total_grad_size = std::max(max_total_grad_size, c_size);
 
-            CUDA_CHECK(cudaMalloc((void**)&d_cweights[i], sizeof(float) * c_size));
-            CUDA_CHECK(cudaMalloc((void**)&d_bweights[i], sizeof(float) * flat_b.size()));
-            CUDA_CHECK(cudaMalloc((void**)&d_gradC[i], sizeof(float) * c_size));
-            CUDA_CHECK(cudaMalloc((void**)&d_gradB[i], sizeof(float) * flat_b.size()));
+            CUDA_CHECK(cudaMalloc(&d_cweights[i], sizeof(float) * c_size));
+            CUDA_CHECK(cudaMalloc(&d_bweights[i], sizeof(float) * flat_b.size()));
+            CUDA_CHECK(cudaMalloc(&d_gradC[i], sizeof(float) * c_size));
+            CUDA_CHECK(cudaMalloc(&d_gradB[i], sizeof(float) * flat_b.size()));
             CUDA_CHECK(cudaMemcpy(d_cweights[i], flat_c.data(), sizeof(float) * c_size, cudaMemcpyHostToDevice));
             CUDA_CHECK(cudaMemcpy(d_bweights[i], flat_b.data(), sizeof(float) * flat_b.size(), cudaMemcpyHostToDevice));
         }
 
         // Allocate buffers for average gradient accumulation
         float *d_totalCgrad = nullptr, *d_totalBgrad = nullptr;
-        CUDA_CHECK(cudaMalloc((void**)&d_totalCgrad, max_total_grad_size * batchSize * sizeof(float)));
-        CUDA_CHECK(cudaMalloc((void**)&d_totalBgrad, max_total_grad_size * batchSize * sizeof(float)));
+        CUDA_CHECK(cudaMalloc(&d_totalCgrad, max_total_grad_size * batchSize * sizeof(float)));
+        CUDA_CHECK(cudaMalloc(&d_totalBgrad, max_total_grad_size * batchSize * sizeof(float)));
 
         // Allocate shared intermediate buffers for outgoing gradient calculation
         int max_act_rows = 0, max_act_cols = 0;
@@ -356,9 +356,9 @@ void mnn2d::cuBackprop(const std::vector<std::vector<float>>& expected) {
             max_act_cols = std::max(max_act_cols, (int)actBatch[l][0][0].size());
         }
         size_t max_act_size = max_act_rows * max_act_cols;
-        CUDA_CHECK(cudaMalloc((void**)&d_grad_x_CT, max_act_size * sizeof(float)));
-        CUDA_CHECK(cudaMalloc((void**)&d_dprev_p, max_act_size * sizeof(float)));
-        CUDA_CHECK(cudaMalloc((void**)&d_dprev_act, max_act_size * sizeof(float)));
+        CUDA_CHECK(cudaMalloc(&d_grad_x_CT, max_act_size * sizeof(float)));
+        CUDA_CHECK(cudaMalloc(&d_dprev_p, max_act_size * sizeof(float)));
+        CUDA_CHECK(cudaMalloc(&d_dprev_act, max_act_size * sizeof(float)));
 
         // --- Backpropagation Loop (Last Layer to Second Layer) ---
         for(int layer = layers - 1; layer >= 1; layer--) {
@@ -379,7 +379,7 @@ void mnn2d::cuBackprop(const std::vector<std::vector<float>>& expected) {
 
                 // 1. Transpose C: C_P_C -> C_C_P
                 float *d_C_T = nullptr;
-                CUDA_CHECK(cudaMalloc((void**)&d_C_T, sizeof(float) * cweight_flat_size));
+                CUDA_CHECK(cudaMalloc(&d_C_T, sizeof(float) * cweight_flat_size));
                 transpose<<<calculate_grid_2d(cweight_cols, cweight_rows, CUDA_BLOCK_SIZE_2D_X, CUDA_BLOCK_SIZE_2D_Y), block_2d>>>(
                     d_cweights[layer], d_C_T, cweight_rows, cweight_cols
                 );
@@ -405,32 +405,32 @@ void mnn2d::cuBackprop(const std::vector<std::vector<float>>& expected) {
 
                 // Power prev_act: a_prev -> a_prev^n
                 float *d_prev_p_i = nullptr;
-                CUDA_CHECK(cudaMalloc((void**)&d_prev_p_i, sizeof(float) * prev_act_size));
+                CUDA_CHECK(cudaMalloc(&d_prev_p_i, sizeof(float) * prev_act_size));
                 power<<<grid1D_prev, block_1d>>>(d_activate[layer-1][i], d_prev_p_i, order, (int)prev_act_size);
                 
                 // 7. Transpose prev_p: (R_prev x P_cols) -> (P_cols x R_prev)
                 float *d_prev_p_T_i = nullptr;
                 size_t prev_p_T_size = prev_cols * prev_rows;
-                CUDA_CHECK(cudaMalloc((void**)&d_prev_p_T_i, sizeof(float) * prev_p_T_size));
+                CUDA_CHECK(cudaMalloc(&d_prev_p_T_i, sizeof(float) * prev_p_T_size));
                 transpose<<<calculate_grid_2d(prev_rows, prev_cols, CUDA_BLOCK_SIZE_2D_X, CUDA_BLOCK_SIZE_2D_Y), block_2d>>>(
                     d_prev_p_i, d_prev_p_T_i, prev_rows, prev_cols
                 );
                 CUDA_CHECK(cudaFree(d_prev_p_i));
 
                 // 8. dL/dC_layer: (P_cols x R_curr) * (R_curr x C_curr) -> P_cols x C_curr
-                float *d_gradC_i = nullptr; CUDA_CHECK(cudaMalloc((void**)&d_gradC_i, sizeof(float) * cweight_flat_size));
+                float *d_gradC_i = nullptr; CUDA_CHECK(cudaMalloc(&d_gradC_i, sizeof(float) * cweight_flat_size));
                 matxmat2mat<<<gridMatMulGrad, block_2d>>>(d_prev_p_T_i, d_incoming[layer][i], d_gradC_i, cweight_rows, curr_rows, cweight_cols);
                 scaleByValue<<<gridWeightGrad, block_1d>>>(d_gradC_i, d_gradC_i, alpha, (int)cweight_flat_size);
                 CUDA_CHECK(cudaMemcpy(d_totalCgrad + i * cweight_flat_size, d_gradC_i, sizeof(float) * cweight_flat_size, cudaMemcpyDeviceToDevice));
                 CUDA_CHECK(cudaFree(d_gradC_i));
 
                 // 9. dL/dB_layer
-                float *d_ones_i = nullptr; CUDA_CHECK(cudaMalloc((void**)&d_ones_i, sizeof(float) * prev_act_size));
-                float *d_onesT_i = nullptr; CUDA_CHECK(cudaMalloc((void**)&d_onesT_i, sizeof(float) * prev_p_T_size));
+                float *d_ones_i = nullptr; CUDA_CHECK(cudaMalloc(&d_ones_i, sizeof(float) * prev_act_size));
+                float *d_onesT_i = nullptr; CUDA_CHECK(cudaMalloc(&d_onesT_i, sizeof(float) * prev_p_T_size));
                 std::vector<float> ones(prev_act_size, 1.0f); CUDA_CHECK(cudaMemcpy(d_ones_i, ones.data(), sizeof(float) * prev_act_size, cudaMemcpyHostToDevice));
                 transpose<<<calculate_grid_2d(prev_cols, prev_rows, CUDA_BLOCK_SIZE_2D_X, CUDA_BLOCK_SIZE_2D_Y), block_2d>>>(d_ones_i, d_onesT_i, prev_rows, prev_cols);
                 CUDA_CHECK(cudaFree(d_ones_i));
-                float *d_gradB_i = nullptr; CUDA_CHECK(cudaMalloc((void**)&d_gradB_i, sizeof(float) * cweight_flat_size));
+                float *d_gradB_i = nullptr; CUDA_CHECK(cudaMalloc(&d_gradB_i, sizeof(float) * cweight_flat_size));
                 matxmat2mat<<<gridMatMulGrad, block_2d>>>(d_onesT_i, d_incoming[layer][i], d_gradB_i, cweight_rows, curr_rows, cweight_cols);
                 scaleByValue<<<gridWeightGrad, block_1d>>>(d_gradB_i, d_gradB_i, 1.0f - alpha, (int)cweight_flat_size);
                 CUDA_CHECK(cudaMemcpy(d_totalBgrad + i * cweight_flat_size, d_gradB_i, sizeof(float) * cweight_flat_size, cudaMemcpyDeviceToDevice));
@@ -459,24 +459,24 @@ void mnn2d::cuBackprop(const std::vector<std::vector<float>>& expected) {
             dim3 grid1D_in = calculate_grid_1d(in_flat_size, CUDA_BLOCK_SIZE_1D);
 
             // 1. input^n: x -> x^n
-            float *d_input_p = nullptr; CUDA_CHECK(cudaMalloc((void**)&d_input_p, sizeof(float) * in_flat_size));
+            float *d_input_p = nullptr; CUDA_CHECK(cudaMalloc(&d_input_p, sizeof(float) * in_flat_size));
             power<<<grid1D_in, block_1d>>>(d_in[i], d_input_p, order, (int)in_flat_size);
             // 2. Transpose x^n: (H x W) -> (W x H)
             float *d_input_p_T = nullptr; size_t in_p_T_size = inWidth * inHeight;
             dim3 grid2D_in = calculate_grid_2d(inWidth, inHeight, CUDA_BLOCK_SIZE_2D_X, CUDA_BLOCK_SIZE_2D_Y);
-            CUDA_CHECK(cudaMalloc((void**)&d_input_p_T, sizeof(float) * in_p_T_size));
+            CUDA_CHECK(cudaMalloc(&d_input_p_T, sizeof(float) * in_p_T_size));
             transpose<<<grid2D_in, block_2d>>>(d_input_p, d_input_p_T, inHeight, inWidth); CUDA_CHECK(cudaFree(d_input_p));
             // 3. dL/dC_1
-            float *d_gradC_i = nullptr; CUDA_CHECK(cudaMalloc((void**)&d_gradC_i, sizeof(float) * cweight_flat_size));
+            float *d_gradC_i = nullptr; CUDA_CHECK(cudaMalloc(&d_gradC_i, sizeof(float) * cweight_flat_size));
             matxmat2mat<<<calculate_grid_2d(cweight_cols, cweight_rows, CUDA_BLOCK_SIZE_2D_X, CUDA_BLOCK_SIZE_2D_Y), block_2d>>>(d_input_p_T, d_incoming[0][i], d_gradC_i, cweight_rows, inHeight, cweight_cols);
             scaleByValue<<<gridWeightGradFirst, block_1d>>>(d_gradC_i, d_gradC_i, alpha, (int)cweight_flat_size);
             CUDA_CHECK(cudaMemcpy(d_totalCgrad + i * cweight_flat_size, d_gradC_i, sizeof(float) * cweight_flat_size, cudaMemcpyDeviceToDevice)); CUDA_CHECK(cudaFree(d_gradC_i));
             // 4. dL/dB_1
-            float *d_ones_i = nullptr; CUDA_CHECK(cudaMalloc((void**)&d_ones_i, sizeof(float) * in_flat_size));
-            float *d_onesT_i = nullptr; CUDA_CHECK(cudaMalloc((void**)&d_onesT_i, sizeof(float) * in_p_T_size));
+            float *d_ones_i = nullptr; CUDA_CHECK(cudaMalloc(&d_ones_i, sizeof(float) * in_flat_size));
+            float *d_onesT_i = nullptr; CUDA_CHECK(cudaMalloc(&d_onesT_i, sizeof(float) * in_p_T_size));
             std::vector<float> ones(in_flat_size, 1.0f); CUDA_CHECK(cudaMemcpy(d_ones_i, ones.data(), sizeof(float) * in_flat_size, cudaMemcpyHostToDevice));
             transpose<<<grid2D_in, block_2d>>>(d_ones_i, d_onesT_i, inHeight, inWidth); CUDA_CHECK(cudaFree(d_ones_i));
-            float *d_gradB_i = nullptr; CUDA_CHECK(cudaMalloc((void**)&d_gradB_i, sizeof(float) * cweight_flat_size));
+            float *d_gradB_i = nullptr; CUDA_CHECK(cudaMalloc(&d_gradB_i, sizeof(float) * cweight_flat_size));
             matxmat2mat<<<calculate_grid_2d(cweight_cols, cweight_rows, CUDA_BLOCK_SIZE_2D_X, CUDA_BLOCK_SIZE_2D_Y), block_2d>>>(d_onesT_i, d_incoming[0][i], d_gradB_i, cweight_rows, inHeight, cweight_cols);
             scaleByValue<<<gridWeightGradFirst, block_1d>>>(d_gradB_i, d_gradB_i, 1.0f - alpha, (int)cweight_flat_size);
             CUDA_CHECK(cudaMemcpy(d_totalBgrad + i * cweight_flat_size, d_gradB[0], sizeof(float) * cweight_flat_size, cudaMemcpyDeviceToDevice)); CUDA_CHECK(cudaFree(d_gradB_i));

@@ -21,7 +21,7 @@ void mnn::cuForprop(const std::vector<float>& input)
         float* current_input_ptr; // Pointer for the input to the current layer
 
         size_t input_size_bytes = input.size() * sizeof(float);
-        CUDA_CHECK(cudaMalloc((void**)&d_input, input_size_bytes));
+        CUDA_CHECK(cudaMalloc(&d_input, input_size_bytes));
         CUDA_CHECK(cudaMemcpy(d_input, input.data(), input_size_bytes, cudaMemcpyHostToDevice));
         for(int i = 0; i < this->layers; i++) {
             // Flatten host weights/biases for H2D transfer
@@ -32,12 +32,12 @@ void mnn::cuForprop(const std::vector<float>& input)
             size_t dotprod_size = dotProds[i].size();
             size_t dotprod_size_bytes = dotprod_size * sizeof(float);
 
-            CUDA_CHECK(cudaMalloc((void**)&d_clayers[i], cweight_size_bytes));
-            CUDA_CHECK(cudaMalloc((void**)&d_blayers[i], bweight_size_bytes));
+            CUDA_CHECK(cudaMalloc(&d_clayers[i], cweight_size_bytes));
+            CUDA_CHECK(cudaMalloc(&d_blayers[i], bweight_size_bytes));
             CUDA_CHECK(cudaMemcpy(d_clayers[i], flat_c.data(), cweight_size_bytes, cudaMemcpyHostToDevice));
             CUDA_CHECK(cudaMemcpy(d_blayers[i], flat_b.data(), bweight_size_bytes, cudaMemcpyHostToDevice));
-            CUDA_CHECK(cudaMalloc((void**)&d_dotProds[i], dotprod_size_bytes));
-            CUDA_CHECK(cudaMalloc((void**)&d_activate[i], dotprod_size_bytes));
+            CUDA_CHECK(cudaMalloc(&d_dotProds[i], dotprod_size_bytes));
+            CUDA_CHECK(cudaMalloc(&d_activate[i], dotprod_size_bytes));
         }
 
         for(int i = 0; i < this->layers; i++) {
@@ -110,7 +110,7 @@ void mnn2d::cuForprop(const std::vector<std::vector<float>>& input)
         int currentInWidth = input[0].size();
         std::vector<float> flat_input = flatten(input);
         size_t input_size_bytes = flat_input.size() * sizeof(float);
-        CUDA_CHECK(cudaMalloc((void**)&d_input, input_size_bytes));
+        CUDA_CHECK(cudaMalloc(&d_input, input_size_bytes));
         CUDA_CHECK(cudaMemcpy(d_input, flat_input.data(), input_size_bytes, cudaMemcpyHostToDevice));
 
         for(int i = 0; i < this->layers; i++) {
@@ -121,13 +121,13 @@ void mnn2d::cuForprop(const std::vector<std::vector<float>>& input)
             size_t dotprod_size = dotProds[i].size() * dotProds[i][0].size();
             size_t dotprod_size_bytes = dotprod_size * sizeof(float);
 
-            CUDA_CHECK(cudaMalloc((void**)&d_clayers[i], cweight_size_bytes));
-            CUDA_CHECK(cudaMalloc((void**)&d_blayers[i], bweight_size_bytes));
+            CUDA_CHECK(cudaMalloc(&d_clayers[i], cweight_size_bytes));
+            CUDA_CHECK(cudaMalloc(&d_blayers[i], bweight_size_bytes));
             CUDA_CHECK(cudaMemcpy(d_clayers[i], flat_c.data(), cweight_size_bytes, cudaMemcpyHostToDevice));
             CUDA_CHECK(cudaMemcpy(d_blayers[i], flat_b.data(), bweight_size_bytes, cudaMemcpyHostToDevice));
 
-            CUDA_CHECK(cudaMalloc((void**)&d_dotProds[i], dotprod_size_bytes));
-            CUDA_CHECK(cudaMalloc((void**)&d_activate[i], dotprod_size_bytes));
+            CUDA_CHECK(cudaMalloc(&d_dotProds[i], dotprod_size_bytes));
+            CUDA_CHECK(cudaMalloc(&d_activate[i], dotprod_size_bytes));
         }
 
         for(int i = 0; i < this->layers; i++) {
@@ -179,7 +179,7 @@ void mnn2d::cuForprop(const std::vector<std::vector<float>>& input)
                 size_t partial_results_size = num_work_groups * 2;
 
                 float* d_partial_results = nullptr;
-                CUDA_CHECK(cudaMalloc((void**)&d_partial_results, partial_results_size * sizeof(float)));
+                CUDA_CHECK(cudaMalloc(&d_partial_results, partial_results_size * sizeof(float)));
 
                 // Launch reduction kernel
                 size_t shared_mem_size = CUDA_BLOCK_SIZE_1D * sizeof(float) * 2; // For local_max and local_sum
@@ -215,7 +215,7 @@ void mnn2d::cuForprop(const std::vector<std::vector<float>>& input)
         int last_layer_cols = activate[layers - 1][0].size();
         size_t output_size_bytes = last_layer_cols * sizeof(float);
         
-        CUDA_CHECK(cudaMalloc((void**)&d_output, output_size_bytes));
+        CUDA_CHECK(cudaMalloc(&d_output, output_size_bytes));
         
         dim3 block_pool(CUDA_BLOCK_SIZE_1D);
         dim3 grid_pool = calculate_grid_1d(last_layer_cols, CUDA_BLOCK_SIZE_1D);

@@ -286,6 +286,7 @@ extern "C" __global__ void vecxmat2vec(const float* vec, const float* mat, float
 extern "C" __global__ void matxmat2mat(const float* mat1, const float* mat2, float* result, int mat1Rows, int mat1Cols, int mat2cols);
 extern "C" __global__ void matxvec2vec(const float* mat, const float* vec, float* result, int matRows, int matCols);
 extern "C" __global__ void hadamard(const float* mat1, const float* mat2, float* result, int mat1Rows, int mat1Cols);
+extern "C" __global__ void fill(float* out, float val, int size);
 extern "C" __global__ void hadamard2(const float* mat1, const float* mat2, const float* mat3, float* result, int mat1Rows, int mat1Cols);
 extern "C" __global__ void matrix_vector_average(const float* inputBuffer, float* outputBuffer, const int N, const int Rows, const int Cols);
 extern "C" __global__ void matrix_vector_sum(const float* inputBuffer, float* outputBuffer, const int Rows, const int Cols);

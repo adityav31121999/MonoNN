@@ -366,6 +366,15 @@ extern "C" __global__ void matxvec2vec(const float* mat, const float* vec, float
     }
 }
 
+extern "C" __global__ void fill(float* out, float val, int size)
+{
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < size)
+    {
+        out[i] = val;
+    }
+}
+
 extern "C" __global__ void hadamard(const float* mat1, const float* mat2, float* result, int mat1Rows, int mat1Cols)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;

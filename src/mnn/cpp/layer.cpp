@@ -279,7 +279,7 @@ void layerBackward(const std::vector<float>& incoming,          // width[l]
     for(int i = 0; i < prev_p.size(); i++) {
         for(int j = 0; j < incoming.size(); j++) {
             gradc[i][j] = alpha * prev_p[i] * incoming[j];
-            gradb[i][j] = (1.0f - (1.1f * alpha)) * incoming[j];
+            gradb[i][j] = (1.0f - alpha) * incoming[j];
         }
     }
 
@@ -353,7 +353,7 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
     for(int i = 0; i < gradc.size(); i++) {
         for(int j = 0; j < gradc[0].size(); j++) {
             gradc[i][j] = alpha * gradc[i][j];
-            gradb[i][j] = (1.0f - (1.1f * alpha)) * gradb[i][j];
+            gradb[i][j] = (1.0f - alpha) * gradb[i][j];
         }
     }
 }
