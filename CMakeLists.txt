@@ -64,21 +64,11 @@ endif()
 
 add_subdirectory(src)
 include_directories(src)
-
-# Define the executable with its main source file
 add_executable(monoNN main.cpp mnn.h)
-
-# Link the executable against the mnn static library from the src directory
 target_link_libraries(monoNN PRIVATE mnn)
 
-# Link libraries based on the selected backend
 if(USE_OPENCL)
     target_link_libraries(monoNN PRIVATE OpenCL::OpenCL)
 elseif(USE_CUDA)
-    target_link_libraries(monoNN PRIVATE cudart)
-endif()
-
-# Explicitly set runtime library for the executable target (redundant if global variable works, but safer)
-if(USE_CUDA AND MSVC)
-    set_target_properties(monoNN PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+    target_link_libraries(monoNN PRIVATE CUDA::cudart)
 endif()

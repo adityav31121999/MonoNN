@@ -31,6 +31,7 @@ void mnn::cuTrain(const std::vector<float>& input, const std::vector<float>& tar
 
         // 2. Backward propagation
         this->target = target;
+        learningRate = 0.01f;
         cuBackprop(this->target);
     }
 
@@ -115,6 +116,7 @@ void mnn2d::cuTrain(const std::vector<std::vector<float>>& input, const std::vec
 
         // 2. Backward propagation
         this->target = target;
+        learningRate = 0.01f;
         cuBackprop(this->target);
     }
 
