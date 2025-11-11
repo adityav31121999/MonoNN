@@ -62,6 +62,15 @@ else()
     add_compile_definitions(USE_CPU)
 endif()
 
+# OpenCV support
+find_package(OpenCV REQUIRED)
+if(OpenCV_FOUND)
+    message(STATUS "Found OpenCV version ${OpenCV_VERSION}")
+    include_directories(${OpenCV_INCLUDE_DIRS})
+else()
+    message(FATAL_ERROR "OpenCV not found. Please install OpenCV or set OpenCV_DIR.")
+endif()
+
 add_subdirectory(src)
 include_directories(src)
 add_executable(monoNN main.cpp mnn.h)

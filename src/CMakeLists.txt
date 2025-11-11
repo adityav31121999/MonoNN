@@ -46,3 +46,10 @@ elseif(USE_OPENCL)
 endif()
 
 add_library(mnn STATIC ${MNN_SOURCES})
+
+target_link_libraries(mnn
+    PUBLIC # Important: Make OpenCL and CUDA linking public
+        ${OpenCL_LIBRARIES}
+        ${CUDAToolkit_LIBRARIES}
+        ${OpenCV_LIBRARIES}
+)

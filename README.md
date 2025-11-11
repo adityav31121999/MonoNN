@@ -20,6 +20,13 @@
 - Certain common functions are commonly used in all code for data access and modification.
 - Binary files are used for weights storage (serialisation and deserialisation).
 
+### Backend Support
+- The project is configurable to run on different hardware backends.
+  - **`USE_CUDA`**: Enables GPU acceleration using NVIDIA's CUDA.
+  - **`USE_OPENCL`**: Enables GPU/accelerator support via OpenCL, for broader hardware compatibility.
+  - **`USE_CPU`**: Defaults to standard C++ for execution on the CPU.
+- The backend can be selected by setting the corresponding flag in the `CMakeLists.txt` file.
+
 ### _MonoNN structure_
 - Both MonoNN have similar mechanism and weight structure, with gradient storing also per hidden layer.
   - For 1D i/o, it has 1D product and Activations per layer.

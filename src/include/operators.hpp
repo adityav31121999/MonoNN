@@ -109,6 +109,15 @@ void layerBackward(const std::vector<std::vector<float>>& incoming, std::vector<
                     std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& gradc,
                     std::vector<std::vector<float>>& gradb, float m, float alpha);
 
+// image access and manipulation
+#include <opencv2/core.hpp>
+#include <opencv2/opencv.hpp>
+
+std::vector<std::vector<float>> cvMat2vec(const cv::Mat& mat);
+cv::Mat vec2cvMat(const std::vector<std::vector<float>>& vec);
+cv::Mat image2grey(const std::string& path2image);
+std::vector<std::vector<std::vector<float>>> image2channels(const std::string& path2image);
+
 #ifdef USE_OPENCL
 
 // Conditional inclusion of OpenCL C++ header based on OS
