@@ -72,7 +72,8 @@ mnn2d::mnn2d(int inw, int inh, int outw, int layers, float order, std::string bi
         clCommandQueue = cl::CommandQueue(clContext, devices[0], 0, &err); CL_CHECK(err);
         createKernelsFromFile(clContext, "D:\\monoNN\\src\\mnn\\cl\\kernel.cl", kernels);
         std::cout << "OpenCL kernels created successfully for mnn2d." << std::endl;
-    } catch (const std::runtime_error& e) {
+    }
+    catch (const std::runtime_error& e) {
         std::cerr << "\n!! FATAL OPENCL INITIALIZATION ERROR (mnn2d) !!" << std::endl;
         std::cerr << e.what() << std::endl;
         throw;
@@ -150,7 +151,8 @@ mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::
         clCommandQueue = cl::CommandQueue(clContext, devices[0], 0, &err); CL_CHECK(err);
         createKernelsFromFile(clContext, "D:\\monoNN\\src\\mnn\\cl\\kernel.cl", kernels);
         std::cout << "OpenCL kernels created successfully for mnn2d." << std::endl;
-    } catch (const std::runtime_error& e) {
+    }
+    catch (const std::runtime_error& e) {
         std::cerr << "\n!! FATAL OPENCL INITIALIZATION ERROR (mnn2d) !!" << std::endl;
         std::cerr << e.what() << std::endl;
         throw;
@@ -225,7 +227,8 @@ mnn2d::mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, st
         clCommandQueue = cl::CommandQueue(clContext, devices[0], 0, &err); CL_CHECK(err);
         createKernelsFromFile(clContext, "D:\\monoNN\\src\\mnn\\cl\\kernel.cl", kernels);
         std::cout << "OpenCL kernels created successfully for mnn2d." << std::endl;
-    } catch (const std::runtime_error& e) {
+    }
+    catch (const std::runtime_error& e) {
         std::cerr << "\n!! FATAL OPENCL INITIALIZATION ERROR (mnn2d) !!" << std::endl;
         std::cerr << e.what() << std::endl;
         throw;

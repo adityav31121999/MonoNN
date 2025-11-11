@@ -14,8 +14,6 @@ mnn::mnn(int insize, int outsize, int layers, float order, std::string binFileAd
     output(outsize, 0.0f), target(outsize, 0.0f), batchSize(1), binFileAddress(binFileAddress)
 {
     epochs = EPOCH;
-    // set width of hidden layers and dot products
-    // int dim = (insize > outsize) ? insize : outsize;     // (optional)
     int dim = (insize + outsize) / 2;
     width.resize(layers, dim);
     width[layers - 1] = outsize;
@@ -82,7 +80,6 @@ mnn::mnn(int insize, int outsize, int dim, int layers, float order, std::string 
     order(order), inSize(insize), outSize(outsize), layers(layers), input(insize, 0.0f), 
     output(outsize, 0.0f), target(outsize, 0.0f), batchSize(1), binFileAddress(binFileAddress)
 {
-    // set width of hidden layers and dot products
     width.resize(layers, dim);
     width[layers - 1] = outsize;
     // initialize weights
@@ -119,29 +116,20 @@ mnn::mnn(int insize, int outsize, int dim, int layers, float order, std::string 
     std::cout << "Network initialized with " << param << " parameters." 
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
 #ifdef USE_OPENCL
-    // *** THE FIX IS HERE ***
     try {
         // Initialize OpenCL context
         cl_int err;
         clContext = cl::Context(CL_DEVICE_TYPE_DEFAULT, nullptr, nullptr, nullptr, &err); CL_CHECK(err);
  
-        // Get devices and create a command queue
         auto devices = clContext.getInfo<CL_CONTEXT_DEVICES>();
         clCommandQueue = cl::CommandQueue(clContext, devices[0], 0, &err); CL_CHECK(err);
  
-        // Now, call the function that can also throw an exception
-        // IMPORTANT: Change the hardcoded path to a relative one if possible
         createKernelsFromFile(clContext, "D:\\monoNN\\src\\mnn\\cl\\kernel.cl", kernels);
-        
         std::cout << "OpenCL kernels created successfully." << std::endl;
- 
-    } catch (const std::runtime_error& e) {
-        // Catch the exception from either context creation or createKernelsFromFile
+    }
+    catch (const std::runtime_error& e) {
         std::cerr << "\n!! FATAL OPENCL INITIALIZATION ERROR !!" << std::endl;
-        std::cerr << e.what() << std::endl; // Print the detailed error message
-        
-        // Re-throw the exception to signal that the mnn object construction has failed.
-        // The code that tried to create this object (e.g., in main) can now catch this.
+        std::cerr << e.what() << std::endl;
         throw; 
     }
 #endif
@@ -194,7 +182,6 @@ mnn::mnn(int insize, int outsize, std::vector<int> width, float order, std::stri
     std::cout << "Network initialized with " << param << " parameters." 
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
 #ifdef USE_OPENCL
-    // *** THE FIX IS HERE ***
     try {
         // Initialize OpenCL context
         cl_int err;
@@ -211,12 +198,8 @@ mnn::mnn(int insize, int outsize, std::vector<int> width, float order, std::stri
         std::cout << "OpenCL kernels created successfully." << std::endl;
  
     } catch (const std::runtime_error& e) {
-        // Catch the exception from either context creation or createKernelsFromFile
         std::cerr << "\n!! FATAL OPENCL INITIALIZATION ERROR !!" << std::endl;
-        std::cerr << e.what() << std::endl; // Print the detailed error message
-        
-        // Re-throw the exception to signal that the mnn object construction has failed.
-        // The code that tried to create this object (e.g., in main) can now catch this.
+        std::cerr << e.what() << std::endl;
         throw; 
     }
 #endif

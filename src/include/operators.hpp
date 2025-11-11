@@ -111,7 +111,6 @@ void layerBackward(const std::vector<std::vector<float>>& incoming, std::vector<
 
 // image access and manipulation
 #include <opencv2/core.hpp>
-#include <opencv2/opencv.hpp>
 
 std::vector<std::vector<float>> cvMat2vec(const cv::Mat& mat);
 cv::Mat vec2cvMat(const std::vector<std::vector<float>>& vec);

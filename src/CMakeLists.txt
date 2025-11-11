@@ -21,7 +21,6 @@ if(USE_CPU)
         mnn/cpp/forprop.cpp
         mnn/cpp/backprop.cpp
         mnn/cpp/train.cpp
-        mnn/cpp/threadTrain.cpp
     )
 elseif(USE_CUDA)
     list(APPEND MNN_SOURCES
@@ -30,7 +29,6 @@ elseif(USE_CUDA)
         mnn/cu/backprop.cu
         mnn/cu/backBatch.cu
         mnn/cu/train.cu
-        mnn/cu/bufTrain.cu
     )
 elseif(USE_OPENCL)
     list(APPEND MNN_SOURCES
@@ -40,8 +38,6 @@ elseif(USE_OPENCL)
         mnn/cl/clBackprop.cpp
         mnn/cl/clbackBatch.cpp
         mnn/cl/cltrain.cpp
-        mnn/cl/clBufTrain.cpp
-        mnn/cl/clBufTrainBatch.cpp
     )
 endif()
 

@@ -13,8 +13,8 @@
 #define DROPOUT_RATE 0.6f           // dropout rate
 #define DECAY_RATE 0.001f           // weight decay rate
 #define WEIGHT_DECAY 0.001f         // weight decay parameter
-#define SOFTMAX_TEMP 1.025f          // softmax temperature
-#define EPOCH 10                    // epochs for single set training
+#define SOFTMAX_TEMP 1.025f         // softmax temperature
+#define EPOCH 100                   // epochs for single set training
 
 /**
  * @brief Class representing a Monomial Neural Network (MNN).
@@ -55,6 +55,7 @@ public:
     std::vector<std::vector<float>> dotProds;       // (activation^n) * cweights + bweights = dot products
     std::vector<std::vector<float>> activate;       // activations of the network
 
+    // for batch-wise training
 
     std::vector<std::vector<float>> inputBatch;     // input vector
     std::vector<std::vector<float>> outputBatch;    // output vector
@@ -116,7 +117,7 @@ public:
     #endif
 
     void train(const std::string& dataSetPath, int batchSize);
-    void test(const std::string& dataSetPath, float loss);
+    void test(const std::string& dataSetPath, float& loss);
 
 // destructor
     ~mnn() = default;
@@ -218,7 +219,7 @@ public:
     #endif
 
     void train(const std::string& dataSetPath, int batchSize);
-    void test(const std::string& dataSetPath, float loss);
+    void test(const std::string& dataSetPath, float& loss);
 
 // destructor
     ~mnn2d() = default;

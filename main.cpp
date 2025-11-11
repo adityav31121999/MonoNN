@@ -27,7 +27,7 @@ int main() {
         for (int i = 0; i < inSize; ++i) {
             input1[i] = static_cast<float>(dis(gen));
         }
-        network.cuTrain(input1, target);
+        network.clTrain(input1, target);
 
         std::cout << "--------------------MNN2D--------------------" << std::endl;
 
@@ -39,7 +39,7 @@ int main() {
                 input2[i][j] = static_cast<float>(dis(gen));
             }
         }
-        network2.cuTrain(input2, target);
+        network2.clTrain(input2, target);
     }
     catch (const std::exception& e) {
         std::cerr << "An exception occurred in main: " << e.what() << std::endl;
