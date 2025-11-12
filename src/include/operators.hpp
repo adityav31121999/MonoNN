@@ -1,5 +1,6 @@
 #ifndef LOSS_HPP
 #define LOSS_HPP 1
+#define NOMINMAX
 #include <vector>
 #include <cmath>
 #include <string>

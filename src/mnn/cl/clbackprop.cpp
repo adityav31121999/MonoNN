@@ -114,7 +114,7 @@ void mnn::clBackprop(const std::vector<float>& expected) {
             // scale gradb by 1-alpha
             kernelScale.setArg(0, d_gradB[layer]);
             kernelScale.setArg(1, d_gradB[layer]);
-            kernelScale.setArg(2, alpha);
+            kernelScale.setArg(2, 1.0f - alpha);
             kernelScale.setArg(3, (int)bweight_size);
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelScale, cl::NullRange, globalWeightGrad, local_1d));
 
@@ -181,7 +181,7 @@ void mnn::clBackprop(const std::vector<float>& expected) {
         // scale gradb by 1-alpha
         kernelScale.setArg(0, d_gradB[0]);
         kernelScale.setArg(1, d_gradB[0]);
-        kernelScale.setArg(2, alpha);
+        kernelScale.setArg(2, 1.0f);
         kernelScale.setArg(3, (int)bweight_size);
         CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelScale, cl::NullRange, globalWeightGradFirst, local_1d));
 
@@ -449,7 +449,7 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
             // dL/dB_layer
             kernelMatMul.setArg(0, d_onesT);
             kernelMatMul.setArg(1, d_incoming[layer]);
-            kernelMatMul.setArg(2, d_gradC[layer]);
+            kernelMatMul.setArg(2, d_gradB[layer]);
             kernelMatMul.setArg(3, prev_cols);
             kernelMatMul.setArg(4, prev_rows);
             kernelMatMul.setArg(5, curr_cols);
@@ -457,7 +457,7 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
             // scale dL/dB_layer by 1- alpha
             kernelScale.setArg(0, d_gradB[layer]);
             kernelScale.setArg(1, d_gradB[layer]);
-            kernelScale.setArg(2, 1.0f - alpha);
+            kernelScale.setArg(2, 1.0f);
             kernelScale.setArg(3, (int)(prev_cols * curr_cols));
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelScale, cl::NullRange, calculate_global_1d(WORKSIZE_1D, prev_cols * curr_cols), local_1d));
 
@@ -494,10 +494,27 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
         kernelMatMul.setArg(4, inHeight);
         kernelMatMul.setArg(5, firstLayerCols);
         CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelMatMul, cl::NullRange, calculate_global_2d(size2d, inWidth, firstLayerCols), local_2d));
-        // dL/dB_1
+        // scale by alpha
         kernelScale.setArg(0, d_gradC[0]);
         kernelScale.setArg(1, d_gradC[0]);
         kernelScale.setArg(2, alpha);
+        kernelScale.setArg(3, (int)(inWidth * firstLayerCols));
+        CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelScale, cl::NullRange, calculate_global_1d(WORKSIZE_1D, inWidth * firstLayerCols), local_1d));
+
+        // dL/dB_1
+        std::vector<float> ones(inWidth * inHeight, 1.0f);
+        cl::Buffer d_ones_T(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * ones.size(), ones.data(), &err); CL_CHECK(err);
+        kernelMatMul.setArg(0, d_ones_T);
+        kernelMatMul.setArg(1, d_incoming[0]);
+        kernelMatMul.setArg(2, d_gradB[0]);
+        kernelMatMul.setArg(3, inWidth);
+        kernelMatMul.setArg(4, inHeight);
+        kernelMatMul.setArg(5, firstLayerCols);
+        CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelMatMul, cl::NullRange, calculate_global_2d(size2d, inWidth, firstLayerCols), local_2d));
+        // scale by 1
+        kernelScale.setArg(0, d_gradB[0]);
+        kernelScale.setArg(1, d_gradB[0]);
+        kernelScale.setArg(2, 1.0f);
         kernelScale.setArg(3, (int)(inWidth * firstLayerCols));
         CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelScale, cl::NullRange, calculate_global_1d(WORKSIZE_1D, inWidth * firstLayerCols), local_1d));
 

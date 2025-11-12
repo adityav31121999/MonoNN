@@ -26,7 +26,7 @@ void mnn::clTrain(const std::vector<float>& input, const std::vector<float>& tar
         // check for error and break if acceptable
         float loss = crossEntropy(output, target);
         std::cout << "Current CE Loss at epoch " << i << ": " <<loss << std::endl;
-
+        if (i == EPOCH) break;
         // 2. Backward propagation
         this->target = target;
         clBackprop(this->target);
@@ -110,6 +110,7 @@ void mnn2d::clTrain(const std::vector<std::vector<float>>& input, const std::vec
         // check for error and break if acceptable
         float loss = crossEntropy(output, target);
         std::cout << "Current CE Loss at epoch " << i << ": " <<loss << std::endl;
+        if (i == EPOCH) break;
 
         // 2. Backward propagation
         this->target = target;

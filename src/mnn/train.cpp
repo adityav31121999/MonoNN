@@ -79,7 +79,7 @@ void mnn::train(const std::string &dataSetPath, int batchSize)
         for(int i = 0; i < totalFiles; i += batchSize) {
             std::vector<std::vector<float>> inBatch;
             std::vector<std::vector<float>> expBatch;
-            int currentBatchEnd = std::min(i + batchSize, totalFiles);
+            int currentBatchEnd = std::min<int>(i + batchSize, totalFiles);
 
             for(int j = i; j < currentBatchEnd; ++j) {
                 const auto& filePath = filePaths[j];
@@ -184,7 +184,7 @@ void mnn2d::train(const std::string &dataSetPath, int batchSize)
         for(int i = 0; i < totalFiles; i += batchSize) {
             std::vector<std::vector<std::vector<float>>> inBatch;
             std::vector<std::vector<float>> expBatch;
-            int currentBatchEnd = std::min(i + batchSize, totalFiles);
+            int currentBatchEnd = std::min<int>(i + batchSize, totalFiles);
 
             for(int j = i; j < currentBatchEnd; ++j) {
                 const auto& filePath = filePaths[j];

@@ -13,7 +13,7 @@
 #define DROPOUT_RATE 0.6f           // dropout rate
 #define DECAY_RATE 0.001f           // weight decay rate
 #define WEIGHT_DECAY 0.001f         // weight decay parameter
-#define SOFTMAX_TEMP 1.025f         // softmax temperature
+#define SOFTMAX_TEMP 1.5f           // softmax temperature
 #define EPOCH 100                   // epochs for single set training
 
 /**

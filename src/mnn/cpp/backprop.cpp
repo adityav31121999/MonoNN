@@ -110,7 +110,6 @@ void mnn2d::backprop(const std::vector<float>& expected) {
     }
 }
 
-
 /**
  * @brief Backpropagation for the mnn2d class (2D data) for batch backpropagation
  * @param expected The expected output vector (after pooling).
