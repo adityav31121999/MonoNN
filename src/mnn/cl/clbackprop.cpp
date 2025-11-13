@@ -1,4 +1,4 @@
-#ifdef USE_OPENCL
+#ifdef USE_CL
 #include "mnn.hpp"
 #include <vector>
 #include <iostream>
@@ -48,7 +48,7 @@ void mnn::clBackprop(const std::vector<float>& expected) {
         d_err = cl::Buffer(clContext, CL_MEM_READ_WRITE, sizeof(float) * output.size()); CL_CHECK(err);
 
         for(int i = 0; i < this->layers; i++) {
-            // allot weights to c and b
+            // allot weights to c and b and their gradients
             size_t cweight_size = cweights[i].size() * cweights[i][0].size();
             size_t bweight_size = bweights[i].size() * bweights[i][0].size();
             d_cweights[i] = cl::Buffer(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * cweight_size, (void*)flatten(cweights[i]).data(), &err); CL_CHECK(err);
@@ -64,8 +64,9 @@ void mnn::clBackprop(const std::vector<float>& expected) {
             // for incoming gradients
             d_incoming[i] = cl::Buffer(clContext, CL_MEM_READ_WRITE, sizeof(float) * activate[i].size()); CL_CHECK(err);
         }
-        // for outgoing gradients
+        // for outgoing gradients: from 0 to layers - 2
         for(int i = 0; i < this->layers-1; i++) {
+            d_preoutgoing[i] = cl::Buffer(clContext, CL_MEM_READ_WRITE, sizeof(float) * activate[i].size()); CL_CHECK(err);
             d_outgoing[i] = cl::Buffer(clContext, CL_MEM_READ_WRITE, sizeof(float) * activate[i].size()); CL_CHECK(err);
             d_dpow[i] = cl::Buffer(clContext, CL_MEM_READ_WRITE, sizeof(float) * activate[i].size()); CL_CHECK(err);
             d_dact[i] = cl::Buffer(clContext, CL_MEM_READ_WRITE, sizeof(float) * activate[i].size()); CL_CHECK(err);
@@ -152,11 +153,14 @@ void mnn::clBackprop(const std::vector<float>& expected) {
             kernelHadamard.setArg(4, (int)activate[layer - 1].size());
             kernelHadamard.setArg(5, (int)1);
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelHadamard, cl::NullRange, globalOutGrad, local_1d));
+            CL_CHECK(clCommandQueue.enqueueCopyBuffer(d_outgoing[layer - 1], d_incoming[layer - 1], 0, 0, sizeof(float) * activate[layer - 1].size()));
         }
+
+        // Backpropagation for the first layer (input layer)
         cl::NDRange globalWeightGradFirst = calculate_global_1d(WORKSIZE_1D, cweights[0].size() * cweights[0][0].size());
         size_t cweight_size = cweights[0].size() * cweights[0][0].size();
         size_t bweight_size = bweights[0].size() * bweights[0][0].size();
-        // Backpropagation for the first layer (input layer)
+        cl::Buffer d_ones(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * input.size(), std::vector<float>(input.size(), 1.0f).data(), &err); CL_CHECK(err);
         // dL/dC_1
         kernelvxv2m.setArg(0, d_incoming[0]);
         kernelvxv2m.setArg(1, d_in);
@@ -173,7 +177,7 @@ void mnn::clBackprop(const std::vector<float>& expected) {
 
         // dL/dB_1
         kernelvxv2m.setArg(0, d_incoming[0]);
-        kernelvxv2m.setArg(1, d_bweights[0]);
+        kernelvxv2m.setArg(1, d_ones);
         kernelvxv2m.setArg(2, d_gradB[0]);
         kernelvxv2m.setArg(3, (int)input.size());
         kernelvxv2m.setArg(4, (int)bweights[0][0].size());
@@ -185,10 +189,11 @@ void mnn::clBackprop(const std::vector<float>& expected) {
         kernelScale.setArg(3, (int)bweight_size);
         CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelScale, cl::NullRange, globalWeightGradFirst, local_1d));
 
-        // Read the updated weights back to host
+        // update weights and copy to host vectors
         for (int i = 0; i < this->layers; ++i) {
             size_t cweight_size = cweights[i].size() * cweights[i][0].size();
             size_t bweight_size = bweights[i].size() * bweights[i][0].size();
+            // flat vectors for C, B weights and gradients
             std::vector<float> takeIn(cweight_size, 0.0f);
             std::vector<float> takeIn2(bweight_size, 0.0f);
             std::vector<float> takeIn3(cweight_size, 0.0f);
@@ -208,14 +213,16 @@ void mnn::clBackprop(const std::vector<float>& expected) {
             kernelUpdateWeights.setArg(1, d_gradB[i]);
             kernelUpdateWeights.setArg(2, (int)bweight_size);
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelUpdateWeights, cl::NullRange, globalWeightGrad, local_1d));
+
+            // copy and reshape
             CL_CHECK(clCommandQueue.enqueueReadBuffer(d_cweights[i], CL_TRUE, 0, sizeof(float) * cweight_size, (void*)takeIn.data()));
             CL_CHECK(clCommandQueue.enqueueReadBuffer(d_bweights[i], CL_TRUE, 0, sizeof(float) * bweight_size, (void*)takeIn2.data()));
-            cweights[i] = reshape(takeIn, cweights[i].size(), cweights[i][0].size());
-            bweights[i] = reshape(takeIn2, bweights[i].size(), bweights[i][0].size());
             CL_CHECK(clCommandQueue.enqueueReadBuffer(d_gradC[i], CL_TRUE, 0, sizeof(float) * cweight_size, (void*)takeIn3.data()));
             CL_CHECK(clCommandQueue.enqueueReadBuffer(d_gradB[i], CL_TRUE, 0, sizeof(float) * bweight_size, (void*)takeIn4.data()));
+            cweights[i] = reshape(takeIn, cweights[i].size(), cweights[i][0].size());
+            bweights[i] = reshape(takeIn2, bweights[i].size(), bweights[i][0].size());
             cgradients[i] = reshape(takeIn3, cgradients[i].size(), cgradients[i][0].size());
-            bgradients[i] = reshape(takeIn4, bweights[i].size(), bgradients[i][0].size()); 
+            bgradients[i] = reshape(takeIn4, bgradients[i].size(), bgradients[i][0].size());
         }
     }
     catch (const std::runtime_error& e) {
@@ -323,7 +330,7 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
             cl::NDRange globalTranspose = calculate_global_2d(size2d, prev_cols, curr_cols);
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelTranspose, cl::NullRange, globalTranspose, local_2d));
 
-            // grad x C^T
+            // dL/dz_l x C^T
             cl::Buffer d_grad_x_CT(clContext, CL_MEM_READ_WRITE, prev_rows * prev_cols * sizeof(float));
             kernelMatMul.setArg(0, d_incoming[layer]);
             kernelMatMul.setArg(1, d_C_T);
@@ -385,7 +392,8 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
                 kernelSoftMaxDerNormalize.setArg(4, global_max);
                 kernelSoftMaxDerNormalize.setArg(5, global_sum);
                 CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSoftMaxDerNormalize, cl::NullRange, globalReduce, localReduce));
-            } else {
+            }
+            else {
                 // Use single-work-group kernel for small sizes
                 kernelSoftmaxDer.setArg(0, d_dotProds[layer-1]);
                 kernelSoftmaxDer.setArg(1, d_dprev_act);
@@ -412,7 +420,6 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
             kernelPower.setArg(2, order);
             kernelPower.setArg(3, (int)(prev_rows * prev_cols));
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelPower, cl::NullRange, calculate_global_1d(WORKSIZE_1D, prev_rows * prev_cols), local_1d));
-
             // transpose prev_p
             cl::Buffer d_prev_p_T(clContext, CL_MEM_READ_WRITE, prev_cols * prev_rows * sizeof(float));
             kernelTranspose.setArg(0, d_prev_p);
@@ -420,7 +427,6 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
             kernelTranspose.setArg(2, prev_rows);
             kernelTranspose.setArg(3, prev_cols);
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelTranspose, cl::NullRange, calculate_global_2d(size2d, prev_rows, prev_cols), local_2d));
-
             // dL/dC_layer
             kernelMatMul.setArg(0, d_prev_p_T);
             kernelMatMul.setArg(1, d_incoming[layer]);
@@ -436,16 +442,10 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
             kernelScale.setArg(3, (int)(prev_cols * curr_cols));
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelScale, cl::NullRange, calculate_global_1d(WORKSIZE_1D, prev_cols * curr_cols), local_1d));
 
+            // gradB = dL/dz_l x V1^T
             // transpose ones = onesT
             std::vector<float> ones(prev_cols * prev_rows, 1.0f);
-            cl::Buffer d_ones(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * ones.size(), ones.data(), &err); CL_CHECK(err);
-            cl::Buffer d_onesT(clContext, CL_MEM_READ_WRITE, prev_cols * prev_rows * sizeof(float));
-            kernelTranspose.setArg(0, d_ones);
-            kernelTranspose.setArg(1, d_onesT);
-            kernelTranspose.setArg(2, prev_rows);
-            kernelTranspose.setArg(3, prev_cols);
-            CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelTranspose, cl::NullRange, calculate_global_2d(size2d, prev_rows, prev_cols), local_2d));
-
+            cl::Buffer d_onesT(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * ones.size(), ones.data(), &err); CL_CHECK(err);
             // dL/dB_layer
             kernelMatMul.setArg(0, d_onesT);
             kernelMatMul.setArg(1, d_incoming[layer]);
@@ -460,9 +460,6 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
             kernelScale.setArg(2, 1.0f);
             kernelScale.setArg(3, (int)(prev_cols * curr_cols));
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelScale, cl::NullRange, calculate_global_1d(WORKSIZE_1D, prev_cols * curr_cols), local_1d));
-
-            // Copy outgoing to incoming for the next iteration
-            CL_CHECK(clCommandQueue.enqueueCopyBuffer(d_outgoing[layer-1], d_incoming[layer-1], 0, 0, sizeof(float) * prev_rows * prev_cols));
         }
 
         // --- Backpropagation for the first layer ---
@@ -524,8 +521,9 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
             size_t bweight_size = bweights[i].size() * bweights[i][0].size();
             std::vector<float> takeIn(cweight_size, 0.0f);
             std::vector<float> takeIn2(bweight_size, 0.0f);
+            std::vector<float> takeIn3(cweight_size, 0.0f);
+            std::vector<float> takeIn4(bweight_size, 0.0f);
             cl::NDRange globalWeightGrad = calculate_global_1d(WORKSIZE_1D, cweights[i].size() * cweights[i][0].size());
-
             size_t prev_layer_size = (i == 0) ? input.size() : activate[i - 1].size();
 
             // Update C weights using kernelUpdateWeights
@@ -541,14 +539,16 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
             kernelUpdateWeights.setArg(1, d_gradB[i]);
             kernelUpdateWeights.setArg(2, (int)bweights[i].size() * (int)prev_layer_size);
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelUpdateWeights, cl::NullRange, globalWeightGrad, local_1d));
+
+            // copy and reshape
             CL_CHECK(clCommandQueue.enqueueReadBuffer(d_cweights[i], CL_TRUE, 0, sizeof(float) * cweight_size, (void*)takeIn.data()));
             CL_CHECK(clCommandQueue.enqueueReadBuffer(d_bweights[i], CL_TRUE, 0, sizeof(float) * bweight_size, (void*)takeIn2.data()));
+            CL_CHECK(clCommandQueue.enqueueReadBuffer(d_gradC[i], CL_TRUE, 0, sizeof(float) * cweight_size, (void*)takeIn3.data()));
+            CL_CHECK(clCommandQueue.enqueueReadBuffer(d_gradB[i], CL_TRUE, 0, sizeof(float) * bweight_size, (void*)takeIn4.data()));
             cweights[i] = reshape(takeIn, cweights[i].size(), cweights[i][0].size());
             bweights[i] = reshape(takeIn2, bweights[i].size(), bweights[i][0].size());
-            CL_CHECK(clCommandQueue.enqueueReadBuffer(d_cweights[i], CL_TRUE, 0, sizeof(float) * cweight_size, (void*)takeIn.data()));
-            CL_CHECK(clCommandQueue.enqueueReadBuffer(d_bweights[i], CL_TRUE, 0, sizeof(float) * bweight_size, (void*)takeIn2.data()));
-            cgradients[i] = reshape(takeIn, cweights[i].size(), cweights[i][0].size());
-            bgradients[i] = reshape(takeIn2, bweights[i].size(), bweights[i][0].size());
+            cgradients[i] = reshape(takeIn3, cweights[i].size(), cgradients[i][0].size());
+            bgradients[i] = reshape(takeIn4, bweights[i].size(), bgradients[i][0].size());
         }
     }
     catch (const std::runtime_error& e) {

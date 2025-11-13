@@ -50,7 +50,7 @@ mnn::mnn(int insize, int outsize, int layers, float order, std::string binFileAd
     makeBinFile(binFileAddress);
     std::cout << "Network initialized with " << param << " parameters." 
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
-#ifdef USE_OPENCL
+#ifdef USE_CL
     try {
         cl_int err;
         clContext = cl::Context(CL_DEVICE_TYPE_DEFAULT, nullptr, nullptr, nullptr, &err); CL_CHECK(err);
@@ -116,7 +116,7 @@ mnn::mnn(int insize, int outsize, int dim, int layers, float order, std::string 
     makeBinFile(binFileAddress);
     std::cout << "Network initialized with " << param << " parameters." 
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
-#ifdef USE_OPENCL
+#ifdef USE_CL
     try {
         // Initialize OpenCL context
         cl_int err;
@@ -183,7 +183,7 @@ mnn::mnn(int insize, int outsize, std::vector<int> width, float order, std::stri
     makeBinFile(binFileAddress);
     std::cout << "Network initialized with " << param << " parameters." 
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
-#ifdef USE_OPENCL
+#ifdef USE_CL
     try {
         // Initialize OpenCL context
         cl_int err;

@@ -65,7 +65,7 @@ mnn2d::mnn2d(int inw, int inh, int outw, int layers, float order, std::string bi
     makeBinFile(binFileAddress);
     std::cout << "Network initialized with " << param << " parameters." 
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
-    #ifdef USE_OPENCL
+    #ifdef USE_CL
     // Initialize OpenCL context and command queue
     try {
         clContext = cl::Context(CL_DEVICE_TYPE_DEFAULT, nullptr, nullptr, nullptr, &err); CL_CHECK(err);
@@ -145,7 +145,7 @@ mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::
     makeBinFile(binFileAddress);
     std::cout << "Network initialized with " << param << " parameters." 
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
-    #ifdef USE_OPENCL
+    #ifdef USE_CL
     // Initialize OpenCL context and command queue
     try {
         clContext = cl::Context(CL_DEVICE_TYPE_DEFAULT, nullptr, nullptr, nullptr, &err); CL_CHECK(err);
@@ -222,7 +222,7 @@ mnn2d::mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, st
     makeBinFile(binFileAddress);
     std::cout << "Network initialized with " << param << " parameters." 
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
-    #ifdef USE_OPENCL
+    #ifdef USE_CL
     // Initialize OpenCL context and command queue
     try {
         clContext = cl::Context(CL_DEVICE_TYPE_DEFAULT, nullptr, nullptr, nullptr, &err); CL_CHECK(err);

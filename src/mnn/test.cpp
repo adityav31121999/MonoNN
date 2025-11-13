@@ -59,7 +59,7 @@ void mnn::test(const std::string &dataSetPath, float& loss)
             forprop(input);
         #elif USE_CUDA
             cuForprop(input);
-        #elif USE_OPENCL
+        #elif USE_CL
             clForprop(input);
         #endif
 
@@ -129,7 +129,7 @@ void mnn2d::test(const std::string &dataSetPath, float& loss)
             forprop(input);
         #elif USE_CUDA
             cuForprop(input);
-        #elif USE_OPENCL
+        #elif USE_CL
             clForprop(input);
         #endif
 

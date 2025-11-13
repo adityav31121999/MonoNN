@@ -1,4 +1,4 @@
-#ifdef USE_OPENCL
+#ifdef USE_CL
 #include "mnn.hpp"
 #include <vector>
 #include <stdexcept>

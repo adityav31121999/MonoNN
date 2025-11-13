@@ -6,6 +6,36 @@
 #include <string>
 #include <map>
 
+// struct to save and access information on testing and training of neural network
+// single session will have fixed number of batches or files to be trained on
+struct progress {
+    // files
+    unsigned int batchSize;             // number of files in single batch
+    unsigned int sessionSize;           // number of batches to be trained in single session
+    unsigned int totalTrainFiles;       // total training files
+    unsigned int totalTestFiles;        // total test files
+
+    // training
+    int batchSize;                              // maximum batchsize allowed for training
+    float currentLearningRate;                  // current session's learning rate after successful training
+    float loss;                                 // loss after successful training
+    double accLoss;                             // accumulated loss till current session
+    unsigned int filesProcessed;                // number of files processed in current session
+    unsigned long long ongoingCycleCount;       // total cyles of trainig till previous successful training
+    unsigned long long totalCycleCount;         // total cycles after full training
+    unsigned int totalSessionsOfTraining;       // total sessions used for training
+    double timeForCurrentSession;               // time taken for current session
+    double timeTakenForTraining;                // total time taken throughout sessions
+
+    // testing
+    float testError;                            // error recorded during testing
+    float testAccuracy;                         // accuracy recorded during testing (correct predictions / total testing files)
+    unsigned int correctPredictions;            // correct predictions done in testing
+};
+
+bool logProgressToCSV(const progress& p, const std::string& filePath);
+bool loadLastProgress(progress& p, const std::string& filePath);
+
 // file operations for weights serialization
 
 void makeBinFile(const std::string& fileAddress, unsigned long long param);
@@ -118,7 +148,7 @@ cv::Mat vec2cvMat(const std::vector<std::vector<float>>& vec);
 cv::Mat image2grey(const std::string& path2image);
 std::vector<std::vector<std::vector<float>>> image2channels(const std::string& path2image);
 
-#ifdef USE_OPENCL
+#ifdef USE_CL
 
 // Conditional inclusion of OpenCL C++ header based on OS
 #if defined(_WIN64)

@@ -23,7 +23,7 @@
 ### Backend Support
 - The project is configurable to run on different hardware backends.
   - **`USE_CUDA`**: Enables GPU acceleration using NVIDIA's CUDA.
-  - **`USE_OPENCL`**: Enables GPU/accelerator support via OpenCL, for broader hardware compatibility.
+  - **`USE_CL`**: Enables GPU/accelerator support via OpenCL, for broader hardware compatibility.
   - **`USE_CPU`**: Defaults to standard C++ for execution on the CPU.
 - The backend can be selected by setting the corresponding flag in the `CMakeLists.txt` file.
 
@@ -79,9 +79,28 @@ The library is built with a modular approach, separating functionalities into di
     - `b <- 0.1 * (1 - (L.n/x)) * c`
   - Hence, based on this, the gradients that will calculated during backpropagation, will be split to c and b.
   - This helps in modifying the impact of both c and b.
+- This kind of assumption, since i have not included application of activation on monomial and its deriavative in update of coefficient.
+  - Let a(.) be activation functon and a'(.) be its derivative.
+  - v = a(c(x^n) + b) is the output of the monomial neuron after activation.
+  - To properly update the coefficients `c` and `b` when an activation function is involved, we must use the chain rule from calculus. The goal is to find the partial derivative of the Loss function `E` with respect to `c` and `b`.
+  - Let `z = c(x^n) + b` be the pre-activation output. The output of the neuron is `v = a(z)`.
+  - The gradients for `c` and `b` are calculated as follows:
+    - `∂E/∂c = ∂E/∂v * ∂v/∂z * ∂z/∂c`
+    - `∂E/∂b = ∂E/∂v * ∂v/∂z * ∂z/∂b`
+  - Where:
+    - `∂E/∂v` is the error signal propagated backward from the next layer.
+    - `∂v/∂z = a'(z) = a'(c(x^n) + b)` is the derivative of the activation function.
+    - `∂z/∂c = x^n`
+    - `∂z/∂b = 1`
+  - Substituting these in, we get the gradients:
+    - **Gradient for c**: `∂E/∂c = (∂E/∂v) * a'(c(x^n) + b) * (x^n)`
+    - **Gradient for b**: `∂E/∂b = (∂E/∂v) * a'(c(x^n) + b)`
+  - The final update rules using the learning rate `L` are:
+    - `c <- c - L * (∂E/∂v) * a'(c(x^n) + b) * (x^n)`
+    - `b <- b - L * (∂E/∂v) * a'(c(x^n) + b)`
 
 ## Theorem Sketch
 - _**Universal Approximation (given by Grok)**_: Monomial networks with fixed $ m \geq 2 $ and sufficient layers/neurons can approximate any continuous function on compact sets. Why?
-  - Powers $ \{x^m\} $ span nonlinear basis
+  - Powers `x^m` span nonlinear basis
   - Layer composition generates dense function class
   - More expressive than linear MLPs for same width/depth

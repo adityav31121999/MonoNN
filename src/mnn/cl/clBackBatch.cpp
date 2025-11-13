@@ -1,4 +1,4 @@
-#ifdef USE_OPENCL
+#ifdef USE_CL
 #include "mnn.hpp"
 #include <vector>
 #include <iostream>
@@ -246,6 +246,7 @@ void mnn::clBackprop(const std::vector<std::vector<float>>& expected) {
         for (int i = 0; i < this->layers; ++i) {
             size_t cweight_size = cweights[i].size() * cweights[i][0].size();
             size_t bweight_size = bweights[i].size() * bweights[i][0].size();
+            // flat vectors for C, B weights and gradients
             std::vector<float> takeIn(cweight_size, 0.0f);
             std::vector<float> takeIn2(bweight_size, 0.0f);
             std::vector<float> takeIn3(cweight_size, 0.0f);
@@ -265,14 +266,16 @@ void mnn::clBackprop(const std::vector<std::vector<float>>& expected) {
             kernelUpdateWeights.setArg(1, d_gradB[i]);
             kernelUpdateWeights.setArg(2, (int)bweight_size);
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelUpdateWeights, cl::NullRange, globalWeightGrad, local_1d));
+
+            // copy and reshape
             CL_CHECK(clCommandQueue.enqueueReadBuffer(d_cweights[i], CL_TRUE, 0, sizeof(float) * cweight_size, (void*)takeIn.data()));
             CL_CHECK(clCommandQueue.enqueueReadBuffer(d_bweights[i], CL_TRUE, 0, sizeof(float) * bweight_size, (void*)takeIn2.data()));
-            cweights[i] = reshape(takeIn, cweights[i].size(), cweights[i][0].size());
-            bweights[i] = reshape(takeIn2, bweights[i].size(), bweights[i][0].size());
             CL_CHECK(clCommandQueue.enqueueReadBuffer(d_gradC[i], CL_TRUE, 0, sizeof(float) * cweight_size, (void*)takeIn3.data()));
             CL_CHECK(clCommandQueue.enqueueReadBuffer(d_gradB[i], CL_TRUE, 0, sizeof(float) * bweight_size, (void*)takeIn4.data()));
+            cweights[i] = reshape(takeIn, cweights[i].size(), cweights[i][0].size());
+            bweights[i] = reshape(takeIn2, bweights[i].size(), bweights[i][0].size());
             cgradients[i] = reshape(takeIn3, cgradients[i].size(), cgradients[i][0].size());
-            bgradients[i] = reshape(takeIn4, bweights[i].size(), bgradients[i][0].size()); 
+            bgradients[i] = reshape(takeIn4, bgradients[i].size(), bgradients[i][0].size());
         }
     }
     catch (const std::runtime_error& e) {
@@ -431,7 +434,8 @@ void mnn2d::clBackprop(const std::vector<std::vector<float>>& expected) {
                     kernelSoftmaxDer.setArg(2, SOFTMAX_TEMP);
                     kernelSoftmaxDer.setArg(3, (int)prev_dot_size);
                     CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSoftmaxDer, cl::NullRange, cl::NDRange(prev_dot_size), cl::NDRange(prev_dot_size)));
-                } else {
+                }
+                else {
                     // Use multi-work-group approach for large sizes
                     cl::Kernel kernelSoftMaxReduce = kernels.at("softmax_reduce");
                     cl::Kernel kernelSoftMaxDerNormalize = kernels.at("softmaxDer_normalize");
@@ -515,13 +519,7 @@ void mnn2d::clBackprop(const std::vector<std::vector<float>>& expected) {
 
                 // transpose ones = onesT
                 std::vector<float> ones(prev_cols * prev_rows, 1.0f);
-                cl::Buffer d_ones(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * ones.size(), ones.data(), &err); CL_CHECK(err);
-                cl::Buffer d_onesT(clContext, CL_MEM_READ_WRITE, prev_cols * prev_rows * sizeof(float));
-                kernelTranspose.setArg(0, d_ones);
-                kernelTranspose.setArg(1, d_onesT);
-                kernelTranspose.setArg(2, prev_rows);
-                kernelTranspose.setArg(3, prev_cols);
-                CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelTranspose, cl::NullRange, calculate_global_2d(size2d, prev_rows, prev_cols), local_2d));
+                cl::Buffer d_onesT(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * ones.size(), ones.data(), &err); CL_CHECK(err);
                 // dL/dB
                 kernelMatMul.setArg(0, d_onesT);
                 kernelMatMul.setArg(1, d_incoming[layer]);
@@ -643,8 +641,10 @@ void mnn2d::clBackprop(const std::vector<std::vector<float>>& expected) {
             size_t bweight_size = bweights[i].size() * bweights[i][0].size();
             std::vector<float> takeIn(cweight_size, 0.0f);
             std::vector<float> takeIn2(bweight_size, 0.0f);
-            cl::NDRange globalWeightGrad = calculate_global_1d(WORKSIZE_1D, cweight_size);
-            size_t prev_layer_size = (i == 0) ? input.size() : actBatch[0][i - 1].size();
+            std::vector<float> takeIn3(cweight_size, 0.0f);
+            std::vector<float> takeIn4(bweight_size, 0.0f);
+            cl::NDRange globalWeightGrad = calculate_global_1d(WORKSIZE_1D, cweights[i].size() * cweights[i][0].size());
+            size_t prev_layer_size = (i == 0) ? input.size() : activate[i - 1].size();
 
             // Update C weights using kernelUpdateWeights
             kernelUpdateWeights.setArg(0, d_cweights[i]);
@@ -659,14 +659,16 @@ void mnn2d::clBackprop(const std::vector<std::vector<float>>& expected) {
             kernelUpdateWeights.setArg(1, d_gradB[i]);
             kernelUpdateWeights.setArg(2, (int)bweights[i].size() * (int)prev_layer_size);
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelUpdateWeights, cl::NullRange, globalWeightGrad, local_1d));
+
+            // copy and reshape
             CL_CHECK(clCommandQueue.enqueueReadBuffer(d_cweights[i], CL_TRUE, 0, sizeof(float) * cweight_size, (void*)takeIn.data()));
             CL_CHECK(clCommandQueue.enqueueReadBuffer(d_bweights[i], CL_TRUE, 0, sizeof(float) * bweight_size, (void*)takeIn2.data()));
+            CL_CHECK(clCommandQueue.enqueueReadBuffer(d_gradC[i], CL_TRUE, 0, sizeof(float) * cweight_size, (void*)takeIn3.data()));
+            CL_CHECK(clCommandQueue.enqueueReadBuffer(d_gradB[i], CL_TRUE, 0, sizeof(float) * bweight_size, (void*)takeIn4.data()));
             cweights[i] = reshape(takeIn, cweights[i].size(), cweights[i][0].size());
             bweights[i] = reshape(takeIn2, bweights[i].size(), bweights[i][0].size());
-            CL_CHECK(clCommandQueue.enqueueReadBuffer(d_cweights[i], CL_TRUE, 0, sizeof(float) * cweight_size, (void*)takeIn.data()));
-            CL_CHECK(clCommandQueue.enqueueReadBuffer(d_bweights[i], CL_TRUE, 0, sizeof(float) * bweight_size, (void*)takeIn2.data()));
-            cgradients[i] = reshape(takeIn, cweights[i].size(), cweights[i][0].size());
-            bgradients[i] = reshape(takeIn2, bweights[i].size(), bweights[i][0].size());
+            cgradients[i] = reshape(takeIn3, cweights[i].size(), cgradients[i][0].size());
+            bgradients[i] = reshape(takeIn4, bweights[i].size(), bgradients[i][0].size());
         }
     }
     catch (const std::runtime_error& e) {

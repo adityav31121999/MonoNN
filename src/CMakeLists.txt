@@ -30,7 +30,7 @@ elseif(USE_CUDA)
         mnn/cu/backBatch.cu
         mnn/cu/train.cu
     )
-elseif(USE_OPENCL)
+elseif(USE_CL)
     list(APPEND MNN_SOURCES
         mnn/cl/kernel.cl
         mnn/cl/kernels.cpp

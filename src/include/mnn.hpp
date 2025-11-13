@@ -45,6 +45,7 @@ public:
     unsigned long long param;       // counter for iterations
     std::string binFileAddress;     // binary file address to save weights and biases
     FILE* binFile = nullptr;        // binary file pointer to read/write weights and biases
+    progress mnnPrg;                // progress for mnn
 
 // store values for training
 
@@ -70,11 +71,14 @@ public:
     mnn(int insize, int outsize, int dim, int layers, float order, std::string binFileAddress);
     mnn(int insize, int outsize, std::vector<int> width, float order, std::string binFileAddress);
 
-
     void makeBinFile(const std::string& fileAddress);
     void initiateWeights(int type);
-    friend void serializeWeights(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights, const std::string& fileAddress);
-    friend void deserializeWeights(std::vector<std::vector<std::vector<float>>>& cweights, std::vector<std::vector<std::vector<float>>>& bweights, const std::vector<int>& width, const std::vector<int>& height, const std::string& fileAddress);
+    void loadNetwork();
+    void saveNetwork();
+    friend void serializeWeights(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights, 
+                                    const std::string& fileAddress);
+    friend void deserializeWeights(std::vector<std::vector<std::vector<float>>>& cweights, std::vector<std::vector<std::vector<float>>>& bweights, 
+                                    const std::vector<int>& width, const std::vector<int>& height, const std::string& fileAddress);
 
     #ifdef USE_CPU
 
@@ -98,7 +102,7 @@ public:
         void cuBufTrain(const std::vector<float>& input, const std::vector<float>& target);
         void cuBufTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets); 
 
-    #elif USE_OPENCL
+    #elif USE_CL
 
         cl::Context clContext;               // OpenCL context
         cl::CommandQueue clCommandQueue;     // OpenCL command queue
@@ -154,6 +158,7 @@ public:
     unsigned long long param;       // counter for iterations
     std::string binFileAddress;     // binary file address to save weights and biases
     FILE* binFile;                  // binary file pointer to read/write weights and biases
+    progress mnn2dPrg;              // progress for mnn2d
 
 // weights and biases
 
@@ -179,6 +184,10 @@ public:
 
     void makeBinFile(const std::string& fileAddress);
     void initiateWeights(int type);
+    friend void serializeWeights(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights, 
+                                    const std::string& fileAddress);
+    friend void deserializeWeights(std::vector<std::vector<std::vector<float>>>& cweights, std::vector<std::vector<std::vector<float>>>& bweights, 
+                                    const std::vector<int>& width, const std::vector<int>& height, const std::string& fileAddress);
 
     #ifdef USE_CPU
 
@@ -201,7 +210,7 @@ public:
         void cuBufTrain(const std::vector<std::vector<float>>& input, const std::vector<float>& target);
         void cuBufTrainBatch(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets);
 
-    #elif USE_OPENCL
+    #elif USE_CL
 
         cl::Context clContext;               // OpenCL context
         cl::CommandQueue clCommandQueue;     // OpenCL command queue

@@ -188,8 +188,8 @@ void layerBackward(const std::vector<float>& incoming,
                     std::vector<std::vector<float>>& gradb,
                     float m, float alpha)
 {
-    std::vector<float> v1(gradb.size(), 1.0f);          // dz_l/dB_l
-    std::vector<float> prev_p = power(prevAct, m);  // dz_l/dC_l
+    // std::vector<float> v1(gradb.size(), 1.0f);           // dz_l/dB_l
+    std::vector<float> prev_p = power(prevAct, m);          // dz_l/dC_l
     // derivativ of prevAct (no sigmoid applied)
     std::vector<float> dprevAct(prevAct.size(), 1.0f);
 
@@ -220,13 +220,13 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
                     std::vector<std::vector<float>>& gradb,
                     float m, float alpha)
 {
-    // dz_l/dB_l
-    std::vector<std::vector<float>> v1(prevAct.size(), std::vector<float>(prevAct[0].size(), 1.0f));
+    // dz_l/dB_l = v1^T
+    std::vector<std::vector<float>> v1T(prevAct[0].size(), std::vector<float>(prevAct.size(), 1.0f));
     // dz_l/dC_l
     std::vector<std::vector<float>> prev_p = power(prevAct, m);
 
     gradc = multiply(transpose(prev_p), incoming);  // gradc = alpha * prev_p^T x dl/dz_l
-    gradb = multiply(transpose(v1), incoming);      // gradb = (1 - alpha) * v1^T x dl/dz_l
+    gradb = multiply(v1T, incoming);      // gradb = (1 - alpha) * v1^T x dl/dz_l
     for(int i = 0; i < gradc.size(); i++) {
         for(int j = 0; j < gradc[0].size(); j++) {
             gradc[i][j] = alpha * gradc[i][j];
@@ -315,8 +315,8 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
                     std::vector<std::vector<float>>& gradb,
                     float m, float alpha)
 {
-    // dz_l/dB_l
-    std::vector<std::vector<float>> v1(prevAct.size(), std::vector<float>(prevAct[0].size(), 1.0f));
+    // dz_l/dB_l = V1^T
+    std::vector<std::vector<float>> v1T(prevAct[0].size(), std::vector<float>(prevAct.size(), 1.0f));
     // dz_l/dC_l
     std::vector<std::vector<float>> prev_p = power(prevAct, m);
     // derivative of prev_p (element-wise)
@@ -349,7 +349,7 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
 
     // gradc = prev_p^T x dl/dz_l, gradc = (1 - alpha) * v1^T x dl/dz_l
     gradc = multiply(transpose(prev_p), incoming);
-    gradb = multiply(transpose(v1), incoming);
+    gradb = multiply(v1T, incoming);
     for(int i = 0; i < gradc.size(); i++) {
         for(int j = 0; j < gradc[0].size(); j++) {
             gradc[i][j] = alpha * gradc[i][j];

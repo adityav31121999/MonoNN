@@ -1,4 +1,4 @@
-#ifdef USE_OPENCL
+#ifdef USE_CL
 // In a new file, e.g., d:\monoNN\src\operators.cpp
 #include "operators.hpp" // Use the correct path to your header
 #include <vector>
@@ -154,4 +154,4 @@ void createKernelsFromFile(const cl::Context& context, const std::string& filePa
     }
 }
 
-#endif // USE_OPENCL
+#endif // USE_CL
