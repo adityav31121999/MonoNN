@@ -16,7 +16,6 @@ struct progress {
     unsigned int totalTestFiles;        // total test files
 
     // training
-    int batchSize;                              // maximum batchsize allowed for training
     float currentLearningRate;                  // current session's learning rate after successful training
     float loss;                                 // loss after successful training
     double accLoss;                             // accumulated loss till current session
@@ -75,6 +74,7 @@ std::vector<float> softmaxDer(const std::vector<float>& x, float temp);
 float mse(const std::vector<float>& output, const std::vector<float>& target);
 float crossEntropy(const std::vector<float>& output, const std::vector<float>& target);
 float binaryCrossEntropy(const std::vector<float>& output, const std::vector<float>& target);
+float categoricalCrossEntropy(const std::vector<std::vector<float>>& output, const std::vector<std::vector<float>>& target);
 
 // math operators
 

@@ -1,6 +1,8 @@
 #include "mnn.hpp"
 #include <stdexcept>
 #include <iostream>
+#include <fstream>
+#include <filesystem>
 
 /**
  * @brief Constructor for the mnn2d class in-out size.
@@ -245,79 +247,32 @@ mnn2d::mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, st
  */
 void mnn2d::makeBinFile(const std::string &fileAddress)
 {
-    this->binFileAddress = fileAddress;
+	this->binFileAddress = fileAddress;
+	long expectedFileSize = (long)(this->param * sizeof(float));
 
-#ifdef _MSC_VER
-    fopen_s(&this->binFile, fileAddress.c_str(), "rb+");
-#else
-    this->binFile = fopen(fileAddress.c_str(), "rb+");
-#endif
+	// Check if the file exists and has the correct size.
+	if (std::filesystem::exists(fileAddress)) {
+		long fileSize = std::filesystem::file_size(fileAddress);
+		if (fileSize == expectedFileSize) {
+			// If it exists and size is correct, load it.
+			std::cout << "Loading weights from existing file: " << fileAddress << std::endl;
+			try {
+				loadNetwork();
+				std::cout << "Binary file ready at: " << fileAddress << " & size: " << fileSize / (1024.0 * 1024.0) << " MB" << std::endl;
+				return; // Success, we are done.
+			}
+			catch (const std::runtime_error& e) {
+				std::cerr << "Error loading existing weights file: " << e.what() << ". Re-creating file." << std::endl;
+			}
+		}
+		else {
+			// If it exists but size is wrong, log it and proceed to create a new one.
+			std::cout << "File size mismatch. Expected " << expectedFileSize << " bytes, found " << fileSize << ". Re-creating file." << std::endl;
+		}
+	}
 
-    if (this->binFile) { // File exists
-        fseek(this->binFile, 0, SEEK_END);
-        long fileSize = ftell(this->binFile);
-        rewind(this->binFile);
-
-        long expectedFileSize = (long)(this->param * sizeof(float));
-
-        if (fileSize == expectedFileSize) {
-            // Parameters match, read weights and biases
-            for (int i = 0; i < layers; ++i) {
-                for (auto& row : cweights[i]) {
-                    size_t read_count = fread(row.data(), sizeof(float), row.size(), this->binFile);
-                    if (read_count != row.size()) {
-                        std::cerr << "Error reading cweights[" << i << "]" << std::endl;
-                        fclose(this->binFile);
-                        throw std::runtime_error("Error reading weights from file.");
-                    }
-                }
-                for (auto& row : bweights[i]) {
-                    size_t read_count = fread(row.data(), sizeof(float), row.size(), this->binFile);
-                    if (read_count != row.size()) {
-                        std::cerr << "Error reading bweights[" << i << "]" << std::endl;
-                        fclose(this->binFile);
-                        throw std::runtime_error("Error reading weights from file.");
-                    }
-                }
-            }
-            std::cout << "Loaded weights from existing file." << std::endl;
-        } else {
-            std::cout << "File size mismatch. Expected " << expectedFileSize << ", found " << fileSize << ". Re-creating the file." << std::endl;
-            // Size does not match, re-create the file
-            fclose(this->binFile);
-#ifdef _MSC_VER
-            fopen_s(&this->binFile, fileAddress.c_str(), "wb+");
-#else
-            this->binFile = fopen(fileAddress.c_str(), "wb+");
-#endif
-        }
-    }
-
-    // This block handles both file creation and re-creation after a size mismatch
-    if (!this->binFile || (ftell(this->binFile) == 0 && this->param > 0)) {
-        if (!this->binFile) { // File didn't exist
-            std::cout << "File does not exist. Creating new file." << std::endl;
-#ifdef _MSC_VER
-            fopen_s(&this->binFile, fileAddress.c_str(), "wb+");
-#else
-            this->binFile = fopen(fileAddress.c_str(), "wb+");
-#endif
-        }
-        if (this->binFile) { // Write initial weights
-            for (int i = 0; i < layers; i++) {
-                for (auto& row : cweights[i]) fwrite(row.data(), sizeof(float), row.size(), this->binFile);
-                for (auto& row : bweights[i]) fwrite(row.data(), sizeof(float), row.size(), this->binFile);
-            }
-        }
-    }
-
-    if (!this->binFile) {
-        throw std::runtime_error("Could not open or create binary file: " + fileAddress);
-    }
-
-    rewind(this->binFile); // Rewind for future operations
-    fseek(this->binFile, 0, SEEK_END);
-    long currentFileSize = ftell(this->binFile);
-    rewind(this->binFile);
-    std::cout << "Binary file ready at: " << fileAddress << " & size: " << currentFileSize / (1024.0 * 1024.0) << " MB" << std::endl;
+	// If the file does not exist, is the wrong size, or failed to load, create a new one.
+	std::cout << "Creating new weights file: " << fileAddress << std::endl;
+	::makeBinFile(fileAddress, this->param);
+	std::cout << "Binary file created successfully." << std::endl;
 }

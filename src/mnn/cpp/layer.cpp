@@ -57,16 +57,16 @@ void layerForward(const std::vector<float>& input, std::vector<float>& output, c
                 const std::vector<std::vector<float>>& bweights, float n)
 {
     if(input.size() != cweights.size()) {
-        throw std::runtime_error("input size and cweights rows mismatch :)");
+        throw std::runtime_error("input size and cweights rows mismatch: " + std::to_string(input.size()) + " != " + std::to_string(cweights.size()));
     }
     if(input.size() != bweights.size()) {
-        throw std::runtime_error("input size and bweights rows mismatch :)");
+        throw std::runtime_error("input size and bweights rows mismatch: " + std::to_string(input.size()) + " != " + std::to_string(bweights.size()));
     }
     if(output.size() != cweights[0].size()) {
-        throw std::runtime_error("output size and cweights columns mismatch :)");
+        throw std::runtime_error("output size and cweights columns mismatch: " + std::to_string(output.size()) + " != " + std::to_string(cweights[0].size()));
     }
     if(output.size() != bweights[0].size()) {
-        throw std::runtime_error("output size and bweights columns mismatch :)");
+        throw std::runtime_error("output size and bweights columns mismatch: " + std::to_string(output.size()) + " != " + std::to_string(bweights[0].size()));
     }
     std::vector<float> powerIn = power(input, n);
     for(int i = 0; i < cweights.size(); i++) {
@@ -192,6 +192,11 @@ void layerBackward(const std::vector<float>& incoming,
     std::vector<float> prev_p = power(prevAct, m);          // dz_l/dC_l
     // derivativ of prevAct (no sigmoid applied)
     std::vector<float> dprevAct(prevAct.size(), 1.0f);
+    std::transform(prevAct.begin(), prevAct.end(), dprevAct.begin(), 
+                    [](float x) { 
+                        return x*(1.0f - x); 
+                    }
+                );
 
     // gradc = alpha * prev_p^T x dl/dz_l, gradb = (1 - alpha) * v1^T x dl/dz_l
     for(int i = 0; i < prev_p.size(); i++) {

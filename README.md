@@ -73,13 +73,7 @@ The library is built with a modular approach, separating functionalities into di
   - Hence: `w <- (c*(x^n) + b) - L.(nc(x^(n-1))) = c(1 - (L.n/x))(x^n) + b`
   - The term `1 - (L.n/x)` solely updates the `c` coefficient of monomial not the `b` term.
     - `c <- (1-(L.n/x)) * c`
-  - So, a small part of it can be applied to the `b` term. So gradient can be split equally or specific value can be used to break and use it to update the coefficient with major part and minor part for `b`.
-  - So the gradient term is `L(n-1)/x`, in this project will be split on the basis of `0.9 and 0.1` for both major and minor part.
-    - `c <- 0.9 * (1 - (L.n/x)) * c`
-    - `b <- 0.1 * (1 - (L.n/x)) * c`
-  - Hence, based on this, the gradients that will calculated during backpropagation, will be split to c and b.
-  - This helps in modifying the impact of both c and b.
-- This kind of assumption, since i have not included application of activation on monomial and its deriavative in update of coefficient.
+- This is an assumption, since i have not included application of activation on monomial and its deriavative in update of coefficient.
   - Let a(.) be activation functon and a'(.) be its derivative.
   - v = a(c(x^n) + b) is the output of the monomial neuron after activation.
   - To properly update the coefficients `c` and `b` when an activation function is involved, we must use the chain rule from calculus. The goal is to find the partial derivative of the Loss function `E` with respect to `c` and `b`.

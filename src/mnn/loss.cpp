@@ -74,3 +74,17 @@ std::vector<float> binaryCrossEntropyDer(const std::vector<float>& output, const
     }
     return derivative;
 }
+
+float categoricalCrossEntropy(const std::vector<std::vector<float>>& output, const std::vector<std::vector<float>>& target) {
+    if (output.size() != target.size() || output[0].size() != target[0].size()) {
+        throw std::runtime_error("Dimension mismatch: " + std::to_string(output.size()) + "x" + std::to_string(output[0].size()) 
+                                                        + " vs " + std::to_string(target.size()) + "x" + std::to_string(target[0].size()));
+    }
+    float loss = 0.0f;
+    for (size_t i = 0; i < output.size(); ++i) {
+        for (size_t j = 0; j < output[i].size(); ++j) {
+            loss += target[i][j] * std::log(output[i][j] + 1e-9f);
+        }
+    }
+    return -loss / output.size();
+}

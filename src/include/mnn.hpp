@@ -44,7 +44,7 @@ public:
 
     unsigned long long param;       // counter for iterations
     std::string binFileAddress;     // binary file address to save weights and biases
-    FILE* binFile = nullptr;        // binary file pointer to read/write weights and biases
+    std::string path2progress;      // path to progress file
     progress mnnPrg;                // progress for mnn
 
 // store values for training
@@ -77,8 +77,8 @@ public:
     void saveNetwork();
     friend void serializeWeights(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights, 
                                     const std::string& fileAddress);
-    friend void deserializeWeights(std::vector<std::vector<std::vector<float>>>& cweights, std::vector<std::vector<std::vector<float>>>& bweights, 
-                                    const std::vector<int>& width, const std::vector<int>& height, const std::string& fileAddress);
+    friend void deserializeWeights(std::vector<float>& cweights, std::vector<float>& bweights, const std::vector<int>& width, const std::vector<int>& height, 
+                                    const std::string& fileAddress);
 
     #ifdef USE_CPU
 
@@ -157,8 +157,8 @@ public:
 
     unsigned long long param;       // counter for iterations
     std::string binFileAddress;     // binary file address to save weights and biases
-    FILE* binFile;                  // binary file pointer to read/write weights and biases
-    progress mnn2dPrg;              // progress for mnn2d
+    std::string path2progress;      // path to progress file
+    progress mnn2dPrg;              // progress for mnn
 
 // weights and biases
 
@@ -184,10 +184,12 @@ public:
 
     void makeBinFile(const std::string& fileAddress);
     void initiateWeights(int type);
+    void loadNetwork();
+    void saveNetwork();
     friend void serializeWeights(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights, 
                                     const std::string& fileAddress);
-    friend void deserializeWeights(std::vector<std::vector<std::vector<float>>>& cweights, std::vector<std::vector<std::vector<float>>>& bweights, 
-                                    const std::vector<int>& width, const std::vector<int>& height, const std::string& fileAddress);
+    friend void deserializeWeights(std::vector<float>& cweights, std::vector<float>& bweights, const std::vector<int>& width, const std::vector<int>& height, 
+                                    const std::string& fileAddress);
 
     #ifdef USE_CPU
 

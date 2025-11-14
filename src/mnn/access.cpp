@@ -29,7 +29,7 @@ bool logProgressToCSV(const progress& p, const std::string& filePath) {
 
     // If the file was empty, write the header first
     if (fileIsEmpty) {
-        file << "batchSize,sessionSize,totalTrainFiles,totalTestFiles,batchSize,currentLearningRate,"
+        file << "batchSize,sessionSize,totalTrainFiles,totalTestFiles,currentLearningRate,"
              << "loss,accLoss,filesProcessed,ongoingCycleCount,totalCycleCount,"
              << "totalSessionsOfTraining,timeForCurrentSession,timeTakenForTraining,"
              << "testError,testAccuracy,correctPredictions\n";
@@ -37,7 +37,7 @@ bool logProgressToCSV(const progress& p, const std::string& filePath) {
 
     // Append the data row
     file << p.batchSize << "," << p.sessionSize << "," << p.totalTrainFiles << "," << p.totalTestFiles << ","
-         << p.batchSize << "," << p.currentLearningRate << "," << p.loss << "," << p.accLoss << "," 
+         << p.currentLearningRate << "," << p.loss << "," << p.accLoss << "," 
          << p.filesProcessed << "," << p.ongoingCycleCount << "," << p.totalCycleCount << "," 
          << p.totalSessionsOfTraining << "," << p.timeForCurrentSession << "," << p.timeTakenForTraining << ","
          << p.testError << "," << p.testAccuracy << "," << p.correctPredictions << "\n";
@@ -86,7 +86,6 @@ bool loadLastProgress(progress& p, const std::string& filePath) {
         std::getline(ss, token, ','); p.sessionSize = std::stoul(token);
         std::getline(ss, token, ','); p.totalTrainFiles = std::stoul(token);
         std::getline(ss, token, ','); p.totalTestFiles = std::stoul(token);
-        std::getline(ss, token, ','); p.batchSize = std::stoi(token);
         std::getline(ss, token, ','); p.currentLearningRate = std::stof(token);
         std::getline(ss, token, ','); p.loss = std::stof(token);
         std::getline(ss, token, ','); p.accLoss = std::stod(token);
@@ -189,6 +188,10 @@ void serializeWeights(const std::vector<std::vector<std::vector<float>>>& cweigh
 void deserializeWeights(std::vector<float>& cweights, std::vector<float>& bweights,
                         const std::string& fileAddress)
 {
+    if (!std::filesystem::exists(fileAddress)) {
+        throw std::runtime_error("File not found: " + fileAddress);
+    }
+
     FILE* file = nullptr;
     #ifdef _MSC_VER
         fopen_s(&file, fileAddress.c_str(), "rb");
@@ -268,22 +271,48 @@ void deserializeWeights(std::vector<std::vector<std::vector<float>>>& cweights,
     fclose(file);
 }
 
-// load data of networ from binary file
+// mnn: load data of networ from binary file
 void mnn::loadNetwork() {
     std::vector<float> c(param/2, 0.0f);
     std::vector<float> b(param/2, 0.0f);
     deserializeWeights(c, b, binFileAddress);
+    unsigned long long offset = 0;
     for(int i = 0; i < cweights.size(); i++) {
         for(int j = 0; j < cweights[i].size(); j++) {
             for(int k = 0; k < cweights[i][j].size(); k++) {
-                cweights[i][j][k] = c[i*cweights[i].size()*cweights[i][j].size() + j*cweights[i][j].size() + k];
-                bweights[i][j][k] = b[i*bweights[i].size()*bweights[i][j].size() + j*bweights[i][j].size() + k];
+                cweights[i][j][k] = c[offset + (unsigned long long)j * cweights[i][j].size() + k];
+                bweights[i][j][k] = b[offset + (unsigned long long)j * cweights[i][j].size() + k];
             }
         }
+        offset += (unsigned long long)cweights[i].size() * cweights[i][0].size();
     }
+    std::cout << "Binary File " << binFileAddress << " loaded successfully." << std::endl;
 }
 
-// save data of network to binary file
+// mnn: save data of network to binary file
 void mnn::saveNetwork() {
+    serializeWeights(cweights, bweights, binFileAddress);
+}
+
+// mnn2d: load data of networ from binary file
+void mnn2d::loadNetwork() {
+    std::vector<float> c(param/2, 0.0f);
+    std::vector<float> b(param/2, 0.0f);
+    deserializeWeights(c, b, binFileAddress);
+    unsigned long long offset = 0;
+    for(int i = 0; i < cweights.size(); i++) {
+        for(int j = 0; j < cweights[i].size(); j++) {
+            for(int k = 0; k < cweights[i][j].size(); k++) {
+                cweights[i][j][k] = c[offset + (unsigned long long)j * cweights[i][j].size() + k];
+                bweights[i][j][k] = b[offset + (unsigned long long)j * cweights[i][j].size() + k];
+            }
+        }
+        offset += (unsigned long long)cweights[i].size() * cweights[i][0].size();
+    }
+    std::cout << "Binary File " << binFileAddress << " loaded successfully." << std::endl;
+}
+
+// mnn2d: save data of network to binary file
+void mnn2d::saveNetwork() {
     serializeWeights(cweights, bweights, binFileAddress);
 }

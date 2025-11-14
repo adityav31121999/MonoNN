@@ -46,7 +46,7 @@ void mnn2d::forprop(const std::vector<std::vector<float>>& input)
 
 /**
  * @brief forprop for monomial neural network with vector input
- * @param input input vector
+ * @param input input batch of vectors
  */
 void mnn::forprop(const std::vector<std::vector<float>>& input)
 {
@@ -60,7 +60,7 @@ void mnn::forprop(const std::vector<std::vector<float>>& input)
         // from 2nd to last
         for(int j = 1; j < layers; j++) {
             // forPower = power(activate[i-1], order); layerForward(forPower, dotProds[i], cweights(i+1), bweights(i+1));
-            layerForward(actBatch[j-1][i], dotBatch[j][i-1], cweights[j], bweights[j], order);
+            layerForward(actBatch[j-1][i], dotBatch[j][i], cweights[j], bweights[j], order);
             actBatch[j][i] = sigmoid(dotBatch[j][i]);
         }
     }
@@ -70,7 +70,7 @@ void mnn::forprop(const std::vector<std::vector<float>>& input)
 
 /**
  * @brief forprop for monomial neural network with matrix input
- * @param input input matrix
+ * @param input input batch of matrix
  */
 void mnn2d::forprop(const std::vector<std::vector<std::vector<float>>>& input)
 {

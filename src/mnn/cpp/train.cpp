@@ -27,7 +27,7 @@ void mnn::train(const std::vector<float>& input, const std::vector<float>& targe
             break;
         }
         i++;
-        // if(i == 10) break;
+        if(i == EPOCH) break;
 
         // 2. Backward propagation
         backprop(this->target);
@@ -54,28 +54,21 @@ void mnn::trainBatch(const std::vector<std::vector<float>>& inputs, const std::v
  
     this->batchSize = inputs.size();
     int totalEpochs = 0;
- 
+    int i = 0;
     while (true) {
-        for (int e = 0; e < this->epochs; ++e) {
-            float total_loss = 0.0f;
-            for (size_t i = 0; i < inputs.size(); ++i) {
-                this->input = inputs[i];
-                forprop(this->input);
-                total_loss += crossEntropy(this->output, targets[i]);
-            }
-            totalEpochs++;
-            std::cout << "Epoch " << totalEpochs << ", Average CE Loss: " << total_loss / inputs.size() << std::endl;
-            backprop(const_cast<std::vector<std::vector<float>>&>(targets));
-        }
+        float total_loss = 0.0f;
+        forprop(inputs);
+        totalEpochs++;
+        total_loss = categoricalCrossEntropy(outputBatch, targets);
+        std::cout << "Epoch " << totalEpochs << ", Average CE Loss: " << total_loss / inputs.size() << std::endl;
  
         int correct_predictions = 0;
         for (size_t i = 0; i < inputs.size(); ++i) {
-            forprop(inputs[i]);
             if (maxIndex(this->output) == maxIndex(targets[i])) {
                 correct_predictions++;
             }
         }
- 
+
         if (correct_predictions == inputs.size()) {
             std::cout << "All " << inputs.size() << " outputs in the batch are correct after " << totalEpochs << " epochs. Training complete." << std::endl;
             break;
@@ -83,6 +76,11 @@ void mnn::trainBatch(const std::vector<std::vector<float>>& inputs, const std::v
         else {
             std::cout << "predictions: " <<  correct_predictions << "/" << inputs.size() << std::endl;
         }
+
+        i++;
+        if(i == EPOCH) break;
+        backprop(targets);
+
         if (totalEpochs == epochs) {
             std::cout << correct_predictions << "/" << inputs.size() << " correct. Increasing epochs by 10 and continuing training." << std::endl;
             this->epochs += 10;
@@ -111,7 +109,7 @@ void mnn2d::train(const std::vector<std::vector<float>>& input, const std::vecto
             break;
         }
         i++;
-        // if(i == 10) break;
+        if(i == EPOCH) break;
 
         backprop(this->target);
     }
@@ -137,28 +135,21 @@ void mnn2d::trainBatch(const std::vector<std::vector<std::vector<float>>>& input
  
     this->batchSize = inputs.size();
     int totalEpochs = 0;
- 
+    int i = 0;
     while (true) {
-        for (int e = 0; e < this->epochs; ++e) {
-            float total_loss = 0.0f;
-            for (size_t i = 0; i < inputs.size(); ++i) {
-                this->input = inputs[i];
-                forprop(this->input);
-                total_loss += crossEntropy(this->output, targets[i]);
-            }
-            totalEpochs++;
-            std::cout << "Epoch " << totalEpochs << ", Average CE Loss: " << total_loss / inputs.size() << std::endl;
-            backprop(const_cast<std::vector<std::vector<float>>&>(targets));
-        }
- 
+        float total_loss = 0.0f;
+        forprop(inputs);
+        totalEpochs++;
+        total_loss = categoricalCrossEntropy(outputBatch, targets);
+        std::cout << "Epoch " << totalEpochs << ", Average CE Loss: " << total_loss / inputs.size() << std::endl;
+
         int correct_predictions = 0;
         for (size_t i = 0; i < inputs.size(); ++i) {
-            forprop(inputs[i]);
             if (maxIndex(this->output) == maxIndex(targets[i])) {
                 correct_predictions++;
             }
         }
- 
+
         if (correct_predictions == inputs.size()) {
             std::cout << "All " << inputs.size() << " outputs in the batch are correct after " << totalEpochs << " epochs. Training complete." << std::endl;
             break;
@@ -167,6 +158,10 @@ void mnn2d::trainBatch(const std::vector<std::vector<std::vector<float>>>& input
             std::cout << correct_predictions << "/" << inputs.size() << " correct. Increasing epochs by 10 and continuing training." << std::endl;
             this->epochs += 10;
         }
+
+        i++;
+        if(i == EPOCH) break;
+        backprop(targets);
     }
 }
 
