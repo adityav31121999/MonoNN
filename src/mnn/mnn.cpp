@@ -58,7 +58,7 @@ mnn::mnn(int insize, int outsize, int layers, float order, std::string binFileAd
         clContext = cl::Context(CL_DEVICE_TYPE_DEFAULT, nullptr, nullptr, nullptr, &err); CL_CHECK(err);
         auto devices = clContext.getInfo<CL_CONTEXT_DEVICES>();
         clCommandQueue = cl::CommandQueue(clContext, devices[0], 0, &err); CL_CHECK(err);
-        createKernelsFromFile(clContext, "D:\\monoNN\\src\\mnn\\cl\\kernel.cl", kernels);
+        createKernelsFromFile(clContext, kernelFiles, kernels);
         std::cout << "OpenCL kernels created successfully." << std::endl;
     }
     catch (const std::runtime_error& e) {
@@ -127,7 +127,7 @@ mnn::mnn(int insize, int outsize, int dim, int layers, float order, std::string 
         auto devices = clContext.getInfo<CL_CONTEXT_DEVICES>();
         clCommandQueue = cl::CommandQueue(clContext, devices[0], 0, &err); CL_CHECK(err);
  
-        createKernelsFromFile(clContext, "D:\\monoNN\\src\\mnn\\cl\\kernel.cl", kernels);
+        createKernelsFromFile(clContext, kernelFiles, kernels);
         std::cout << "OpenCL kernels created successfully." << std::endl;
     }
     catch (const std::runtime_error& e) {
@@ -197,8 +197,7 @@ mnn::mnn(int insize, int outsize, std::vector<int> width, float order, std::stri
  
         // Now, call the function that can also throw an exception
         // IMPORTANT: Change the hardcoded path to a relative one if possible
-        createKernelsFromFile(clContext, "D:\\monoNN\\src\\mnn\\cl\\kernel.cl", kernels);
-        
+        createKernelsFromFile(clContext, kernelFiles, kernels);
         std::cout << "OpenCL kernels created successfully." << std::endl;
  
     } catch (const std::runtime_error& e) {

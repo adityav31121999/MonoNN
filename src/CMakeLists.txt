@@ -24,7 +24,9 @@ if(USE_CPU)
     )
 elseif(USE_CUDA)
     list(APPEND MNN_SOURCES
-        mnn/cu/kernel.cu
+        mnn/cu/activations.cu
+        mnn/cu/operators.cu
+        mnn/cu/forprop.cu
         mnn/cu/forprop.cu
         mnn/cu/backprop.cu
         mnn/cu/backBatch.cu
@@ -32,7 +34,9 @@ elseif(USE_CUDA)
     )
 elseif(USE_CL)
     list(APPEND MNN_SOURCES
-        mnn/cl/kernel.cl
+        mnn/cl/activations.cl
+        mnn/cl/operators.cl
+        mnn/cl/forprop.cl
         mnn/cl/kernels.cpp
         mnn/cl/clforprop.cpp
         mnn/cl/clBackprop.cpp

@@ -73,7 +73,7 @@ mnn2d::mnn2d(int inw, int inh, int outw, int layers, float order, std::string bi
         clContext = cl::Context(CL_DEVICE_TYPE_DEFAULT, nullptr, nullptr, nullptr, &err); CL_CHECK(err);
         auto devices = clContext.getInfo<CL_CONTEXT_DEVICES>();
         clCommandQueue = cl::CommandQueue(clContext, devices[0], 0, &err); CL_CHECK(err);
-        createKernelsFromFile(clContext, "D:\\monoNN\\src\\mnn\\cl\\kernel.cl", kernels);
+        createKernelsFromFile(clContext, kernelFiles, kernels);
         std::cout << "OpenCL kernels created successfully for mnn2d." << std::endl;
     }
     catch (const std::runtime_error& e) {
@@ -153,7 +153,7 @@ mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::
         clContext = cl::Context(CL_DEVICE_TYPE_DEFAULT, nullptr, nullptr, nullptr, &err); CL_CHECK(err);
         auto devices = clContext.getInfo<CL_CONTEXT_DEVICES>();
         clCommandQueue = cl::CommandQueue(clContext, devices[0], 0, &err); CL_CHECK(err);
-        createKernelsFromFile(clContext, "D:\\monoNN\\src\\mnn\\cl\\kernel.cl", kernels);
+        createKernelsFromFile(clContext, kernelFiles, kernels);
         std::cout << "OpenCL kernels created successfully for mnn2d." << std::endl;
     }
     catch (const std::runtime_error& e) {
@@ -230,7 +230,7 @@ mnn2d::mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, st
         clContext = cl::Context(CL_DEVICE_TYPE_DEFAULT, nullptr, nullptr, nullptr, &err); CL_CHECK(err);
         auto devices = clContext.getInfo<CL_CONTEXT_DEVICES>();
         clCommandQueue = cl::CommandQueue(clContext, devices[0], 0, &err); CL_CHECK(err);
-        createKernelsFromFile(clContext, "D:\\monoNN\\src\\mnn\\cl\\kernel.cl", kernels);
+        createKernelsFromFile(clContext, kernelFiles, kernels);
         std::cout << "OpenCL kernels created successfully for mnn2d." << std::endl;
     }
     catch (const std::runtime_error& e) {

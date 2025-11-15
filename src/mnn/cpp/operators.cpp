@@ -362,3 +362,125 @@ int maxIndex(const std::vector<float> &input)
 {
     return std::distance(input.begin(), std::max_element(input.begin(), input.end()));
 }
+
+
+/**
+ * @brief Clip gradients by L2 norm to prevent exploding gradients.
+ * @param gradients Input gradient matrix (modified in place).
+ * @param max_norm Maximum allowed L2 norm for gradients.
+ */
+void clipGradients(std::vector<std::vector<float>>& gradients, float max_norm) {
+    // Compute L2 norm of all gradients
+    float total_norm = 0.0f;
+    
+    for (const auto& row : gradients) {
+        for (float val : row) {
+            total_norm += val * val;
+        }
+    }
+    total_norm = std::sqrt(total_norm);
+    
+    // Clip if necessary
+    if (total_norm > max_norm) {
+        float scale = max_norm / total_norm;
+        for (auto& row : gradients) {
+            for (float& val : row) {
+                val *= scale;
+            }
+        }
+    }
+}
+
+/**
+ * @brief Compute statistics (mean, std, min, max) for a 2D vector.
+ * @param data Input matrix.
+ * @return Statistics struct containing mean, std, min, max.
+ */
+Statistics computeStats(const std::vector<float>& data) {
+    Statistics stats;
+    
+    // Handle edge cases
+    if (data.empty()) {
+        stats.mean = 0.0f;
+        stats.std = 0.0f;
+        stats.min = 0.0f;
+        stats.max = 0.0f;
+        return stats;
+    }
+
+    // Compute statistics
+    float sum = 0.0f;
+    float sum_sq = 0.0f;
+    size_t count = 0;
+    stats.min = std::numeric_limits<float>::max();
+    stats.max = -std::numeric_limits<float>::max();
+    
+    for (float val : data) {
+        sum += val;
+        sum_sq += val * val;
+        count++;
+        stats.min = std::min(stats.min, val);
+        stats.max = std::max(stats.max, val);
+    }
+    
+    // Handle single element case
+    if (count == 1) {
+        stats.mean = sum;
+        stats.std = 0.0f;
+        return stats;
+    }
+    
+    stats.mean = sum / count;
+    float variance = (sum_sq / count) - (stats.mean * stats.mean);
+    stats.std = std::sqrt(std::max(0.0f, variance));
+    
+    return stats;
+}
+
+/**
+ * @brief Compute statistics (mean, std, min, max) for a 2D vector.
+ * @param data Input matrix.
+ * @return Statistics struct containing mean, std, min, max.
+ */
+Statistics computeStats(const std::vector<std::vector<float>>& data) {
+    Statistics stats;
+    
+    // Handle edge cases
+    if (data.empty() || data[0].empty()) {
+        stats.mean = 0.0f;
+        stats.std = 0.0f;
+        stats.min = 0.0f;
+        stats.max = 0.0f;
+        return stats;
+    }
+    
+    // Compute statistics
+    float sum = 0.0f;
+    float sum_sq = 0.0f;
+    size_t count = 0;
+    stats.min = std::numeric_limits<float>::max();
+    stats.max = -std::numeric_limits<float>::max();
+    
+    for (const auto& row : data) {
+        for (float val : row) {
+            sum += val;
+            sum_sq += val * val;
+            count++;
+            stats.min = std::min(stats.min, val);
+            stats.max = std::max(stats.max, val);
+        }
+    }
+    
+    // Handle single element case
+    if (count == 1) {
+        stats.mean = sum;
+        stats.std = 0.0f;
+        return stats;
+    }
+    
+    stats.mean = sum / count;
+    float variance = (sum_sq / count) - (stats.mean * stats.mean);
+    stats.std = std::sqrt(std::max(0.0f, variance));
+    
+    return stats;
+}

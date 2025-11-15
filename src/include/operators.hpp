@@ -6,6 +6,17 @@
 #include <string>
 #include <map>
 
+// struct to hold statistical information about data
+struct Statistics {
+    float mean;
+    float std;
+    float min;
+    float max;
+};
+
+Statistics computeStats(const std::vector<float>& data);
+Statistics computeStats(const std::vector<std::vector<float>>& data);
+
 // struct to save and access information on testing and training of neural network
 // single session will have fixed number of batches or files to be trained on
 struct progress {
@@ -97,7 +108,6 @@ std::vector<std::vector<float>> average(const std::vector<std::vector<std::vecto
 int maxIndex(const std::vector<float>& input);
 
 // weight initialisation
-
 void setWeightsByNormalDist(std::vector<std::vector<std::vector<float>>>& weights, float mean, float stddev);
 void setWeightsByUniformDist(std::vector<std::vector<std::vector<float>>>& weights, float lower, float upper);
 void setWeightsByXavier(std::vector<std::vector<std::vector<float>>>& weights, int fin, int fout, bool uniformOrNot);
@@ -105,7 +115,7 @@ void setWeightsByHe(std::vector<std::vector<std::vector<float>>>& weights, int f
 void setWeightsByLeCunn(std::vector<std::vector<std::vector<float>>>& weights, int fin, int fout);
 
 // modify weights with gradients
-
+void clipGradients(std::vector<std::vector<float>>& gradients, float max_norm);
 void updateWeights(std::vector<std::vector<float>>& weights, std::vector<std::vector<float>>& gradients, float& learningRate);
 void updateWeightsL1(std::vector<std::vector<float>>& weights, std::vector<std::vector<float>>& gradients, float learningRate, float lambdaL1);
 void updateWeightsL2(std::vector<std::vector<float>>& weights, std::vector<std::vector<float>>& gradients, float learningRate, float lambdaL2);
@@ -174,9 +184,9 @@ std::vector<std::vector<std::vector<float>>> image2channels(const std::string& p
         }                                                                       \
     } while (0)
 
+    extern const std::vector<std::string> kernelFiles;
     extern const std::vector<std::string> kernelNames;
-    void createKernelsFromFile(const cl::Context& context, const std::string& filePath, std::map<std::string, cl::Kernel>& kernelMap);
-
+    void createKernelsFromFile(const cl::Context& context, const std::vector<std::string>& filePath, std::map<std::string, cl::Kernel>& kernelMap);
 
 #define WORKSIZE_1D 256
 #define WORKSIZE_2DX 16

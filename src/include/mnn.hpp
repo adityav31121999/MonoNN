@@ -14,7 +14,7 @@
 #define DECAY_RATE 0.001f           // weight decay rate
 #define WEIGHT_DECAY 0.001f         // weight decay parameter
 #define SOFTMAX_TEMP 1.5f           // softmax temperature
-#define EPOCH 100                   // epochs for single set training
+#define EPOCH 25                    // epochs for single set training
 
 /**
  * @brief Class representing a Monomial Neural Network (MNN).
@@ -104,10 +104,10 @@ public:
 
     #elif USE_CL
 
-        cl::Context clContext;               // OpenCL context
-        cl::CommandQueue clCommandQueue;     // OpenCL command queue
+        cl::Context clContext;              // OpenCL context
+        cl::CommandQueue clCommandQueue;    // OpenCL command queue
         cl::Device device;                  // Represents the selected OpenCL device.
-        std::map<std::string, cl::Kernel> kernels; // Map to store kernel objects by name
+        std::map<std::string, cl::Kernel> kernels;      // Map to store kernel objects by name
 
         void clForprop(const std::vector<float>& input);
         void clForprop(const std::vector<std::vector<float>>& input);
