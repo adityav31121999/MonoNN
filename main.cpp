@@ -27,20 +27,20 @@ int main() {
 
     try {
         std::cout << "----------------------MNN----------------------" << std::endl;
+/*
         mnn network1(inSize, outSize, hidden_layers1, order, binFileAddress1);
         network1.loadNetwork();
         network1.path2progress = progressData1;
         network1.batchSize = 1;
         network1.learningRate = 0.01f;
         network1.train(digitTrain, network1.batchSize);
-/*
+*/
         std::cout << "---------------------MNN2D---------------------" << std::endl;
         mnn2d network2(inh, inw, outSize, hidden_layers2, order, binFileAddress3);
         network2.path2progress = progressData3;
-        network2.batchSize = 10;
+        network2.batchSize = 1;
         network2.learningRate = 0.01f;
         network2.train(digitTrain, network2.batchSize);
-*/
     }
     catch (const std::exception& e) {
         std::cerr << "An exception occurred in main: " << e.what() << std::endl;

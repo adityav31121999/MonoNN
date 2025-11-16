@@ -1,18 +1,8 @@
 cmake_minimum_required(VERSION 3.30.0 FATAL_ERROR)
-project(monoNN LANGUAGES C CXX)
+project(monoNN)
 set(VERSION 0.0.1)
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
 message("> Project Name: ${PROJECT_NAME} | Version: ${VERSION}")
 message("> Experimental Implementation of Monomial Neural Network")
-
-# language settings
-enable_language(C CXX)
-set(CMAKE_C_STANDARD 17)
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # binaries for debug and release
 set(OSbit 32)
@@ -25,9 +15,24 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${FullOutputDir}/static_libs")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${FullOutputDir}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${FullOutputDir}")
 
-set(USE_CL ON)
-set(USE_CU OFF)
+set(USE_CL OFF)
+set(USE_CU ON)
 set(USE_CPU OFF)
+
+# language settings
+set(LANGUAGES 
+    C
+    CXX
+    if(USE_CU)
+        CUDA
+    endif()
+)
+enable_language(C CXX)
+set(CMAKE_C_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # set compile definitions
 if(USE_CU)
@@ -36,13 +41,15 @@ if(USE_CU)
     message(STATUS "Using CUDA for compilation.")
     message(STATUS "Using CUDA for better operations on CUDA-based GPUs:)")
     enable_language(CUDA)
+    if(LINUX)
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++")
+    endif()
     set(CMAKE_CUDA_STANDARD 20)
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)
     set(MY_CUDA_ARCH "86" CACHE STRING "Target CUDA Architecture(s) e.g., 75, 86, 90")
     set(CMAKE_CUDA_ARCHITECTURES ${MY_CUDA_ARCH})
     add_compile_definitions(USE_CU)
     include_directories(${CUDAToolkit_INCLUDE_DIRS}) # Ensure CUDA headers are available
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++")
     if(MSVC)
         set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
     endif()
@@ -76,11 +83,11 @@ endif()
 
 add_subdirectory(src)
 include_directories(src)
-add_executable(monoNN main.cpp mnn.h)
-target_link_libraries(monoNN PRIVATE mnn stdc++)
+add_executable(${PROJECT_NAME} main.cpp mnn.h)
+target_link_libraries(${PROJECT_NAME} PRIVATE mnn)
 
 if(USE_CL)
-    target_link_libraries(monoNN PRIVATE OpenCL::OpenCL)
+    target_link_libraries(${PROJECT_NAME} PRIVATE OpenCL::OpenCL)
 elseif(USE_CU)
-    target_link_libraries(monoNN PRIVATE CUDA::cudart)
+    target_link_libraries(${PROJECT_NAME} PRIVATE CUDA::cudart)
 endif()

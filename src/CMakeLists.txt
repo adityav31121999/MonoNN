@@ -24,7 +24,7 @@ if(USE_CPU)
     )
 elseif(USE_CU)
     list(APPEND MNN_SOURCES
-        mnn/cu/kernel.cu
+        mnn/cu/device_functions.cuh
         mnn/cu/activations.cu
         mnn/cu/operators.cu
         mnn/cu/forward.cu
