@@ -54,9 +54,32 @@ mnn::mnn(int insize, int outsize, int layers, float order, std::string binFileAd
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
 #ifdef USE_CL
     try {
+        // --- Enhanced OpenCL Initialization with Debug Info ---
         cl_int err;
+        std::vector<cl::Platform> platforms;
+        cl::Platform::get(&platforms);
+
+        if (platforms.empty()) {
+            throw std::runtime_error("No OpenCL platforms found. Check your OpenCL installation and drivers.");
+        }
+
+        std::cout << "--- Found OpenCL Platforms ---" << std::endl;
+        for(const auto& p : platforms) {
+            std::cout << "Platform: " << p.getInfo<CL_PLATFORM_NAME>() << std::endl;
+            std::vector<cl::Device> devices;
+            p.getDevices(CL_DEVICE_TYPE_ALL, &devices);
+            for(const auto& d : devices) {
+                std::cout << "  - Device: " << d.getInfo<CL_DEVICE_NAME>() << std::endl;
+            }
+        }
+        std::cout << "----------------------------" << std::endl;
+
+        // Attempt to create a context on the default device
         clContext = cl::Context(CL_DEVICE_TYPE_DEFAULT, nullptr, nullptr, nullptr, &err); CL_CHECK(err);
         auto devices = clContext.getInfo<CL_CONTEXT_DEVICES>();
+        if (devices.empty()) {
+            throw std::runtime_error("No OpenCL devices found in the default context.");
+        }
         clCommandQueue = cl::CommandQueue(clContext, devices[0], 0, &err); CL_CHECK(err);
         createKernelsFromFile(clContext, kernelFiles, kernels);
         std::cout << "OpenCL kernels created successfully." << std::endl;
@@ -120,11 +143,29 @@ mnn::mnn(int insize, int outsize, int dim, int layers, float order, std::string 
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
 #ifdef USE_CL
     try {
-        // Initialize OpenCL context
+        // --- Enhanced OpenCL Initialization with Debug Info ---
         cl_int err;
+        std::vector<cl::Platform> platforms;
+        cl::Platform::get(&platforms);
+
+        if (platforms.empty()) {
+            throw std::runtime_error("No OpenCL platforms found. Check your OpenCL installation and drivers.");
+        }
+
+        // Don't print details again if already done by another constructor
+        // std::cout << "--- Found OpenCL Platforms ---" << std::endl;
+        // for(const auto& p : platforms) {
+        //     std::cout << "Platform: " << p.getInfo<CL_PLATFORM_NAME>() << std::endl;
+        // }
+        // std::cout << "----------------------------" << std::endl;
+
+        // Attempt to create a context on the default device
         clContext = cl::Context(CL_DEVICE_TYPE_DEFAULT, nullptr, nullptr, nullptr, &err); CL_CHECK(err);
  
         auto devices = clContext.getInfo<CL_CONTEXT_DEVICES>();
+        if (devices.empty()) {
+            throw std::runtime_error("No OpenCL devices found in the default context.");
+        }
         clCommandQueue = cl::CommandQueue(clContext, devices[0], 0, &err); CL_CHECK(err);
  
         createKernelsFromFile(clContext, kernelFiles, kernels);
@@ -187,16 +228,25 @@ mnn::mnn(int insize, int outsize, std::vector<int> width, float order, std::stri
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
 #ifdef USE_CL
     try {
-        // Initialize OpenCL context
+        // --- Enhanced OpenCL Initialization with Debug Info ---
         cl_int err;
+        std::vector<cl::Platform> platforms;
+        cl::Platform::get(&platforms);
+
+        if (platforms.empty()) {
+            throw std::runtime_error("No OpenCL platforms found. Check your OpenCL installation and drivers.");
+        }
+
+        // Attempt to create a context on the default device
         clContext = cl::Context(CL_DEVICE_TYPE_DEFAULT, nullptr, nullptr, nullptr, &err); CL_CHECK(err);
  
         // Get devices and create a command queue
         auto devices = clContext.getInfo<CL_CONTEXT_DEVICES>();
+        if (devices.empty()) {
+            throw std::runtime_error("No OpenCL devices found in the default context.");
+        }
         clCommandQueue = cl::CommandQueue(clContext, devices[0], 0, &err); CL_CHECK(err);
- 
-        // Now, call the function that can also throw an exception
-        // IMPORTANT: Change the hardcoded path to a relative one if possible
+
         createKernelsFromFile(clContext, kernelFiles, kernels);
         std::cout << "OpenCL kernels created successfully." << std::endl;
  

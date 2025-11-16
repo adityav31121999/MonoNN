@@ -57,7 +57,7 @@ void mnn::test(const std::string &dataSetPath, float& loss)
         // Perform forward propagation
         #ifdef USE_CPU
             forprop(input);
-        #elif USE_CUDA
+        #elif USE_CU
             cuForprop(input);
         #elif USE_CL
             clForprop(input);
@@ -127,7 +127,7 @@ void mnn2d::test(const std::string &dataSetPath, float& loss)
 
         #ifdef USE_CPU
             forprop(input);
-        #elif USE_CUDA
+        #elif USE_CU
             cuForprop(input);
         #elif USE_CL
             clForprop(input);

@@ -166,8 +166,7 @@ std::vector<std::vector<std::vector<float>>> image2channels(const std::string& p
     // For Windows, use the older/common cl.hpp
     #include <CL/cl.hpp>
 #elif defined(__linux__)
-    #define CL_HPP_TARGET_OPENCL_VERSION 220
-    #define CL_TARGET_OPENCL_VERSION 220 // Inform C headers to target OpenCL 2.2
+    #define CL_HPP_TARGET_OPENCL_VERSION 300
     #include <CL/opencl.hpp>
 #endif
 
@@ -192,19 +191,17 @@ std::vector<std::vector<std::vector<float>>> image2channels(const std::string& p
 #define WORKSIZE_2DX 16
 #define WORKSIZE_2DY 16
 
-inline auto calculate_global_1d = [&](size_t local_work_size_1d, size_t total_size) { 
+inline auto calculate_global_1d = [](size_t local_work_size_1d, size_t total_size) { 
     return ((total_size + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d; 
 };
 
-inline auto calculate_global_2d = [&](size_t local_work_size_2d_arr[2], size_t dim0, size_t dim1) { 
+inline auto calculate_global_2d = [](size_t local_work_size_2d_arr[2], size_t dim0, size_t dim1) { 
     size_t g0 = ((dim0 + local_work_size_2d_arr[0] - 1) / local_work_size_2d_arr[0]) * local_work_size_2d_arr[0];
     size_t g1 = ((dim1 + local_work_size_2d_arr[1] - 1) / local_work_size_2d_arr[1]) * local_work_size_2d_arr[1];
     return cl::NDRange(g0, g1); 
 };
 
-
-// --- OpenCL Error String Helper ---
-// (Add this function definition before the CL_CHECK macro)
+// to be used in CL_CHECK macro
 inline const char* oclErrorString(cl_int error) {
     switch (error) {
         // Run-time and JIT compiler errors
@@ -277,7 +274,7 @@ inline const char* oclErrorString(cl_int error) {
     }
 }
 
-#elif USE_CUDA
+#elif USE_CU
 
 #include <cuda_runtime.h> // For cudaError_t, cudaGetErrorString, etc.
 #include <stdexcept>      // For std::runtime_error

@@ -1,4 +1,4 @@
-#ifdef USE_CUDA
+#ifdef USE_CU
 #include <cfloat> // For FLT_MAX
 #include <cmath>  // For signbit, pow, exp
 #include <cuda_runtime.h>

@@ -4,18 +4,19 @@
 
 int main() {
     std::cout << "THIS IS MONOMIAL NEURAL NETWORK  IMPLEMENTATION" << std::endl;
-    std::string digitTrain      =   "D:\\train\\digits_mnist\\train";
-    std::string digitTest       =   "D:\\train\\digits_mnist\\test";
-    std::string fashionTrain    =   "D:\\train\\fashion_mnist\\train";
-    std::string fashionTest     =   "D:\\train\\fashion_mnist\\test";
-    std::string progressData1   =   "D:\\train\\progress\\progress1.txt";   // mnn digits
-    std::string progressData2   =   "D:\\train\\progress\\progress2.txt";   // mnn fashion
-    std::string progressData3   =   "D:\\train\\progress\\progress3.txt";   // mnn2d digits
-    std::string progressData4   =   "D:\\train\\progress\\progress4.txt";   // mnn2d fashion
-    std::string binFileAddress1 =   "D:\\train\\weightsMNNdigits.bin";
-    std::string binFileAddress2 =   "D:\\train\\weightsMNNfashion.bin";
-    std::string binFileAddress3 =   "D:\\train\\weightsMNN2Ddigits.bin";
-    std::string binFileAddress4 =   "D:\\train\\weightsMNN2Dfashion.bin";
+    std::string path2Folder = "/home/adi23444/code/train";
+    std::string digitTrain      =   path2Folder + "/digits_mnist/train";
+    std::string digitTest       =   path2Folder + "/digits_mnist/test";
+    std::string fashionTrain    =   path2Folder + "/fashion_mnist/train";
+    std::string fashionTest     =   path2Folder + "/fashion_mnist/test";
+    std::string progressData1   =   path2Folder + "/progress/progress1.txt";   // mnn digits
+    std::string progressData2   =   path2Folder + "/progress/progress2.txt";   // mnn fashion
+    std::string progressData3   =   path2Folder + "/progress/progress3.txt";   // mnn2d digits
+    std::string progressData4   =   path2Folder + "/progress/progress4.txt";   // mnn2d fashion
+    std::string binFileAddress1 =   path2Folder + "/weightsMNNdigits.bin";
+    std::string binFileAddress2 =   path2Folder + "/weightsMNNfashion.bin";
+    std::string binFileAddress3 =   path2Folder + "/weightsMNN2Ddigits.bin";
+    std::string binFileAddress4 =   path2Folder + "/weightsMNN2Dfashion.bin";
 
     int inSize = 784;
     int inh = 28, inw = 28;

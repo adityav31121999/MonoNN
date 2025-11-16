@@ -1,4 +1,4 @@
-#ifdef USE_CUDA
+#ifdef USE_CU
 #include "mnn.hpp"
 #include <cuda_runtime.h>
 #include <vector>

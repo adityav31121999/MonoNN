@@ -1,4 +1,4 @@
-#ifdef USE_CUDA
+#ifdef USE_CU
 #include "mnn.hpp"
 #include <cuda_runtime.h>
 #include <vector>
@@ -246,4 +246,4 @@ void mnn2d::cuForprop(const std::vector<std::vector<float>>& input)
     }
 }
 
-#endif // USE_CUDA
+#endif // USE_CU

@@ -85,7 +85,7 @@ void mnn::train(const std::string &dataSetPath, int batchSize)
             target = exp;
             #ifdef USE_CPU
                 train(in, exp);
-            #elif USE_CUDA
+            #elif USE_CU
                 cuTrain(in, exp);
             #elif USE_CL
                 clTrain(in, exp);
@@ -156,7 +156,7 @@ void mnn::train(const std::string &dataSetPath, int batchSize)
             targetBatch = expBatch;
             #ifdef USE_CPU
                 trainBatch(inBatch, expBatch);
-            #elif USE_CUDA
+            #elif USE_CU
                 cuTrainBatch(inBatch, expBatch);
             #elif USE_CL
                 clTrainBatch(inBatch, expBatch);
@@ -264,7 +264,7 @@ void mnn2d::train(const std::string &dataSetPath, int batchSize)
             target = exp;
             #ifdef USE_CPU
                 train(in, exp);
-            #elif USE_CUDA
+            #elif USE_CU
                 cuTrain(in, exp);
             #elif USE_CL
                 clTrain(in, exp);
@@ -339,7 +339,7 @@ void mnn2d::train(const std::string &dataSetPath, int batchSize)
             targetBatch = expBatch;
             #ifdef USE_CPU
                 trainBatch(inBatch, expBatch);
-            #elif USE_CUDA
+            #elif USE_CU
                 cuTrainBatch(inBatch, expBatch);
             #elif USE_CL
                 clTrainBatch(inBatch, expBatch);

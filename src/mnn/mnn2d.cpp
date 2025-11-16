@@ -69,9 +69,28 @@ mnn2d::mnn2d(int inw, int inh, int outw, int layers, float order, std::string bi
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
     #ifdef USE_CL
     // Initialize OpenCL context and command queue
-    try {
+    try {    
+        // --- Enhanced OpenCL Initialization with Debug Info ---
+        cl_int err;
+        std::vector<cl::Platform> platforms;
+        cl::Platform::get(&platforms);
+
+        if (platforms.empty()) {
+            throw std::runtime_error("No OpenCL platforms found. Check your OpenCL installation and drivers.");
+        }
+
+        // Don't print details again if already done by another constructor
+        // std::cout << "--- Found OpenCL Platforms (mnn2d) ---" << std::endl;
+        // for(const auto& p : platforms) {
+        //     std::cout << "Platform: " << p.getInfo<CL_PLATFORM_NAME>() << std::endl;
+        // }
+        // std::cout << "-------------------------------------" << std::endl;
+
         clContext = cl::Context(CL_DEVICE_TYPE_DEFAULT, nullptr, nullptr, nullptr, &err); CL_CHECK(err);
         auto devices = clContext.getInfo<CL_CONTEXT_DEVICES>();
+        if (devices.empty()) {
+            throw std::runtime_error("No OpenCL devices found in the default context.");
+        }
         clCommandQueue = cl::CommandQueue(clContext, devices[0], 0, &err); CL_CHECK(err);
         createKernelsFromFile(clContext, kernelFiles, kernels);
         std::cout << "OpenCL kernels created successfully for mnn2d." << std::endl;
@@ -149,9 +168,28 @@ mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
     #ifdef USE_CL
     // Initialize OpenCL context and command queue
-    try {
+    try {    
+        // --- Enhanced OpenCL Initialization with Debug Info ---
+        cl_int err;
+        std::vector<cl::Platform> platforms;
+        cl::Platform::get(&platforms);
+
+        if (platforms.empty()) {
+            throw std::runtime_error("No OpenCL platforms found. Check your OpenCL installation and drivers.");
+        }
+
+        // Don't print details again if already done by another constructor
+        // std::cout << "--- Found OpenCL Platforms (mnn2d) ---" << std::endl;
+        // for(const auto& p : platforms) {
+        //     std::cout << "Platform: " << p.getInfo<CL_PLATFORM_NAME>() << std::endl;
+        // }
+        // std::cout << "-------------------------------------" << std::endl;
+
         clContext = cl::Context(CL_DEVICE_TYPE_DEFAULT, nullptr, nullptr, nullptr, &err); CL_CHECK(err);
         auto devices = clContext.getInfo<CL_CONTEXT_DEVICES>();
+        if (devices.empty()) {
+            throw std::runtime_error("No OpenCL devices found in the default context.");
+        }
         clCommandQueue = cl::CommandQueue(clContext, devices[0], 0, &err); CL_CHECK(err);
         createKernelsFromFile(clContext, kernelFiles, kernels);
         std::cout << "OpenCL kernels created successfully for mnn2d." << std::endl;
@@ -226,9 +264,32 @@ mnn2d::mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, st
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
     #ifdef USE_CL
     // Initialize OpenCL context and command queue
-    try {
+    try {    
+        // --- Enhanced OpenCL Initialization with Debug Info ---
+        cl_int err;
+        std::vector<cl::Platform> platforms;
+        cl::Platform::get(&platforms);
+
+        if (platforms.empty()) {
+            throw std::runtime_error("No OpenCL platforms found. Check your OpenCL installation and drivers.");
+        }
+
+        std::cout << "--- Found OpenCL Platforms (mnn2d) ---" << std::endl;
+        for(const auto& p : platforms) {
+            std::cout << "Platform: " << p.getInfo<CL_PLATFORM_NAME>() << std::endl;
+            std::vector<cl::Device> devices;
+            p.getDevices(CL_DEVICE_TYPE_ALL, &devices);
+            for(const auto& d : devices) {
+                std::cout << "  - Device: " << d.getInfo<CL_DEVICE_NAME>() << std::endl;
+            }
+        }
+        std::cout << "-------------------------------------" << std::endl;
+
         clContext = cl::Context(CL_DEVICE_TYPE_DEFAULT, nullptr, nullptr, nullptr, &err); CL_CHECK(err);
         auto devices = clContext.getInfo<CL_CONTEXT_DEVICES>();
+        if (devices.empty()) {
+            throw std::runtime_error("No OpenCL devices found in the default context.");
+        }
         clCommandQueue = cl::CommandQueue(clContext, devices[0], 0, &err); CL_CHECK(err);
         createKernelsFromFile(clContext, kernelFiles, kernels);
         std::cout << "OpenCL kernels created successfully for mnn2d." << std::endl;

@@ -22,11 +22,12 @@ if(USE_CPU)
         mnn/cpp/backprop.cpp
         mnn/cpp/train.cpp
     )
-elseif(USE_CUDA)
+elseif(USE_CU)
     list(APPEND MNN_SOURCES
+        mnn/cu/kernel.cu
         mnn/cu/activations.cu
         mnn/cu/operators.cu
-        mnn/cu/forprop.cu
+        mnn/cu/forward.cu
         mnn/cu/forprop.cu
         mnn/cu/backprop.cu
         mnn/cu/backBatch.cu
@@ -39,8 +40,8 @@ elseif(USE_CL)
         mnn/cl/forprop.cl
         mnn/cl/kernels.cpp
         mnn/cl/clforprop.cpp
-        mnn/cl/clBackprop.cpp
-        mnn/cl/clbackBatch.cpp
+        mnn/cl/clbackprop.cpp
+        mnn/cl/clBackBatch.cpp
         mnn/cl/cltrain.cpp
     )
 endif()

@@ -22,7 +22,7 @@
 
 ### Backend Support
 - The project is configurable to run on different hardware backends.
-  - **`USE_CUDA`**: Enables GPU acceleration using NVIDIA's CUDA.
+  - **`USE_CU`**: Enables GPU acceleration using NVIDIA's CUDA.
   - **`USE_CL`**: Enables GPU/accelerator support via OpenCL, for broader hardware compatibility.
   - **`USE_CPU`**: Defaults to standard C++ for execution on the CPU.
 - The backend can be selected by setting the corresponding flag in the `CMakeLists.txt` file.

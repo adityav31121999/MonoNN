@@ -1,6 +1,5 @@
 #ifdef USE_CL
-// In a new file, e.g., d:\monoNN\src\operators.cpp
-#include "operators.hpp" // Use the correct path to your header
+#include "operators.hpp"
 #include <vector>
 #include <string>
 #include <fstream>
@@ -8,13 +7,19 @@
 #include <stdexcept>
 #include <map>
 #include <iostream>
-#include <CL/cl.hpp>
+#include <CL/opencl.hpp>
+#include <filesystem>
 
-const std::vector<std::string> kernelFiles = {
-    "D:\\monoNN\\src\\mnn\\cl\\activations.cl",
-    "D:\\monoNN\\src\\mnn\\cl\\operators.cl",
-    "D:\\monoNN\\src\\mnn\\cl\\forprop.cl",
-};
+// Get the absolute source directory path from the CMake-defined macro
+const std::filesystem::path src_dir = MONO_NN_SRC_DIR;
+
+const std::vector<std::string> kernelFiles = [] {
+    return std::vector<std::string>{
+        (src_dir / "src/mnn/cl/activations.cl").string(),
+        (src_dir / "src/mnn/cl/operators.cl").string(),
+        (src_dir / "src/mnn/cl/forprop.cl").string(),
+    };
+}();
 
 // Define and initialize the global kernelNames variable here.
 const std::vector<std::string> kernelNames = {
@@ -106,70 +111,70 @@ void createKernelsFromFile(const cl::Context& context, const std::vector<std::st
     std::cout << "----------------------------------" << std::endl;
     // --- End of New Feature ---
 
-    // Iterate through each kernel file path
+    cl::Program::Sources sources;
+    std::vector<std::string> sourceCodes; // To keep the string data alive
+
+    // --- Step 1: Read all kernel files into a single sources object ---
     for (const std::string& filePath : filePaths) {
-        // Read kernel file
         std::ifstream kernelFile(filePath);
         if (!kernelFile.is_open()) {
             throw std::runtime_error("Kernels not created. Reason: Could not open kernel file '" + filePath + "'");
         }
-        std::string kernelCode((std::istreambuf_iterator<char>(kernelFile)), std::istreambuf_iterator<char>());
-        if (kernelCode.empty()) {
-            std::cerr << "Warning: Kernel file is empty '" << filePath << "'. Skipping." << std::endl;
-            continue; // Skip empty files, don't throw an error unless it's critical
+        sourceCodes.emplace_back((std::istreambuf_iterator<char>(kernelFile)), std::istreambuf_iterator<char>());
+    }
+
+    for (const auto& code : sourceCodes) {
+        sources.push_back({code.c_str(), code.length()});
+    }
+
+    // --- Step 2: Create and build a SINGLE program from all sources ---
+    cl::Program program(context, sources);
+    cl_int build_err = program.build(devices);
+
+    if (build_err != CL_SUCCESS) {
+        std::string log_message = "Kernels not created. Reason: Program build failed. ";
+        if (build_err == CL_BUILD_PROGRAM_FAILURE) {
+            std::string buildLog = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]);
+            log_message += "\n\n--- Build Log ---\n" + buildLog + "\n-----------------";
+        } else {
+            log_message += "Error code: " + std::to_string(build_err);
+        }
+        throw std::runtime_error(log_message);
+    }
+
+    // --- Step 3: Extract all kernels from the single compiled program ---
+    cl_uint numKernels = 0;
+    cl_int err = clCreateKernelsInProgram(program(), 0, NULL, &numKernels);
+    if (err != CL_SUCCESS) {
+        throw std::runtime_error("Kernels not created. Reason: Failed to get number of kernels from program. Error code: " + std::to_string(err));
+    }
+    if (numKernels == 0) {
+        std::cerr << "Warning: No kernels found in any of the provided files. Skipping." << std::endl;
+        return;
+    }
+
+    std::vector<cl_kernel> rawKernels(numKernels);
+    err = clCreateKernelsInProgram(program(), numKernels, rawKernels.data(), NULL);
+    if (err != CL_SUCCESS) {
+        throw std::runtime_error("Kernels not created. Reason: Failed to create kernels from program. Error code: " + std::to_string(err));
+    }
+
+    // Populate the map
+    for (cl_kernel rawKernel : rawKernels) {
+        if (rawKernel == nullptr) {
+            throw std::runtime_error("Kernels not created. Reason: OpenCL driver returned a null kernel handle.");
         }
 
-        // Create and build the OpenCL program
-        cl::Program::Sources sources;
-        sources.push_back({kernelCode.c_str(), kernelCode.length()});
-        cl::Program program(context, sources);
-        cl_int build_err = program.build(devices);
+        size_t nameSize;
+        clGetKernelInfo(rawKernel, CL_KERNEL_FUNCTION_NAME, 0, NULL, &nameSize);
+        std::vector<char> nameBuffer(nameSize);
+        clGetKernelInfo(rawKernel, CL_KERNEL_FUNCTION_NAME, nameSize, nameBuffer.data(), NULL);
+        std::string kernelName(nameBuffer.data());
 
-        if (build_err != CL_SUCCESS) {
-            std::string log_message = "Kernels not created. Reason: Program build failed for file '" + filePath + "'. ";
-            if (build_err == CL_BUILD_PROGRAM_FAILURE) {
-                std::string buildLog = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]);
-                log_message += "\n\n--- Build Log ---\n" + buildLog + "\n-----------------";
-            } else {
-                log_message += "Error code: " + std::to_string(build_err);
-            }
-            throw std::runtime_error(log_message);
+        if (kernelMap.count(kernelName)) {
+            std::cerr << "Warning: Duplicate kernel name '" << kernelName << "' found. Overwriting existing kernel." << std::endl;
         }
-
-        // Create raw C-style kernel handles
-        cl_uint numKernels = 0;
-        cl_int err = clCreateKernelsInProgram(program(), 0, NULL, &numKernels);
-        if (err != CL_SUCCESS) {
-            throw std::runtime_error("Kernels not created. Reason: Failed to get number of kernels from file '" + filePath + "'. Error code: " + std::to_string(err));
-        }
-        if (numKernels == 0) {
-            std::cerr << "Warning: No kernels found in file '" << filePath << "'. Skipping." << std::endl;
-            continue;
-        }
-
-        std::vector<cl_kernel> rawKernels(numKernels);
-        err = clCreateKernelsInProgram(program(), numKernels, rawKernels.data(), NULL);
-        if (err != CL_SUCCESS) {
-            throw std::runtime_error("Kernels not created. Reason: Failed to create kernels from file '" + filePath + "'. Error code: " + std::to_string(err));
-        }
-
-        // populate the map
-        for (cl_kernel rawKernel : rawKernels) {
-            if (rawKernel == nullptr) {
-                throw std::runtime_error("Kernels not created. Reason: OpenCL driver returned a null kernel handle for a kernel in file '" + filePath + "'.");
-            }
-
-            size_t nameSize;
-            clGetKernelInfo(rawKernel, CL_KERNEL_FUNCTION_NAME, 0, NULL, &nameSize);
-            std::vector<char> nameBuffer(nameSize);
-            clGetKernelInfo(rawKernel, CL_KERNEL_FUNCTION_NAME, nameSize, nameBuffer.data(), NULL);
-            std::string kernelName(nameBuffer.data());
-
-            if (kernelMap.count(kernelName)) {
-                std::cerr << "Warning: Duplicate kernel name '" << kernelName << "' found when processing file '" << filePath << "'. Overwriting existing kernel." << std::endl;
-            }
-            kernelMap[kernelName] = cl::Kernel(rawKernel); // Use assignment to allow overwriting
-        }
+        kernelMap[kernelName] = cl::Kernel(rawKernel); // Use assignment to allow overwriting
     }
 }
 

@@ -91,7 +91,7 @@ public:
         void thredTrain(const std::vector<float>& input, const std::vector<float>& target);
         void threadTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets);
 
-    #elif USE_CUDA
+    #elif USE_CU
 
         void cuForprop(const std::vector<float>& input);
         void cuForprop(const std::vector<std::vector<float>>& input);
@@ -202,7 +202,7 @@ public:
         void threadTrain(const std::vector<std::vector<float>>& input, const std::vector<float>& target);
         void threadTrainBatch(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets);
 
-    #elif USE_CUDA
+    #elif USE_CU
 
         void cuForprop(const std::vector<std::vector<float>>& input);
         void cuBackprop(const std::vector<float>& target);
