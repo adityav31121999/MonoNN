@@ -295,9 +295,9 @@ inline const char* oclErrorString(cl_int error) {
 
 
 // Standard block sizes for kernel launches
-constexpr int CUDA_BLOCK_SIZE_1D = 256;
-constexpr int CUDA_BLOCK_SIZE_2D_X = 16;
-constexpr int CUDA_BLOCK_SIZE_2D_Y = 16;
+constexpr int WORKSIZE_1D = 256;
+constexpr int WORKSIZE_2D_X = 16;
+constexpr int WORKSIZE_2D_Y = 16;
 
 // Function to calculate grid size for 1D operations
 inline dim3 calculate_grid_1d(int total_size, int block_size) {

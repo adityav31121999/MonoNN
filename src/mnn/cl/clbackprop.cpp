@@ -1,8 +1,10 @@
 #ifdef USE_CL
 #include "mnn.hpp"
 #include <vector>
-#include <iostream>
 #include <stdexcept>
+#include <algorithm> // For std::copy
+#include <cmath> // For std::ceil
+#include <iostream>
 
 /**
  * @brief Backpropagation for mnn using OpenCL.
@@ -241,16 +243,6 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
         cl::NDRange local_1d(WORKSIZE_1D);
         cl::NDRange local_2d(WORKSIZE_2DX, WORKSIZE_2DY);
         size_t size2d[2] = {WORKSIZE_2DX, WORKSIZE_2DY};
-        // Kernels
-        auto kernelSub = kernels.at("subtract");
-        auto kernelSoftmaxDer = kernels.at("softmaxDer");
-        auto kernelHadamard2 = kernels.at("hadamard2");
-        auto kernelMatMul = kernels.at("matxmat2mat");
-        auto kernelScale = kernels.at("scaleByValue");
-        auto kernelUpdateWeights = kernels.at("kernelUpdateWeightsElasticNet");
-        auto kernelTranspose = kernels.at("transpose");
-        auto kernelDPow = kernels.at("dPower");
-        auto kernelPower = kernels.at("power");
         // --- Buffer Allocation and Initialization ---
         cl::Buffer d_in, d_exp, d_out, d_err;
         std::vector<cl::Buffer> d_incoming(this->layers);
@@ -269,6 +261,17 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
         d_out = cl::Buffer(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * output.size(), output.data(), &err); CL_CHECK(err);
         d_exp = cl::Buffer(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * expected.size(), (void*)expected.data(), &err); CL_CHECK(err);
         d_err = cl::Buffer(clContext, CL_MEM_READ_WRITE, sizeof(float) * expected.size()); CL_CHECK(err);
+        
+        // Kernels
+        auto kernelSub = kernels.at("subtract");
+        auto kernelSoftmaxDer = kernels.at("softmaxDer");
+        auto kernelHadamard2 = kernels.at("hadamard2");
+        auto kernelMatMul = kernels.at("matxmat2mat");
+        auto kernelScale = kernels.at("scaleByValue");
+        auto kernelUpdateWeights = kernels.at("kernelUpdateWeightsElasticNet");
+        auto kernelTranspose = kernels.at("transpose");
+        auto kernelDPow = kernels.at("dPower");
+        auto kernelPower = kernels.at("power");
 
         for (int i = 0; i < this->layers; ++i) {
             size_t c_size = cweights[i].size() * cweights[i][0].size();

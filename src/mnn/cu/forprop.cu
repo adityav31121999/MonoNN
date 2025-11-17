@@ -49,8 +49,8 @@ void mnn::cuForprop(const std::vector<float>& input)
 
             int current_in_size = (i == 0) ? (int)input.size() : (int)activate[i-1].size();
             int current_out_size = (int)dotProds[i].size();
-            dim3 block_1d(CUDA_BLOCK_SIZE_1D);
-            dim3 grid_forward = calculate_grid_1d(current_out_size, CUDA_BLOCK_SIZE_1D);
+            dim3 block_1d(WORKSIZE_1D);
+            dim3 grid_forward = calculate_grid_1d(current_out_size, WORKSIZE_1D);
 
             kernelLayerForward2<<<grid_forward, block_1d>>>(
                 current_input_ptr,
@@ -62,7 +62,7 @@ void mnn::cuForprop(const std::vector<float>& input)
                 order
             );
 
-            dim3 grid_sigmoid = calculate_grid_1d(current_out_size, CUDA_BLOCK_SIZE_1D);
+            dim3 grid_sigmoid = calculate_grid_1d(current_out_size, WORKSIZE_1D);
             sigmoid<<<grid_sigmoid, block_1d>>>(
                 d_dotProds[i],
                 d_activate[i],
@@ -143,8 +143,8 @@ void mnn2d::cuForprop(const std::vector<std::vector<float>>& input)
             }
 
             int currentOutWidth = cweights[i][0].size();
-            dim3 block_2d(CUDA_BLOCK_SIZE_2D_X, CUDA_BLOCK_SIZE_2D_Y);
-            dim3 grid_forward = calculate_grid_2d(currentOutWidth, currentInHeight, CUDA_BLOCK_SIZE_2D_X, CUDA_BLOCK_SIZE_2D_Y);
+            dim3 block_2d(WORKSIZE_2D_X, WORKSIZE_2D_Y);
+            dim3 grid_forward = calculate_grid_2d(currentOutWidth, currentInHeight, WORKSIZE_2D_X, WORKSIZE_2D_Y);
             
             kernelLayerForward4<<<grid_forward, block_2d>>>(
                 current_input_ptr,
@@ -159,7 +159,7 @@ void mnn2d::cuForprop(const std::vector<std::vector<float>>& input)
 
             int dotprod_size = dotProds[i].size() * dotProds[i][0].size();
 
-            if (dotprod_size <= CUDA_BLOCK_SIZE_1D) {
+            if (dotprod_size <= WORKSIZE_1D) {
                 // Use the single-block reduction for small inputs
                 dim3 block_softmax(dotprod_size);
                 dim3 grid_softmax(1);
@@ -173,8 +173,8 @@ void mnn2d::cuForprop(const std::vector<std::vector<float>>& input)
             }
             else {
                 // Use the two-stage reduction for large inputs
-                dim3 block_reduce(CUDA_BLOCK_SIZE_1D);
-                dim3 grid_reduce = calculate_grid_1d(dotprod_size, CUDA_BLOCK_SIZE_1D);
+                dim3 block_reduce(WORKSIZE_1D);
+                dim3 grid_reduce = calculate_grid_1d(dotprod_size, WORKSIZE_1D);
                 int num_work_groups = grid_reduce.x;
                 size_t partial_results_size = num_work_groups * 2;
 
@@ -182,7 +182,7 @@ void mnn2d::cuForprop(const std::vector<std::vector<float>>& input)
                 CUDA_CHECK(cudaMalloc(&d_partial_results, partial_results_size * sizeof(float)));
 
                 // Launch reduction kernel
-                size_t shared_mem_size = CUDA_BLOCK_SIZE_1D * sizeof(float) * 2; // For local_max and local_sum
+                size_t shared_mem_size = WORKSIZE_1D * sizeof(float) * 2; // For local_max and local_sum
                 softmax_reduce<<<grid_reduce, block_reduce, shared_mem_size>>>(
                     d_dotProds[i], d_partial_results, nullptr, nullptr, dotprod_size, SOFTMAX_TEMP
                 );
@@ -217,8 +217,8 @@ void mnn2d::cuForprop(const std::vector<std::vector<float>>& input)
         
         CUDA_CHECK(cudaMalloc(&d_output, output_size_bytes));
         
-        dim3 block_pool(CUDA_BLOCK_SIZE_1D);
-        dim3 grid_pool = calculate_grid_1d(last_layer_cols, CUDA_BLOCK_SIZE_1D);
+        dim3 block_pool(WORKSIZE_1D);
+        dim3 grid_pool = calculate_grid_1d(last_layer_cols, WORKSIZE_1D);
 
         meanPool<<<grid_pool, block_pool>>>(
             d_activate[layers - 1],

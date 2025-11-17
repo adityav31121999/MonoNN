@@ -1,8 +1,9 @@
 #ifdef USE_CL
 #include "mnn.hpp"
 #include <vector>
-#include <iostream>
 #include <stdexcept>
+#include <algorithm>
+#include <cmath>
 
 /**
  * @brief batch backpropgation using opencl for mnn
