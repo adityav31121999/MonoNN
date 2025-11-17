@@ -336,7 +336,7 @@ extern "C" __global__ void fill(float* out, float val, int size);
 extern "C" __global__ void hadamard2(const float* mat1, const float* mat2, const float* mat3, float* result, int mat1Rows, int mat1Cols);
 extern "C" __global__ void matrix_vector_average(const float* inputBuffer, float* outputBuffer, const int N, const int Rows, const int Cols);
 extern "C" __global__ void matrix_vector_sum(const float* inputBuffer, float* outputBuffer, const int Rows, const int Cols);
-
+// forward layer
 extern "C" __global__ void kernelLayerForward1(const float* input, float* output, const float* cweights, const float* bweights,
                                   int inSize, int outSize);
 extern "C" __global__ void kernelLayerForward2(const float* input, float* output, const float* cweights, const float* bweights,
@@ -345,7 +345,16 @@ extern "C" __global__ void kernelLayerForward3(const float* input, float* output
                                   int inHeight, int inWidth, int outSize);
 extern "C" __global__ void kernelLayerForward4(const float* input, float* output, const float* cweights, const float* bweights,
                                   int inHeight, int inWidth, int outSize, float n);
-
+// forward layer batch
+extern "C" __global__ void kernelLayerForwardBatch1(const float* input, float* output, const float* cweights, const float* bweights,
+                                  int batchSize, int inSize, int outSize);
+extern "C" __global__ void kernelLayerForwardBatch2(const float* input, float* output, const float* cweights, const float* bweights,
+                                  int batchSize, int inSize, int outSize, float n);
+extern "C" __global__ void kernelLayerForwardBatch3(const float* input, float* output, const float* cweights, const float* bweights,
+                                  int batchSize, int inHeight, int inWidth, int outSize);
+extern "C" __global__ void kernelLayerForwardBatch4(const float* input, float* output, const float* cweights, const float* bweights,
+                                  int batchSize, int inHeight, int inWidth, int outSize, float n);
+// update weights
 extern "C" __global__ void kernelUpdateWeights(float* weights, float* gweights, float learning_rate,
                                     int totalElements);
 extern "C" __global__ void kernelUpdateWeightsWithL1(float* weights, float* gweights, int totalElements, float learning_rate, float lambda_l1);
