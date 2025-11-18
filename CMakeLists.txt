@@ -14,6 +14,7 @@ set(FullOutputDir "${CMAKE_SOURCE_DIR}/bin/${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_P
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${FullOutputDir}/static_libs")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${FullOutputDir}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${FullOutputDir}")
+add_compile_definitions(MONO_NN_SRC_DIR="${CMAKE_SOURCE_DIR}")
 
 set(USE_CL OFF)
 set(USE_CU ON)
@@ -34,6 +35,14 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+find_package(OpenCV REQUIRED)
+if(OpenCV_FOUND)
+    message(STATUS "Found OpenCV version ${OpenCV_VERSION}")
+    include_directories(${OpenCV_INCLUDE_DIRS})
+else()
+    message(FATAL_ERROR "OpenCV not found. Please install OpenCV or set OpenCV_DIR.")
+endif()
+
 # set compile definitions
 if(USE_CU)
     find_package(CUDAToolkit REQUIRED)
@@ -49,7 +58,7 @@ if(USE_CU)
     set(MY_CUDA_ARCH "86" CACHE STRING "Target CUDA Architecture(s) e.g., 75, 86, 90")
     set(CMAKE_CUDA_ARCHITECTURES ${MY_CUDA_ARCH})
     add_compile_definitions(USE_CU)
-    include_directories(${CUDAToolkit_INCLUDE_DIRS}) # Ensure CUDA headers are available
+    include_directories(${CUDAToolkit_INCLUDE_DIRS})
     if(MSVC)
         set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
     endif()
@@ -63,22 +72,9 @@ elseif(USE_CL)
     include_directories(${OpenCL_INCLUDE_DIRS})
     add_compile_definitions(USE_CL)
 else()
-    message(STATUS "OpenCL and CUDA not found:(")
-    message(STATUS "Using CPU Compilation")
+    message(STATUS "OpenCL and CUDA not found or not using:(")
     message(STATUS "Using C++ on CPU for operations:)")
     add_compile_definitions(USE_CPU)
-endif()
-
-# Pass the source directory to the compiler to resolve relative paths
-add_compile_definitions(MONO_NN_SRC_DIR="${CMAKE_SOURCE_DIR}")
-
-# OpenCV support
-find_package(OpenCV REQUIRED)
-if(OpenCV_FOUND)
-    message(STATUS "Found OpenCV version ${OpenCV_VERSION}")
-    include_directories(${OpenCV_INCLUDE_DIRS})
-else()
-    message(FATAL_ERROR "OpenCV not found. Please install OpenCV or set OpenCV_DIR.")
 endif()
 
 add_subdirectory(src)

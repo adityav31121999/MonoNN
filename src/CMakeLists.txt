@@ -1,5 +1,4 @@
 cmake_minimum_required(VERSION 3.30.0 FATAL_ERROR)
-
 include_directories(include)
 
 set(MNN_SOURCES
@@ -13,6 +12,7 @@ set(MNN_SOURCES
     mnn/image.cpp
     mnn/train.cpp
     mnn/test.cpp
+    mnn/stats.cpp
 )
 
 if(USE_CPU)
@@ -29,6 +29,7 @@ elseif(USE_CU)
         mnn/cu/operators.cu
         mnn/cu/forward.cu
         mnn/cu/forprop.cu
+        mnn/cu/forpropb.cu
         mnn/cu/backprop.cu
         mnn/cu/backBatch.cu
         mnn/cu/train.cu
@@ -40,6 +41,7 @@ elseif(USE_CL)
         mnn/cl/forprop.cl
         mnn/cl/kernels.cpp
         mnn/cl/clforprop.cpp
+        mnn/cl/clforpropb.cpp
         mnn/cl/clbackprop.cpp
         mnn/cl/clBackBatch.cpp
         mnn/cl/cltrain.cpp
@@ -47,7 +49,6 @@ elseif(USE_CL)
 endif()
 
 add_library(mnn STATIC ${MNN_SOURCES})
-
 target_link_libraries(mnn
     PUBLIC # Important: Make OpenCL and CUDA linking public
         ${OpenCL_LIBRARIES}

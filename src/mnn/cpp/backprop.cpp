@@ -16,10 +16,8 @@ void mnn::backprop(const std::vector<float>& expected) {
         output_error[i] = activate[layers-1][i] - expected[i];
     }
     std::vector<float> incoming_gradient = output_error;
-    std::cout << "Start\n";
     // Backpropagate the error
     for(int layer = layers - 1; layer >= 1; layer--) {
-        std::cout << "Layer: " << layer << "\n";
         std::vector<float> outgoing_gradient;
         layerBackward(incoming_gradient, outgoing_gradient, activate[layer-1], 
                         cweights[layer], cgradients[layer], bgradients[layer],
@@ -37,11 +35,11 @@ void mnn::backprop(const std::vector<float>& expected) {
 
 /**
  * @brief Backpropagation for the mnn class (1D data) for batch backpropagation
+ *  by discrete gradient calculation and averaging final gradients.
  * @param expected The expected output vector.
  */
 void mnn::backprop(const std::vector<std::vector<float>>& expected)
 {
-    std::cout << "Start\n";
     int type = 3;
     std::vector<std::vector<float>> output_error(expected.size(), std::vector<float>(outSize, 0.0f));
     for(int i = 0; i < expected.size(); i++) {
@@ -51,7 +49,6 @@ void mnn::backprop(const std::vector<std::vector<float>>& expected)
     }
     std::vector<std::vector<float>> incoming_gradient = output_error;
     for(int layer = layers - 1; layer >= 1; layer--) {
-        std::cout << "Layer : " << layer << "\n";
         std::vector<std::vector<std::vector<float>>> cgrads_batch(batchSize, std::vector<std::vector<float>>(cgradients[layer].size(), std::vector<float>(cgradients[layer][0].size(), 0.0f)));
         std::vector<std::vector<std::vector<float>>> bgrads_batch(batchSize, std::vector<std::vector<float>>(bgradients[layer].size(), std::vector<float>(bgradients[layer][0].size(), 0.0f)));
         std::vector<std::vector<float>> outgoing_gradient(batchSize);
@@ -116,6 +113,7 @@ void mnn2d::backprop(const std::vector<float>& expected) {
 
 /**
  * @brief Backpropagation for the mnn2d class (2D data) for batch backpropagation
+ *  by discrete gradient calculation and averaging final gradients.
  * @param expected The expected output vector (after pooling).
  */
 void mnn2d::backprop(const std::vector<std::vector<float>>& expected) {

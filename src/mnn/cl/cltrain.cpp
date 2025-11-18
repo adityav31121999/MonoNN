@@ -17,7 +17,7 @@ void mnn::clTrain(const std::vector<float>& input, const std::vector<float>& tar
         this->input = input;
         clForprop(this->input);
 
-        if(maxIndex(output) != maxIndex(target)) {
+        if(maxIndex(output) == maxIndex(target)) {
             std::cout << "Correct output predicted :) at epoch " << i << "." << std::endl;
             break;
         }
@@ -26,6 +26,13 @@ void mnn::clTrain(const std::vector<float>& input, const std::vector<float>& tar
         // check for error and break if acceptable
         float loss = crossEntropy(output, target);
         std::cout << "Current CE Loss at epoch " << i << ": " <<loss << std::endl;
+
+        // Log diagnostic statistics every 10 epochs
+        if (i % 20 == 0) {
+            std::cout << "=== Diagnostic Statistics at Epoch " << i << " ===" << std::endl;
+            computeStats(cweights, bweights, cgradients, bgradients, activate);
+        }
+
         if (i == EPOCH) break;
         // 2. Backward propagation
         this->target = target;
@@ -57,13 +64,20 @@ void mnn::clTrainBatch(const std::vector<std::vector<float>>& inputs, const std:
     while (true) {
         for (int e = 0; e < this->epochs; ++e) {
             float total_loss = 0.0f;
+            inputBatch = inputs;
+            clForprop(inputs);
             for (size_t i = 0; i < inputs.size(); ++i) {
-                this->input = inputs[i];
-                clForprop(this->input);
                 total_loss += crossEntropy(this->output, targets[i]);
             }
             totalEpochs++;
             std::cout << "Epoch " << totalEpochs << ", Average CE Loss: " << total_loss / inputs.size() << std::endl;
+
+            // Log diagnostic statistics every 10 epochs
+            if (totalEpochs % 20 == 0) {
+                std::cout << "=== Diagnostic Statistics at Epoch " << totalEpochs << " ===" << std::endl;
+                computeStats(cweights, bweights, cgradients, bgradients, activate);
+            }
+
             clBackprop(const_cast<std::vector<std::vector<float>>&>(targets));
         }
  
@@ -110,6 +124,13 @@ void mnn2d::clTrain(const std::vector<std::vector<float>>& input, const std::vec
         // check for error and break if acceptable
         float loss = crossEntropy(output, target);
         std::cout << "Current CE Loss at epoch " << i << ": " <<loss << std::endl;
+
+        // Log diagnostic statistics every 10 epochs
+        if (i % 20 == 0) {
+            std::cout << "=== Diagnostic Statistics at Epoch " << i << " ===" << std::endl;
+            computeStats(cweights, bweights, cgradients, bgradients, activate);
+        }
+
         if (i == EPOCH) break;
 
         // 2. Backward propagation
@@ -149,6 +170,13 @@ void mnn2d::clTrainBatch(const std::vector<std::vector<std::vector<float>>>& inp
             }
             totalEpochs++;
             std::cout << "Epoch " << totalEpochs << ", Average CE Loss: " << total_loss / inputs.size() << std::endl;
+
+            // Log diagnostic statistics every 10 epochs
+            if (totalEpochs % 20 == 0) {
+                std::cout << "=== Diagnostic Statistics at Epoch " << totalEpochs << " ===" << std::endl;
+                computeStats(cweights, bweights, cgradients, bgradients, activate);
+            }
+
             clBackprop(const_cast<std::vector<std::vector<float>>&>(targets));
         }
  

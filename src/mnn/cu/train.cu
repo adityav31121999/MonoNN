@@ -19,7 +19,7 @@ void mnn::cuTrain(const std::vector<float>& input, const std::vector<float>& tar
         this->input = input;
         cuForprop(this->input);
 
-        if(maxIndex(output) != maxIndex(target)) {
+        if(maxIndex(output) == maxIndex(target)) {
             std::cout << "Correct output predicted :) at epoch " << i << "." << std::endl;
             break;
         }
@@ -29,9 +29,37 @@ void mnn::cuTrain(const std::vector<float>& input, const std::vector<float>& tar
         float loss = crossEntropy(output, target);
         std::cout << "Current CE Loss at epoch " << i << ": " <<loss << std::endl;
 
+        // Log diagnostic statistics every 10 epochs
+        if (i % 10 == 0) {
+            std::cout << "=== Diagnostic Statistics at Epoch " << i << " ===" << std::endl;
+            for (int layer = 0; layer < layers; layer++) {
+                // Log gradient statistics
+                auto cgrad_stats = computeStats(cgradients[layer]);
+                auto bgrad_stats = computeStats(bgradients[layer]);
+                std::cout << "  Layer " << layer << " - C-Gradients: "
+                          << "mean=" << cgrad_stats.mean << ", std=" << cgrad_stats.std
+                          << ", min=" << cgrad_stats.min << ", max=" << cgrad_stats.max << std::endl;
+                std::cout << "  Layer " << layer << " - B-Gradients: "
+                          << "mean=" << bgrad_stats.mean << ", std=" << bgrad_stats.std
+                          << ", min=" << bgrad_stats.min << ", max=" << bgrad_stats.max << std::endl;
+                
+                // Log weight statistics
+                auto cweight_stats = computeStats(cweights[layer]);
+                auto bweight_stats = computeStats(bweights[layer]);
+                std::cout << "  Layer " << layer << " - C-Weights: "
+                          << "mean=" << cweight_stats.mean << ", std=" << cweight_stats.std
+                          << ", min=" << cweight_stats.min << ", max=" << cweight_stats.max << std::endl;
+                std::cout << "  Layer " << layer << " - B-Weights: "
+                          << "mean=" << bweight_stats.mean << ", std=" << bweight_stats.std
+                          << ", min=" << bweight_stats.min << ", max=" << bweight_stats.max << std::endl;
+            }
+            std::cout << "========================================" << std::endl;
+        }
+
+        if (i == EPOCH) break;
+
         // 2. Backward propagation
         this->target = target;
-        learningRate = 0.01f;
         cuBackprop(this->target);
     }
 
@@ -67,6 +95,34 @@ void mnn::cuTrainBatch(const std::vector<std::vector<float>>& inputs, const std:
             }
             totalEpochs++;
             std::cout << "Epoch " << totalEpochs << ", Average CE Loss: " << total_loss / inputs.size() << std::endl;
+
+            // Log diagnostic statistics every 10 epochs
+            if (totalEpochs % 10 == 0) {
+                std::cout << "=== Diagnostic Statistics at Epoch " << totalEpochs << " ===" << std::endl;
+                for (int layer = 0; layer < layers; layer++) {
+                    // Log gradient statistics
+                    auto cgrad_stats = computeStats(cgradients[layer]);
+                    auto bgrad_stats = computeStats(bgradients[layer]);
+                    std::cout << "  Layer " << layer << " - C-Gradients: "
+                              << "mean=" << cgrad_stats.mean << ", std=" << cgrad_stats.std
+                              << ", min=" << cgrad_stats.min << ", max=" << cgrad_stats.max << std::endl;
+                    std::cout << "  Layer " << layer << " - B-Gradients: "
+                              << "mean=" << bgrad_stats.mean << ", std=" << bgrad_stats.std
+                              << ", min=" << bgrad_stats.min << ", max=" << bgrad_stats.max << std::endl;
+                    
+                    // Log weight statistics
+                    auto cweight_stats = computeStats(cweights[layer]);
+                    auto bweight_stats = computeStats(bweights[layer]);
+                    std::cout << "  Layer " << layer << " - C-Weights: "
+                              << "mean=" << cweight_stats.mean << ", std=" << cweight_stats.std
+                              << ", min=" << cweight_stats.min << ", max=" << cweight_stats.max << std::endl;
+                    std::cout << "  Layer " << layer << " - B-Weights: "
+                              << "mean=" << bweight_stats.mean << ", std=" << bweight_stats.std
+                              << ", min=" << bweight_stats.min << ", max=" << bweight_stats.max << std::endl;
+                }
+                std::cout << "========================================" << std::endl;
+            }
+
             cuBackprop(const_cast<std::vector<std::vector<float>>&>(targets));
         }
  
@@ -104,7 +160,7 @@ void mnn2d::cuTrain(const std::vector<std::vector<float>>& input, const std::vec
         this->input = input;
         cuForprop(this->input);
 
-        if(maxIndex(output) == maxIndex(target)) {
+        if(maxIndex(output) == maxIndex(target)) { // This was correct
             std::cout << "Correct output predicted :) at epoch " << i << "." << std::endl;
             break;
         }
@@ -113,6 +169,35 @@ void mnn2d::cuTrain(const std::vector<std::vector<float>>& input, const std::vec
         // check for error and break if acceptable
         float loss = crossEntropy(output, target);
         std::cout << "Current CE Loss at epoch " << i << ": " <<loss << std::endl;
+
+        // Log diagnostic statistics every 10 epochs
+        if (i % 10 == 0) {
+            std::cout << "=== Diagnostic Statistics at Epoch " << i << " ===" << std::endl;
+            for (int layer = 0; layer < layers; layer++) {
+                // Log gradient statistics
+                auto cgrad_stats = computeStats(cgradients[layer]);
+                auto bgrad_stats = computeStats(bgradients[layer]);
+                std::cout << "  Layer " << layer << " - C-Gradients: "
+                          << "mean=" << cgrad_stats.mean << ", std=" << cgrad_stats.std
+                          << ", min=" << cgrad_stats.min << ", max=" << cgrad_stats.max << std::endl;
+                std::cout << "  Layer " << layer << " - B-Gradients: "
+                          << "mean=" << bgrad_stats.mean << ", std=" << bgrad_stats.std
+                          << ", min=" << bgrad_stats.min << ", max=" << bgrad_stats.max << std::endl;
+                
+                // Log weight statistics
+                auto cweight_stats = computeStats(cweights[layer]);
+                auto bweight_stats = computeStats(bweights[layer]);
+                std::cout << "  Layer " << layer << " - C-Weights: "
+                          << "mean=" << cweight_stats.mean << ", std=" << cweight_stats.std
+                          << ", min=" << cweight_stats.min << ", max=" << cweight_stats.max << std::endl;
+                std::cout << "  Layer " << layer << " - B-Weights: "
+                          << "mean=" << bweight_stats.mean << ", std=" << bweight_stats.std
+                          << ", min=" << bweight_stats.min << ", max=" << bweight_stats.max << std::endl;
+            }
+            std::cout << "========================================" << std::endl;
+        }
+
+        if (i == EPOCH) break;
 
         // 2. Backward propagation
         this->target = target;
@@ -152,6 +237,34 @@ void mnn2d::cuTrainBatch(const std::vector<std::vector<std::vector<float>>>& inp
             }
             totalEpochs++;
             std::cout << "Epoch " << totalEpochs << ", Average CE Loss: " << total_loss / inputs.size() << std::endl;
+
+            // Log diagnostic statistics every 10 epochs
+            if (totalEpochs % 10 == 0) {
+                std::cout << "=== Diagnostic Statistics at Epoch " << totalEpochs << " ===" << std::endl;
+                for (int layer = 0; layer < layers; layer++) {
+                    // Log gradient statistics
+                    auto cgrad_stats = computeStats(cgradients[layer]);
+                    auto bgrad_stats = computeStats(bgradients[layer]);
+                    std::cout << "  Layer " << layer << " - C-Gradients: "
+                              << "mean=" << cgrad_stats.mean << ", std=" << cgrad_stats.std
+                              << ", min=" << cgrad_stats.min << ", max=" << cgrad_stats.max << std::endl;
+                    std::cout << "  Layer " << layer << " - B-Gradients: "
+                              << "mean=" << bgrad_stats.mean << ", std=" << bgrad_stats.std
+                              << ", min=" << bgrad_stats.min << ", max=" << bgrad_stats.max << std::endl;
+                    
+                    // Log weight statistics
+                    auto cweight_stats = computeStats(cweights[layer]);
+                    auto bweight_stats = computeStats(bweights[layer]);
+                    std::cout << "  Layer " << layer << " - C-Weights: "
+                              << "mean=" << cweight_stats.mean << ", std=" << cweight_stats.std
+                              << ", min=" << cweight_stats.min << ", max=" << cweight_stats.max << std::endl;
+                    std::cout << "  Layer " << layer << " - B-Weights: "
+                              << "mean=" << bweight_stats.mean << ", std=" << bweight_stats.std
+                              << ", min=" << bweight_stats.min << ", max=" << bweight_stats.max << std::endl;
+                }
+                std::cout << "========================================" << std::endl;
+            }
+
             cuBackprop(const_cast<std::vector<std::vector<float>>&>(targets));
         }
  

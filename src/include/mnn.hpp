@@ -205,6 +205,7 @@ public:
     #elif USE_CU
 
         void cuForprop(const std::vector<std::vector<float>>& input);
+        void cuForprop(const std::vector<std::vector<std::vector<float>>>& input);
         void cuBackprop(const std::vector<float>& target);
         void cuBackprop(const std::vector<std::vector<float>>& target);
         void cuTrain(const std::vector<std::vector<float>>& input, const std::vector<float>& target);
@@ -220,6 +221,7 @@ public:
         cl_int err;                          // To hold OpenCL error codes
 
         void clForprop(const std::vector<std::vector<float>>& input);
+        void clForprop(const std::vector<std::vector<std::vector<float>>>& input);
         void clBackprop(const std::vector<float>& target);
         void clBackprop(const std::vector<std::vector<float>>& target);
         void clTrain(const std::vector<std::vector<float>>& input, const std::vector<float>& target);

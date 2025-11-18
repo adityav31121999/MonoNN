@@ -1,5 +1,4 @@
 #ifdef USE_CL
-#include "operators.hpp"
 #include <vector>
 #include <string>
 #include <fstream>
@@ -7,8 +6,13 @@
 #include <stdexcept>
 #include <map>
 #include <iostream>
-#include <CL/opencl.hpp>
 #include <filesystem>
+#if defined(_WIN64)
+    #include <CL/cl.hpp>
+#elif defined(__linux__)
+    #include <CL/opencl.hpp>
+#endif
+#include "operators.hpp"
 
 // Get the absolute source directory path from the CMake-defined macro
 const std::filesystem::path src_dir = MONO_NN_SRC_DIR;
@@ -85,17 +89,10 @@ void createKernelsFromFile(const cl::Context& context, const std::vector<std::st
         throw std::runtime_error("No devices found in the provided OpenCL context.");
     }
 
-    // --- New Feature: Check Maximum Work-Item and Work-Group Sizes ---
-    // We'll query the first device in the context. In a multi-device context,
-    // you might want to iterate over all devices.
+    // check maximum work items and their maximum size
     const cl::Device& device = devices[0];
-
-    // Get maximum work-item sizes for each dimension
     std::vector<size_t> maxWorkItemSizes = device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>();
-
-    // Get the maximum work-group size
     size_t maxWorkGroupSize = device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
-
     std::cout << "--- OpenCL Device Capabilities ---" << std::endl;
     std::cout << "Device: " << device.getInfo<CL_DEVICE_NAME>() << std::endl;
     if (maxWorkItemSizes.size() >= 1) {
@@ -109,7 +106,6 @@ void createKernelsFromFile(const cl::Context& context, const std::vector<std::st
     }
     std::cout << "Max Work-Group Size: " << maxWorkGroupSize << std::endl;
     std::cout << "----------------------------------" << std::endl;
-    // --- End of New Feature ---
 
     cl::Program::Sources sources;
     std::vector<std::string> sourceCodes; // To keep the string data alive

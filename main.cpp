@@ -4,7 +4,13 @@
 
 int main() {
     std::cout << "THIS IS MONOMIAL NEURAL NETWORK  IMPLEMENTATION" << std::endl;
-    std::string path2Folder = "/home/adi23444/code/train";
+
+    #ifdef __linux__
+        std::string path2Folder = "/home/adi23444/code/train";
+    #else
+        std::string path2Folder = "D:/train";
+    #endif
+
     std::string digitTrain      =   path2Folder + "/digits_mnist/train";
     std::string digitTest       =   path2Folder + "/digits_mnist/test";
     std::string fashionTrain    =   path2Folder + "/fashion_mnist/train";
@@ -27,6 +33,13 @@ int main() {
 
     try {
         std::cout << "----------------------MNN----------------------" << std::endl;
+
+        std::cout << "---------------------MNN2D---------------------" << std::endl;
+        mnn2d network2(inh, inw, outSize, hidden_layers2, order, binFileAddress3);
+        network2.path2progress = progressData3;
+        network2.batchSize = 1;
+        network2.learningRate = 0.01f;
+        network2.train(digitTrain, network2.batchSize);
 /*
         mnn network1(inSize, outSize, hidden_layers1, order, binFileAddress1);
         network1.loadNetwork();
@@ -35,12 +48,6 @@ int main() {
         network1.learningRate = 0.01f;
         network1.train(digitTrain, network1.batchSize);
 */
-        std::cout << "---------------------MNN2D---------------------" << std::endl;
-        mnn2d network2(inh, inw, outSize, hidden_layers2, order, binFileAddress3);
-        network2.path2progress = progressData3;
-        network2.batchSize = 1;
-        network2.learningRate = 0.01f;
-        network2.train(digitTrain, network2.batchSize);
     }
     catch (const std::exception& e) {
         std::cerr << "An exception occurred in main: " << e.what() << std::endl;

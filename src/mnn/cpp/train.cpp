@@ -15,7 +15,6 @@ void mnn::train(const std::vector<float>& input, const std::vector<float>& targe
     int i = 0;
     
     while (1) {
-        // 1. Forward propagation
         this->input = input;
         forprop(this->input);
 
@@ -63,10 +62,9 @@ void mnn::train(const std::vector<float>& input, const std::vector<float>& targe
         i++;
         if(i == EPOCH) break;
 
-        // 2. Backward propagation
+        this->target = target;
         backprop(this->target);
     }
-
     std::cout << "Training complete for this input-target pair." << std::endl;
 }
 
@@ -215,9 +213,9 @@ void mnn2d::train(const std::vector<std::vector<float>>& input, const std::vecto
         i++;
         if(i == EPOCH) break;
 
+        this->target = target;
         backprop(this->target);
     }
-
     std::cout << "Training complete for this input-target pair." << std::endl;
 }
 

@@ -99,6 +99,7 @@ void mnn::clForprop(const std::vector<float>& input)
 }
 
 
+
 /**
  * @brief forprop for mnn2d using OpenCL
  * @param input input matrix

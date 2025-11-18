@@ -16,6 +16,12 @@ struct Statistics {
 
 Statistics computeStats(const std::vector<float>& data);
 Statistics computeStats(const std::vector<std::vector<float>>& data);
+void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights,
+        const std::vector<std::vector<std::vector<float>>>& cgrad, const std::vector<std::vector<std::vector<float>>>& bgrad,
+        const std::vector<std::vector<float>>& act);
+void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights,
+        const std::vector<std::vector<std::vector<float>>>& cgrad, const std::vector<std::vector<std::vector<float>>>& bgrad,
+        const std::vector<std::vector<std::vector<float>>>& act);
 
 // struct to save and access information on testing and training of neural network
 // single session will have fixed number of batches or files to be trained on
