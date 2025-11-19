@@ -14,7 +14,7 @@
 #define DECAY_RATE 0.001f           // weight decay rate
 #define WEIGHT_DECAY 0.001f         // weight decay parameter
 #define SOFTMAX_TEMP 1.5f           // softmax temperature
-#define EPOCH 25                    // epochs for single set training
+#define EPOCH 100                   // epochs for single set training
 
 /**
  * @brief Class representing a Monomial Neural Network (MNN).

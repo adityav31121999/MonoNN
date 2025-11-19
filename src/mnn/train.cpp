@@ -96,6 +96,7 @@ void mnn::train(const std::string &dataSetPath, int batchSize)
 
             if (fileCount % 100 == 0 || fileCount == totalFiles) {
                 std::cout << "Processed " << fileCount << "/" << totalFiles << " files..." << std::endl;
+                computeStats(cweights, bweights, cgradients, bgradients, activate);
             }
             // If a session size is defined and reached, stop training for this session
             if (this->mnnPrg.sessionSize > 0 && fileCount >= this->mnnPrg.sessionSize) {
@@ -177,6 +178,7 @@ void mnn::train(const std::string &dataSetPath, int batchSize)
             }
             if (batchesProcessed % 10 == 0 || batchesProcessed == totalBatches) {
                 std::cout << "Processed batch " << batchesProcessed << "/" << totalBatches << "..." << std::endl;
+                computeStats(cweights, bweights, cgradients, bgradients, actBatch);
             }
         }
     }
@@ -275,6 +277,7 @@ void mnn2d::train(const std::string &dataSetPath, int batchSize)
 
             if (fileCount % 100 == 0 || fileCount == totalFiles) {
                 std::cout << "Processed " << fileCount << "/" << totalFiles << " files..." << std::endl;
+                computeStats(cweights, bweights, cgradients, bgradients, activate);
             }
             // If a session size is defined and reached, stop training for this session
             if (this->mnn2dPrg.sessionSize > 0 && fileCount >= this->mnn2dPrg.sessionSize) {
@@ -360,6 +363,7 @@ void mnn2d::train(const std::string &dataSetPath, int batchSize)
             }
             if (batchesProcessed % 10 == 0 || batchesProcessed == totalBatches) {
                 std::cout << "Processed batch " << batchesProcessed << "/" << totalBatches << "..." << std::endl;
+                computeStats(cweights, bweights, cgradients, bgradients, actBatch);
             }
         }
     }

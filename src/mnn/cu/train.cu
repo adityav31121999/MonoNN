@@ -21,6 +21,9 @@ void mnn::cuTrain(const std::vector<float>& input, const std::vector<float>& tar
 
         if(maxIndex(output) == maxIndex(target)) {
             std::cout << "Correct output predicted :) at epoch " << i << "." << std::endl;
+            std::cout << "=== Diagnostic Statistics at correct prediction ===" << std::endl;
+            computeStats(cweights, bweights, cgradients, bgradients, activate);
+            std::cout << "===================================================" << std::endl;
             break;
         }
         i++;
@@ -30,29 +33,9 @@ void mnn::cuTrain(const std::vector<float>& input, const std::vector<float>& tar
         std::cout << "Current CE Loss at epoch " << i << ": " <<loss << std::endl;
 
         // Log diagnostic statistics every 10 epochs
-        if (i % 10 == 0) {
+        if (i % 50 == 0) {
             std::cout << "=== Diagnostic Statistics at Epoch " << i << " ===" << std::endl;
-            for (int layer = 0; layer < layers; layer++) {
-                // Log gradient statistics
-                auto cgrad_stats = computeStats(cgradients[layer]);
-                auto bgrad_stats = computeStats(bgradients[layer]);
-                std::cout << "  Layer " << layer << " - C-Gradients: "
-                          << "mean=" << cgrad_stats.mean << ", std=" << cgrad_stats.std
-                          << ", min=" << cgrad_stats.min << ", max=" << cgrad_stats.max << std::endl;
-                std::cout << "  Layer " << layer << " - B-Gradients: "
-                          << "mean=" << bgrad_stats.mean << ", std=" << bgrad_stats.std
-                          << ", min=" << bgrad_stats.min << ", max=" << bgrad_stats.max << std::endl;
-                
-                // Log weight statistics
-                auto cweight_stats = computeStats(cweights[layer]);
-                auto bweight_stats = computeStats(bweights[layer]);
-                std::cout << "  Layer " << layer << " - C-Weights: "
-                          << "mean=" << cweight_stats.mean << ", std=" << cweight_stats.std
-                          << ", min=" << cweight_stats.min << ", max=" << cweight_stats.max << std::endl;
-                std::cout << "  Layer " << layer << " - B-Weights: "
-                          << "mean=" << bweight_stats.mean << ", std=" << bweight_stats.std
-                          << ", min=" << bweight_stats.min << ", max=" << bweight_stats.max << std::endl;
-            }
+            computeStats(cweights, bweights, cgradients, bgradients, activate);
             std::cout << "========================================" << std::endl;
         }
 
@@ -97,29 +80,9 @@ void mnn::cuTrainBatch(const std::vector<std::vector<float>>& inputs, const std:
             std::cout << "Epoch " << totalEpochs << ", Average CE Loss: " << total_loss / inputs.size() << std::endl;
 
             // Log diagnostic statistics every 10 epochs
-            if (totalEpochs % 10 == 0) {
+            if (totalEpochs % 50 == 0) {
                 std::cout << "=== Diagnostic Statistics at Epoch " << totalEpochs << " ===" << std::endl;
-                for (int layer = 0; layer < layers; layer++) {
-                    // Log gradient statistics
-                    auto cgrad_stats = computeStats(cgradients[layer]);
-                    auto bgrad_stats = computeStats(bgradients[layer]);
-                    std::cout << "  Layer " << layer << " - C-Gradients: "
-                              << "mean=" << cgrad_stats.mean << ", std=" << cgrad_stats.std
-                              << ", min=" << cgrad_stats.min << ", max=" << cgrad_stats.max << std::endl;
-                    std::cout << "  Layer " << layer << " - B-Gradients: "
-                              << "mean=" << bgrad_stats.mean << ", std=" << bgrad_stats.std
-                              << ", min=" << bgrad_stats.min << ", max=" << bgrad_stats.max << std::endl;
-                    
-                    // Log weight statistics
-                    auto cweight_stats = computeStats(cweights[layer]);
-                    auto bweight_stats = computeStats(bweights[layer]);
-                    std::cout << "  Layer " << layer << " - C-Weights: "
-                              << "mean=" << cweight_stats.mean << ", std=" << cweight_stats.std
-                              << ", min=" << cweight_stats.min << ", max=" << cweight_stats.max << std::endl;
-                    std::cout << "  Layer " << layer << " - B-Weights: "
-                              << "mean=" << bweight_stats.mean << ", std=" << bweight_stats.std
-                              << ", min=" << bweight_stats.min << ", max=" << bweight_stats.max << std::endl;
-                }
+                computeStats(cweights, bweights, cgradients, bgradients, actBatch);
                 std::cout << "========================================" << std::endl;
             }
 
@@ -136,6 +99,9 @@ void mnn::cuTrainBatch(const std::vector<std::vector<float>>& inputs, const std:
  
         if (correct_predictions == inputs.size()) {
             std::cout << "All " << inputs.size() << " outputs in the batch are correct after " << totalEpochs << " epochs. cuTraining complete." << std::endl;
+            std::cout << "=== Diagnostic Statistics at correct prediction ===" << std::endl;
+            computeStats(cweights, bweights, cgradients, bgradients, actBatch);
+            std::cout << "===================================================" << std::endl;
             break;
         }
         else {
@@ -162,6 +128,9 @@ void mnn2d::cuTrain(const std::vector<std::vector<float>>& input, const std::vec
 
         if(maxIndex(output) == maxIndex(target)) { // This was correct
             std::cout << "Correct output predicted :) at epoch " << i << "." << std::endl;
+            std::cout << "=== Diagnostic Statistics at correct prediction ===" << std::endl;
+            computeStats(cweights, bweights, cgradients, bgradients, activate);
+            std::cout << "===================================================" << std::endl;
             break;
         }
         i++;
@@ -171,29 +140,9 @@ void mnn2d::cuTrain(const std::vector<std::vector<float>>& input, const std::vec
         std::cout << "Current CE Loss at epoch " << i << ": " <<loss << std::endl;
 
         // Log diagnostic statistics every 10 epochs
-        if (i % 10 == 0) {
+        if (i % 50 == 0) {
             std::cout << "=== Diagnostic Statistics at Epoch " << i << " ===" << std::endl;
-            for (int layer = 0; layer < layers; layer++) {
-                // Log gradient statistics
-                auto cgrad_stats = computeStats(cgradients[layer]);
-                auto bgrad_stats = computeStats(bgradients[layer]);
-                std::cout << "  Layer " << layer << " - C-Gradients: "
-                          << "mean=" << cgrad_stats.mean << ", std=" << cgrad_stats.std
-                          << ", min=" << cgrad_stats.min << ", max=" << cgrad_stats.max << std::endl;
-                std::cout << "  Layer " << layer << " - B-Gradients: "
-                          << "mean=" << bgrad_stats.mean << ", std=" << bgrad_stats.std
-                          << ", min=" << bgrad_stats.min << ", max=" << bgrad_stats.max << std::endl;
-                
-                // Log weight statistics
-                auto cweight_stats = computeStats(cweights[layer]);
-                auto bweight_stats = computeStats(bweights[layer]);
-                std::cout << "  Layer " << layer << " - C-Weights: "
-                          << "mean=" << cweight_stats.mean << ", std=" << cweight_stats.std
-                          << ", min=" << cweight_stats.min << ", max=" << cweight_stats.max << std::endl;
-                std::cout << "  Layer " << layer << " - B-Weights: "
-                          << "mean=" << bweight_stats.mean << ", std=" << bweight_stats.std
-                          << ", min=" << bweight_stats.min << ", max=" << bweight_stats.max << std::endl;
-            }
+            computeStats(cweights, bweights, cgradients, bgradients, activate);
             std::cout << "========================================" << std::endl;
         }
 
@@ -239,29 +188,9 @@ void mnn2d::cuTrainBatch(const std::vector<std::vector<std::vector<float>>>& inp
             std::cout << "Epoch " << totalEpochs << ", Average CE Loss: " << total_loss / inputs.size() << std::endl;
 
             // Log diagnostic statistics every 10 epochs
-            if (totalEpochs % 10 == 0) {
+            if (totalEpochs % 50 == 0) {
                 std::cout << "=== Diagnostic Statistics at Epoch " << totalEpochs << " ===" << std::endl;
-                for (int layer = 0; layer < layers; layer++) {
-                    // Log gradient statistics
-                    auto cgrad_stats = computeStats(cgradients[layer]);
-                    auto bgrad_stats = computeStats(bgradients[layer]);
-                    std::cout << "  Layer " << layer << " - C-Gradients: "
-                              << "mean=" << cgrad_stats.mean << ", std=" << cgrad_stats.std
-                              << ", min=" << cgrad_stats.min << ", max=" << cgrad_stats.max << std::endl;
-                    std::cout << "  Layer " << layer << " - B-Gradients: "
-                              << "mean=" << bgrad_stats.mean << ", std=" << bgrad_stats.std
-                              << ", min=" << bgrad_stats.min << ", max=" << bgrad_stats.max << std::endl;
-                    
-                    // Log weight statistics
-                    auto cweight_stats = computeStats(cweights[layer]);
-                    auto bweight_stats = computeStats(bweights[layer]);
-                    std::cout << "  Layer " << layer << " - C-Weights: "
-                              << "mean=" << cweight_stats.mean << ", std=" << cweight_stats.std
-                              << ", min=" << cweight_stats.min << ", max=" << cweight_stats.max << std::endl;
-                    std::cout << "  Layer " << layer << " - B-Weights: "
-                              << "mean=" << bweight_stats.mean << ", std=" << bweight_stats.std
-                              << ", min=" << bweight_stats.min << ", max=" << bweight_stats.max << std::endl;
-                }
+                computeStats(cweights, bweights, cgradients, bgradients, actBatch);
                 std::cout << "========================================" << std::endl;
             }
 
@@ -278,6 +207,9 @@ void mnn2d::cuTrainBatch(const std::vector<std::vector<std::vector<float>>>& inp
  
         if (correct_predictions == inputs.size()) {
             std::cout << "All " << inputs.size() << " outputs in the batch are correct after " << totalEpochs << " epochs. cuTraining complete." << std::endl;
+            std::cout << "=== Diagnostic Statistics at correct prediction ===" << std::endl;
+            computeStats(cweights, bweights, cgradients, bgradients, actBatch);
+            std::cout << "===================================================" << std::endl;
             break;
         }
         else {
