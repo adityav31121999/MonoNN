@@ -1,17 +1,29 @@
 #ifndef LOSS_HPP
 #define LOSS_HPP 1
-#define NOMINMAX
 #include <vector>
 #include <cmath>
 #include <string>
 #include <map>
 
+#define LEARNING_MAX 0.01f          // maximum learning rate allowed
+#define LEARNING_MIN 0.00001f       // minimum learning rate allowed
+#define LAMBDA_L1 0.001f            // L1 regularization parameter
+#define LAMBDA_L2 0.001f            // L2 regularization parameter
+#define DROPOUT_RATE 0.6f           // dropout rate
+#define DECAY_RATE 0.001f           // weight decay rate
+#define WEIGHT_DECAY 0.001f         // weight decay parameter
+#define SOFTMAX_TEMP 1.5f           // softmax temperature
+#define EPOCH 100                   // epochs for single set training
+#define SESSION_SIZE 10             // number of batches in single session
+#define BATCH_SIZE 50               // number of inputs in single batch
+#define ALPHA 0.9f                  // gradient splitting factor
+
 // struct to hold statistical information about data
 struct Statistics {
-    float mean;
-    float std;
-    float min;
-    float max;
+    float mean;     // mean value
+    float std;      // standard deviation
+    float min;      // minimum value from the set
+    float max;      // maximum value from the set
 };
 
 Statistics computeStats(const std::vector<float>& data);
@@ -144,6 +156,17 @@ void layerForward(const std::vector<std::vector<float>>& input, std::vector<std:
 void layerForward(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output, 
                     const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights, float n);
 
+// batch layer forprop
+
+void layerForwardBatch(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output,
+                       const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights);
+void layerForwardBatch(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output,
+                       const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights, float n);
+void layerForwardBatch(const std::vector<std::vector<std::vector<float>>>& input, std::vector<std::vector<std::vector<float>>>& output,
+                       const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights);
+void layerForwardBatch(const std::vector<std::vector<std::vector<float>>>& input, std::vector<std::vector<std::vector<float>>>& output,
+                       const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights, float n);
+
 // single layer backprop (with direct weights update)
 
 void layerBackward(const std::vector<float>& incoming, const std::vector<float>& prevAct, std::vector<std::vector<float>>& C,
@@ -159,7 +182,25 @@ void layerBackward(const std::vector<std::vector<float>>& incoming, std::vector<
                     std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& gradc,
                     std::vector<std::vector<float>>& gradb, float m, float alpha);
 
+// batch layer backprop
+
+void layerBackwardBatch(const std::vector<std::vector<float>>& incoming, const std::vector<std::vector<float>>& prevAct, 
+                    std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb,
+                    float m, float alpha);
+void layerBackwardBatch(const std::vector<std::vector<std::vector<float>>>& incoming, const std::vector<std::vector<std::vector<float>>>& prevAct,
+                    std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb, 
+                    float m, float alpha);
+void layerBackwardBatch(const std::vector<std::vector<float>>& incoming, std::vector<std::vector<float>>& outgoing,
+                    const std::vector<std::vector<float>>& prevAct, std::vector<std::vector<float>>& C,
+                    std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb,
+                    float m, float alpha);
+void layerBackwardBatch(const std::vector<std::vector<std::vector<float>>>& incoming, std::vector<std::vector<std::vector<float>>>& outgoing,
+                    const std::vector<std::vector<std::vector<float>>>& dotProds, const std::vector<std::vector<std::vector<float>>>& prevAct,
+                    std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb,
+                    float m, float alpha);
+
 // image access and manipulation
+#define NOMINMAX
 #include <opencv2/core.hpp>
 
 std::vector<std::vector<float>> cvMat2vec(const cv::Mat& mat);

@@ -1,8 +1,9 @@
-#include "mnn.hpp"
 #include <random>
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include "mnn.hpp"
+#include "mnn2d.hpp"
 
 // update weights
 

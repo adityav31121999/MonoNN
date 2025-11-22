@@ -1,5 +1,6 @@
 #ifdef USE_CU
 #include "mnn.hpp"
+#include "mnn2d.hpp"
 #include <vector>
 #include <stdexcept>
 #include <iostream>

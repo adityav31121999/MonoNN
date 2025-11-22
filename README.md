@@ -1,9 +1,10 @@
 # MonoNN: Monomial Neural Network
+
 - This is an experimental project to study the modification to multi-layer perception from linear to monomial-based neurons.
-- The monomial is of the form: w => `f(x) = c*(x^n) + b`
+- The monomial is of the form: `f(x) = c*(x^n) + b`
   - `x`: input to monimial
   - `n`: order of monomial, neurons and mlp
-  - `c`: coefficient of `x^n`
+  - `c`: coefficient of $ x^n $
   - `b`: constant
   - Both c and b are trainable parameters.
 - Here the `b` term is intentionally added to represent the `bias` as used in nerual neworks.
@@ -20,14 +21,8 @@
 - Certain common functions are commonly used in all code for data access and modification.
 - Binary files are used for weights storage (serialisation and deserialisation).
 
-### Backend Support
-- The project is configurable to run on different hardware backends.
-  - **`USE_CU`**: Enables GPU acceleration using NVIDIA's CUDA.
-  - **`USE_CL`**: Enables GPU/accelerator support via OpenCL, for broader hardware compatibility.
-  - **`USE_CPU`**: Defaults to standard C++ for execution on the CPU.
-- The backend can be selected by setting the corresponding flag in the `CMakeLists.txt` file.
+## Neural Network structure
 
-### _MonoNN structure_
 - Both MonoNN have similar mechanism and weight structure, with gradient storing also per hidden layer.
   - For 1D i/o, it has 1D product and Activations per layer.
   - For 2D i/o, it has 2D product and Activations per layer.
@@ -36,9 +31,18 @@
 
 ## Features
 
-The library is built with a modular approach, separating functionalities into different files.
+- The library is built with a modular approach, separating functionalities into different files.
 
-### _operators.cpp and weights.cpp_
+### _Backend Support_
+
+- The project is configurable to run on different hardware backends.
+  - `USE_CU`: Enables GPU acceleration using NVIDIA's CUDA.
+  - `USE_CL`: Enables GPU/accelerator support via OpenCL, for broader hardware compatibility.
+  - `USE_CPU`: Defaults to standard C++ for execution on the CPU.
+- The backend can be selected by setting the corresponding flag in the `CMakeLists.txt` file.
+
+### _Functions_
+
 - **Matrix/Vector Operations**: Overloaded `operator*` for standard matrix-matrix and vector-matrix multiplication.
 - **Multi-threaded Element-wise Multiplication**: Optimized `multiply` functions that leverage multi-threading for improved performance on modern CPUs.
 - **Pooling Functions**:
@@ -60,9 +64,56 @@ The library is built with a modular approach, separating functionalities into di
   - `updateWeightsWeightDecay`: Gradient descent with weight decay.
   - `updateWeightsDropout`: Applies dropout during weight updates.
 - Similar to C++ operators, **OpenCL** and **CUDA** kernels are provided for fast training of MonoNNs.
+- **Batch Training**: Support for training on batches of data.
+- **Discrete File Training**: Support for training on discrete files.
 
-### _Gradients_
-#### **Simple derivative based gradient:**
+### _Activation Functions_
+
+- **Sigmoid**: `sigmoid` function and its derivative.
+- **ReLU**: Rectified Linear Unit (`relu`) and its derivative.
+- **Softmax**: `softmax` function with optional temperature parameter for probability distribution control.
+
+### _Loss Functions_
+
+- **MSE**: Mean Squared Error (`mse`) for regression tasks.
+- **Cross Entropy**: Standard Cross Entropy (`crossEntropy`) for classification.
+- **Binary Cross Entropy**: `binaryCrossEntropy` for binary classification tasks.
+- **Categorical Cross Entropy**: `categoricalCrossEntropy` for multi-class classification with 2D outputs.
+
+### _Image Processing_
+
+- **OpenCV Integration**:
+  - `image2grey`: Loads an image as a grayscale matrix.
+  - `image2channels`: Loads an image and splits it into RGB channels.
+  - `cvMat2vec` / `vec2cvMat`: Converters between OpenCV `cv::Mat` and `std::vector` formats.
+
+### _Utilities_
+
+- **Serialization**:
+  - Fixed number of values for saving and loading weights (`serializeWeights`, `deserializeWeights`).
+- **Progress Tracking**:
+  - `progress` struct tracks training metrics (loss, accuracy, time, cycles).
+  - CSV logging support via `logProgressToCSV`.
+- **Statistics**:
+  - `computeStats`: Calculates mean, standard deviation, min, and max for data analysis.
+
+### _Default Hyperparameters_
+
+- Defined in `operators.hpp`, these serve as default configuration values:
+  - `LEARNING_MAX`: 0.01
+  - `LEARNING_MIN`: 0.00001
+  - `BATCH_SIZE`: 50
+  - `EPOCH`: 100
+  - `DROPOUT_RATE`: 0.6
+  - `LAMBDA_L1` / `LAMBDA_L2`: 0.001
+  - `SOFTMAX_TEMP`: 1.5
+
+## Gradients
+
+Gradient calculation is done in following manner:
+
+### _Simple derivative based gradient:_
+
 - The gradient of Neurons are calculated as:
   - Derivative of Monomial is given as: g => `f'(x) = nc(x^(n-1))`
   - Parameter is updated as `w <- w - L.g`
@@ -76,7 +127,8 @@ The library is built with a modular approach, separating functionalities into di
     - `c <- (1-(L.n/x)) * c`
 - This is an assumption, since i have not included application of activation on monomial and its deriavative in update of coefficient.
 
-#### **Gradients After Application of Activation:**
+### _Gradients After Application of Activation:_
+
 - Let a(.) be activation functon and a'(.) be its derivative.
   - v = a(c(x^n) + b) is the output of the monomial neuron after activation.
   - To properly update the coefficients `c` and `b` when an activation function is involved, we must use the chain rule from calculus. The goal is to find the partial derivative of the Loss function `E` with respect to `c` and `b`.
@@ -96,23 +148,37 @@ The library is built with a modular approach, separating functionalities into di
     - `c <- c - L * (∂E/∂v) * a'(c(x^n) + b) * (x^n)`
     - `b <- b - L * (∂E/∂v) * a'(c(x^n) + b)`
 
-#### **Gradients With Chain rule over perceptron:**
+### _Gradients With Chain rule over perceptron:_
+
 - Consider a perceptron with two neurons as follows:
-  ```
-               ____                  ____
-              |    |  z1            |    | z2
-      I ----> | M1 | ---> a(.) ---> | M2 | ---> a(.) ---> O
-              |____|                |____|
 
   ```
+             ____                       ____
+            |    |  z1                 |    | z2
+    I ----> | M1 | ---> a(.) = a1 ---> | M2 | ---> a(.) = a2 ---> O
+            |____|                     |____|
+
+  ```
+
   - I and O indicate the input and output, with M1 and M2 being the monomial neurons, z1 and z2 are their respective output.
   - Hence the gradients for these are as follows, which in general is also similar to Larger networks:
     - `M1 = C1*(x^m) + B1, M2 = C2*(x^m) + B2`
     - Let L be the loss: `∂L/∂O = O - Expected`
+    - For monomial M2:
+      - Incoming gradient for M2: `∂L/∂z2 = ∂L/∂O * ∂O/∂z2`
+      - Gradient for C2: `∂L/∂C2 = ∂L/∂z2 * ∂z2/∂C2`
+      - Gradient for B2: `∂L/∂B2 = ∂L/∂z2 * ∂z2/∂B2`
+      - Outgoing gradient: `∂L/∂z1 = ∂L/∂z2 * ∂z2/∂a1 * ∂a1/∂z1`
+    - For Monomial M1:
+      - Incoming gradient for M2: `dL/dz1 = dL/dz2 * dz2/da1 * da1/dz1`
+      - Gradient for C1: `∂L/∂C1 = ∂L/∂z1 * ∂z1/∂C1`
+      - Gradient for B1: `∂L/∂B1 = ∂L/∂z1 * ∂z1/∂B1`
 
 ## Theorem Sketch
+
 ### **Universal Approximation (generated by Grok)**
+
 - Monomial networks with fixed $ m \geq 2 $ and sufficient layers/neurons can approximate any continuous function on compact sets. Why?
-  - Powers `x^m` span nonlinear basis
+  - Powers $ x^m $ span nonlinear basis
   - Layer composition generates dense function class
   - More expressive than linear MLPs for same width/depth

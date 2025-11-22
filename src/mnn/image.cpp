@@ -1,4 +1,5 @@
 #include "mnn.hpp"
+#include "mnn2d.hpp"
 #include <opencv2/core.hpp>      // For cv::Mat
 #include <opencv2/imgcodecs.hpp> // For cv::imread
 #include <opencv2/imgproc.hpp>   // For cv::cvtColor, cv::split

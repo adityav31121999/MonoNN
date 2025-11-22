@@ -1,9 +1,10 @@
 #ifdef USE_CL
-#include "mnn.hpp"
 #include <vector>
 #include <stdexcept>
 #include <algorithm>
 #include <cmath>
+#include "mnn.hpp"
+#include "mnn2d.hpp"
 
 /**
  * @brief batch backpropgation using opencl for mnn

@@ -1,3 +1,4 @@
+#ifdef USE_CU
 #ifndef MNN_CU_DEVICE_FUNCTIONS_CUH
 #define MNN_CU_DEVICE_FUNCTIONS_CUH
 
@@ -32,3 +33,4 @@ __device__ __forceinline__ float OP_SIGN(float a)
                                     }
 
 #endif // MNN_CU_DEVICE_FUNCTIONS_CUH
+#endif // USE_CU

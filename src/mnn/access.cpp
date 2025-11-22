@@ -3,6 +3,7 @@
 #include <fstream>
 #include <stdexcept>
 #include "mnn.hpp"
+#include "mnn2d.hpp"
 
 /**
  * @brief Appends the current training progress as a new row in a CSV file.

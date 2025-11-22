@@ -1,12 +1,12 @@
-#include "mnn.hpp"
 #include <vector>
 #include <stdexcept>
 #include <iostream>
-
 #include <filesystem>
 #include <string>
 #include <vector>
 #include <algorithm>
+#include "mnn.hpp"
+#include "mnn2d.hpp"
 
 /**
  * @brief test network on given dataset

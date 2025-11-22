@@ -1,4 +1,5 @@
 #include "mnn.hpp"
+#include "mnn2d.hpp"
 #include <vector>
 #include <stdexcept>
 #include <thread>

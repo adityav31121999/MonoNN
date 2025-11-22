@@ -1,4 +1,3 @@
-#include "mnn.hpp"
 #include <stdexcept>
 #include <iostream>
 #include <filesystem>
@@ -7,6 +6,8 @@
 #include <string>
 #include <algorithm>
 #include <random>
+#include "mnn.hpp"
+#include "mnn2d.hpp"
 
 /**
  * @brief train network on given dataset

@@ -1,5 +1,6 @@
 #ifdef USE_CPU
 #include "mnn.hpp"
+#include "mnn2d.hpp"
 #include <vector>
 #include <stdexcept>
 #include <algorithm>
@@ -166,6 +167,173 @@ void layerForward(const std::vector<std::vector<float>>& input, std::vector<std:
             }
             if (std::isinf(output[i][j])) {
                 output[i][j] = 1.0f;
+            }
+        }
+    }
+}
+
+
+//// Batch Forprop Variants ////
+
+/**
+ * @brief batch layer forward for mnn
+ * @param [in] input batch of input vectors
+ * @param [out] output batch of output vectors
+ * @param [in] cweights coefficient weights
+ * @param [in] bweights bias weights
+ */
+void layerForwardBatch(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output,
+                       const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights)
+{
+    if (input.empty()) return;
+    int batchSize = input.size();
+    int inSize = cweights.size();
+    int outSize = cweights[0].size();
+
+    // Precompute bias sum
+    std::vector<float> b_sum(outSize, 0.0f);
+    for(int i=0; i<inSize; ++i) {
+        for(int j=0; j<outSize; ++j) {
+            b_sum[j] += bweights[i][j];
+        }
+    }
+
+    for(int b=0; b<batchSize; ++b) {
+        // Add bias sum
+        for(int j=0; j<outSize; ++j) output[b][j] += b_sum[j];
+
+        for(int i=0; i<inSize; ++i) {
+            float in_val = input[b][i];
+            for(int j=0; j<outSize; ++j) {
+                output[b][j] += in_val * cweights[i][j];
+            }
+        }
+        
+        for(int j=0; j<outSize; ++j) {
+             if (std::isnan(output[b][j])) output[b][j] = 0.0f;
+             else if (std::isinf(output[b][j])) output[b][j] = 1.0f;
+        }
+    }
+}
+
+/**
+ * @brief batch layer forward for mnn with power
+ * @param [in] input batch of input vectors
+ * @param [out] output batch of output vectors
+ * @param [in] cweights coefficient weights
+ * @param [in] bweights bias weights
+ * @param [in] n order of monomial
+ */
+void layerForwardBatch(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output,
+                       const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights, float n)
+{
+    if (input.empty()) return;
+    int batchSize = input.size();
+    int inSize = cweights.size();
+    int outSize = cweights[0].size();
+
+    // Precompute bias sum
+    std::vector<float> b_sum(outSize, 0.0f);
+    for(int i=0; i<inSize; ++i) {
+        for(int j=0; j<outSize; ++j) {
+            b_sum[j] += bweights[i][j];
+        }
+    }
+
+    for(int b=0; b<batchSize; ++b) {
+        std::vector<float> powerIn = power(input[b], n);
+        
+        // Add bias sum
+        for(int j=0; j<outSize; ++j) output[b][j] += b_sum[j];
+
+        for(int i=0; i<inSize; ++i) {
+            float in_val = powerIn[i];
+            for(int j=0; j<outSize; ++j) {
+                output[b][j] += in_val * cweights[i][j];
+            }
+        }
+
+        for(int j=0; j<outSize; ++j) {
+             if (std::isnan(output[b][j])) output[b][j] = 0.0f;
+             else if (std::isinf(output[b][j])) output[b][j] = 1.0f;
+        }
+    }
+}
+
+/**
+ * @brief batch layer forward for mnn2d
+ * @param [in] input batch of input matrices
+ * @param [out] output batch of output matrices
+ * @param [in] cweights coefficient weights
+ * @param [in] bweights bias weights
+ */
+void layerForwardBatch(const std::vector<std::vector<std::vector<float>>>& input, std::vector<std::vector<std::vector<float>>>& output,
+                       const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights)
+{
+    if (input.empty()) return;
+    int batchSize = input.size();
+    int inHeight = input[0].size();
+    int inWidth = input[0][0].size(); // cweights.size()
+    int outWidth = cweights[0].size();
+
+    for(int b=0; b<batchSize; ++b) {
+        for(int r=0; r<inHeight; ++r) {
+            // Add bias term (bweights[r][c] * inWidth)
+            for(int c=0; c<outWidth; ++c) {
+                output[b][r][c] += bweights[r][c] * inWidth;
+            }
+
+            for(int k=0; k<inWidth; ++k) {
+                float in_val = input[b][r][k];
+                for(int c=0; c<outWidth; ++c) {
+                    output[b][r][c] += in_val * cweights[k][c];
+                }
+            }
+
+            for(int c=0; c<outWidth; ++c) {
+                if (std::isnan(output[b][r][c])) output[b][r][c] = 0.0f;
+                else if (std::isinf(output[b][r][c])) output[b][r][c] = 1.0f;
+            }
+        }
+    }
+}
+
+/**
+ * @brief batch layer forward for mnn2d with power
+ * @param [in] input batch of input matrices
+ * @param [out] output batch of output matrices
+ * @param [in] cweights coefficient weights
+ * @param [in] bweights bias weights
+ * @param [in] n order of monomial
+ */
+void layerForwardBatch(const std::vector<std::vector<std::vector<float>>>& input, std::vector<std::vector<std::vector<float>>>& output,
+                       const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights, float n)
+{
+    if (input.empty()) return;
+    int batchSize = input.size();
+    int inHeight = input[0].size();
+    int inWidth = input[0][0].size();
+    int outWidth = cweights[0].size();
+
+    for(int b=0; b<batchSize; ++b) {
+        std::vector<std::vector<float>> powerIn = power(input[b], n);
+
+        for(int r=0; r<inHeight; ++r) {
+            // Add bias term
+            for(int c=0; c<outWidth; ++c) {
+                output[b][r][c] += bweights[r][c] * inWidth;
+            }
+
+            for(int k=0; k<inWidth; ++k) {
+                float in_val = powerIn[r][k];
+                for(int c=0; c<outWidth; ++c) {
+                    output[b][r][c] += in_val * cweights[k][c];
+                }
+            }
+
+            for(int c=0; c<outWidth; ++c) {
+                if (std::isnan(output[b][r][c])) output[b][r][c] = 0.0f;
+                else if (std::isinf(output[b][r][c])) output[b][r][c] = 1.0f;
             }
         }
     }

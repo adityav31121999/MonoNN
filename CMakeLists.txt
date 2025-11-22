@@ -17,8 +17,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${FullOutputDir}")
 add_compile_definitions(MONO_NN_SRC_DIR="${CMAKE_SOURCE_DIR}")
 
 set(USE_CL OFF)
-set(USE_CU ON)
-set(USE_CPU OFF)
+set(USE_CU OFF)
+set(USE_CPU ON)
 
 # language settings
 set(LANGUAGES 

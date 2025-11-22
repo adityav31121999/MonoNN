@@ -13,7 +13,8 @@
  */
 mnn::mnn(int insize, int outsize, int layers, float order, std::string binFileAddress) :
     order(order), inSize(insize), outSize(outsize), layers(layers), input(insize, 0.0f), 
-    output(outsize, 0.0f), target(outsize, 0.0f), batchSize(1), binFileAddress(binFileAddress)
+    output(outsize, 0.0f), target(outsize, 0.0f), batchSize(1), binFileAddress(binFileAddress),
+    epochs(100), iterations(0), learningRate(0.01f)
 {
     alpha = 1.0f;
     int dim = (insize + outsize) / 2;
@@ -103,7 +104,8 @@ mnn::mnn(int insize, int outsize, int layers, float order, std::string binFileAd
  */
 mnn::mnn(int insize, int outsize, int dim, int layers, float order, std::string binFileAddress) :
     order(order), inSize(insize), outSize(outsize), layers(layers), input(insize, 0.0f), 
-    output(outsize, 0.0f), target(outsize, 0.0f), batchSize(1), binFileAddress(binFileAddress)
+    output(outsize, 0.0f), target(outsize, 0.0f), batchSize(1), binFileAddress(binFileAddress),
+    epochs(100), iterations(0), learningRate(0.01f)
 {
     alpha = 1.0f;
     width.resize(layers, dim);
@@ -161,13 +163,13 @@ mnn::mnn(int insize, int outsize, int dim, int layers, float order, std::string 
 
         // Attempt to create a context on the default device
         clContext = cl::Context(CL_DEVICE_TYPE_DEFAULT, nullptr, nullptr, nullptr, &err); CL_CHECK(err);
- 
+
         auto devices = clContext.getInfo<CL_CONTEXT_DEVICES>();
         if (devices.empty()) {
             throw std::runtime_error("No OpenCL devices found in the default context.");
         }
         clCommandQueue = cl::CommandQueue(clContext, devices[0], 0, &err); CL_CHECK(err);
- 
+
         createKernelsFromFile(clContext, kernelFiles, kernels);
         std::cout << "OpenCL kernels created successfully." << std::endl;
     }
@@ -190,7 +192,8 @@ mnn::mnn(int insize, int outsize, int dim, int layers, float order, std::string 
  */
 mnn::mnn(int insize, int outsize, std::vector<int> width, float order, std::string binFileAddress) : 
     order(order), inSize(insize), outSize(outsize), width(width), layers(width.size()),
-    input(insize, 0.0f), output(outsize, 0.0f), target(outsize, 0.0f), batchSize(1), binFileAddress(binFileAddress)
+    input(insize, 0.0f), output(outsize, 0.0f), target(outsize, 0.0f), batchSize(1), binFileAddress(binFileAddress),
+    epochs(100), iterations(0), learningRate(0.01f)
 {
     alpha = 1.0f;
     // initialize weights

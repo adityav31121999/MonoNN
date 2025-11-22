@@ -1,4 +1,4 @@
-#include "mnn.hpp"
+#include "mnn2d.hpp"
 #include <stdexcept>
 #include <iostream>
 #include <fstream>
@@ -15,7 +15,7 @@
  */
 mnn2d::mnn2d(int inw, int inh, int outw, int layers, float order, std::string binFileAddress) :
     order(order), inWidth(inw), inHeight(inh), outWidth(outw), layers(layers),
-    batchSize(1), binFileAddress(binFileAddress)
+    batchSize(1), binFileAddress(binFileAddress), epochs(100), iterations(0), learningRate(0.01f)
 {
     alpha = 1.0f;
     // set hidden layers width and height
@@ -115,7 +115,7 @@ mnn2d::mnn2d(int inw, int inh, int outw, int layers, float order, std::string bi
  */
 mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::string binFileAddress) :
     order(order), inWidth(inw), inHeight(inh), outWidth(outw), layers(layers),
-    batchSize(1), binFileAddress(binFileAddress)
+    batchSize(1), binFileAddress(binFileAddress), epochs(100), iterations(0), learningRate(0.01f)
 {
     alpha = 1.0f;
     // set hidden layers width and height
@@ -212,7 +212,7 @@ mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::
  */
 mnn2d::mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, std::string binFileAddress) :
     order(order), inWidth(inw), inHeight(inh), outWidth(outw), layers(width.size()),
-    width(width), batchSize(1), binFileAddress(binFileAddress)
+    width(width), batchSize(1), binFileAddress(binFileAddress), epochs(100), iterations(0), learningRate(0.01f)
 {
     alpha = 1.0f;
     input.resize(inh, std::vector<float>(inw, 0.0f));
