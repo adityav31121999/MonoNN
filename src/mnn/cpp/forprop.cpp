@@ -4,6 +4,8 @@
 #include <stdexcept>
 #include <iostream>
 
+// forprop for mnn
+
 /**
  * @brief forprop for monomial neural network with vector input
  * @param input input vector
@@ -25,7 +27,7 @@ void mnn::forprop(const std::vector<float>& input)
 
 
 /**
- * @brief forprop for monomial neural network with vector input
+ * @brief batch forprop for monomial neural network with vector input
  * @param input input batch of vectors
  */
 void mnn::forprop(const std::vector<std::vector<float>>& input)
@@ -44,9 +46,11 @@ void mnn::forprop(const std::vector<std::vector<float>>& input)
             actBatch[j][i] = sigmoid(dotBatch[j][i]);
         }
     }
+    // assign output batch
     outputBatch = actBatch[layers - 1];
 }
 
+// forprop for mnn2d
 
 /**
  * @brief forprop for monomial neural network with matrix input
@@ -69,7 +73,7 @@ void mnn2d::forprop(const std::vector<std::vector<float>>& input)
 
 
 /**
- * @brief forprop for monomial neural network with matrix input
+ * @brief batch forprop for monomial neural network with matrix input
  * @param input input batch of matrix
  */
 void mnn2d::forprop(const std::vector<std::vector<std::vector<float>>>& input)

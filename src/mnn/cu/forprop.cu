@@ -184,7 +184,7 @@ void mnn2d::cuForprop(const std::vector<std::vector<float>>& input)
                 // Launch reduction kernel
                 size_t shared_mem_size = WORKSIZE_1D * sizeof(float) * 2; // For local_max and local_sum
                 softmax_reduce<<<grid_reduce, block_reduce, shared_mem_size>>>(
-                    d_dotProds[i], d_partial_results, nullptr, nullptr, dotprod_size, SOFTMAX_TEMP
+                    d_dotProds[i], d_partial_results, dotprod_size, SOFTMAX_TEMP
                 );
 
                 // Copy partial results to host to find global max and sum

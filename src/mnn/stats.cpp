@@ -187,14 +187,15 @@ void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, 
         bgstats[i] = computeStats(bgrad[i]);
         actstats[i] = computeStats(act[i]);
     }
+
     // print stats
-    std::cout << "\n--------------- Analysis (i: max, min, mean, std) ---------------";
+    std::cout << "\n--------------- Analysis (layer: maximum, minimum, mean, std. deviation) ---------------";
     std::cout << "\nCWEIGHTS  :";   for(int i = 0; i < act.size(); i++) std::cout << "\n\t(" << i << " : " << cwstats[i].max << ", " << cwstats[i].min << ", " << cwstats[i].mean << ", " << cwstats[i].std << ")";
     std::cout << "\nBWEIGHTS  :";   for(int i = 0; i < act.size(); i++) std::cout << "\n\t(" << i << " : " << bwstats[i].max << ", " << bwstats[i].min << ", " << bwstats[i].mean << ", " << bwstats[i].std << ")";
     std::cout << "\nCGRAD     :";   for(int i = 0; i < act.size(); i++) std::cout << "\n\t(" << i << " : " << cgstats[i].max << ", " << cgstats[i].min << ", " << cgstats[i].mean << ", " << cgstats[i].std << ")";
     std::cout << "\nBGRAD     :";   for(int i = 0; i < act.size(); i++) std::cout << "\n\t(" << i << " : " << bgstats[i].max << ", " << bgstats[i].min << ", " << bgstats[i].mean << ", " << bgstats[i].std << ")";
     std::cout << "\nACT       :";   for(int i = 0; i < act.size(); i++) std::cout << "\n\t(" << i << " : " << actstats[i].max << ", " << actstats[i].min << ", " << actstats[i].mean << ", " << actstats[i].std << ")";
-    std::cout << "\n------------------------------------------------------------------\n";
+    std::cout << "\n------------------------------------------------------------------------------------\n";
 }
 
 /**
@@ -239,8 +240,9 @@ void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, 
         bgstats[i] = computeStats(bgrad[i]);
         actstats[i] = computeStats(act[i]);
     }
+
     // print stats
-    std::cout << "\n--------------- Analysis (i: max, min, mean, std) ---------------";
+    std::cout << "\n--------------- Analysis (layer: max, min, mean, std) ---------------";
     std::cout << "\nCWEIGHTS  :";   for(int i = 0; i < act.size(); i++) std::cout << "\n\t(" << i << " : " << cwstats[i].max << ", " << cwstats[i].min << ", " << cwstats[i].mean << ", " << cwstats[i].std << ")";
     std::cout << "\nBWEIGHTS  :";   for(int i = 0; i < act.size(); i++) std::cout << "\n\t(" << i << " : " << bwstats[i].max << ", " << bwstats[i].min << ", " << bwstats[i].mean << ", " << bwstats[i].std << ")";
     std::cout << "\nCGRAD     :";   for(int i = 0; i < act.size(); i++) std::cout << "\n\t(" << i << " : " << cgstats[i].max << ", " << cgstats[i].min << ", " << cgstats[i].mean << ", " << cgstats[i].std << ")";
@@ -292,8 +294,9 @@ void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, 
         bgstats[i] = computeStats(bgrad[i]);
         actstats[i] = computeStats(act[i]);
     }
+
     // print stats
-    std::cout << "\n--------------- Analysis (i: max, min, mean, std) ---------------";
+    std::cout << "\n--------------- Analysis (layer: max, min, mean, std) ---------------";
     std::cout << "\nCWEIGHTS  :";   for(int i = 0; i < act.size(); i++) std::cout << "\n\t(" << i << " : " << cwstats[i].max << ", " << cwstats[i].min << ", " << cwstats[i].mean << ", " << cwstats[i].std << ")";
     std::cout << "\nBWEIGHTS  :";   for(int i = 0; i < act.size(); i++) std::cout << "\n\t(" << i << " : " << bwstats[i].max << ", " << bwstats[i].min << ", " << bwstats[i].mean << ", " << bwstats[i].std << ")";
     std::cout << "\nCGRAD     :";   for(int i = 0; i < act.size(); i++) std::cout << "\n\t(" << i << " : " << cgstats[i].max << ", " << cgstats[i].min << ", " << cgstats[i].mean << ", " << cgstats[i].std << ")";

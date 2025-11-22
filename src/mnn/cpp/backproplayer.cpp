@@ -5,170 +5,6 @@
 #include <algorithm>
 #include <iostream>
 
-/**
- * @brief monomial operation for single layer in forprop
- * @param [in] input vector input
- * @param [out] output vector output
- * @param [in] cweights coefficient weights
- * @param [in] bweights bias weights
- */
-void layerForward(const std::vector<float>& input, std::vector<float>& output, const std::vector<std::vector<float>>& cweights,
-                const std::vector<std::vector<float>>& bweights)
-{
-    if(input.size() != cweights.size()) {
-        throw std::runtime_error("input size and cweights rows mismatch :)");
-    }
-    if(input.size() != bweights.size()) {
-        throw std::runtime_error("input size and bweights rows mismatch :)");
-    }
-    if(output.size() != cweights[0].size()) {
-        throw std::runtime_error("output size and cweights columns mismatch :)");
-    }
-    if(output.size() != bweights[0].size()) {
-        throw std::runtime_error("output size and bweights columns mismatch :)");
-    }
-    
-    for(int i = 0; i < cweights.size(); i++) {
-        for(int j = 0; j < cweights[0].size(); j++) {
-            // output[j] = sum(input[i]*cweights[i][j] + bweights[i][j]) for j = 0 to height - 1
-            output[j] += (input[i]*cweights[i][j]) + bweights[i][j];
-        }
-    }
-    for(int i = 0; i < output.size(); i++) {
-        if (std::isnan(output[i])) {
-            output[i] = 0.0f;
-        }
-        else if (std::isinf(output[i])) {
-            output[i] = 1.0f;
-        }
-    }
-}
-
-
-/**
- * @brief monomial operation for single layer in forprop
- * @param [in] input vector input
- * @param [out] output vector output
- * @param [in] cweights coefficient weights
- * @param [in] bweights bias weights
- * @param [in] n order of monomial
- */
-void layerForward(const std::vector<float>& input, std::vector<float>& output, const std::vector<std::vector<float>>& cweights,
-                const std::vector<std::vector<float>>& bweights, float n)
-{
-    if(input.size() != cweights.size()) {
-        throw std::runtime_error("input size and cweights rows mismatch: " + std::to_string(input.size()) + " != " + std::to_string(cweights.size()));
-    }
-    if(input.size() != bweights.size()) {
-        throw std::runtime_error("input size and bweights rows mismatch: " + std::to_string(input.size()) + " != " + std::to_string(bweights.size()));
-    }
-    if(output.size() != cweights[0].size()) {
-        throw std::runtime_error("output size and cweights columns mismatch: " + std::to_string(output.size()) + " != " + std::to_string(cweights[0].size()));
-    }
-    if(output.size() != bweights[0].size()) {
-        throw std::runtime_error("output size and bweights columns mismatch: " + std::to_string(output.size()) + " != " + std::to_string(bweights[0].size()));
-    }
-    std::vector<float> powerIn = power(input, n);
-    for(int i = 0; i < cweights.size(); i++) {
-        for(int j = 0; j < cweights[0].size(); j++) {
-            output[j] += (powerIn[i]*cweights[i][j]) + bweights[i][j];
-        }
-    }
-    for(int i = 0; i < output.size(); i++) {
-        if (std::isnan(output[i])) {
-            output[i] = 0.0f;
-        }
-        else if (std::isinf(output[i])) {
-            output[i] = 1.0f;
-        }
-    }
-}
-
-
-/**
- * @brief monomial operation for single layer in forprop
- * @param [in] input matrix input
- * @param [out] output matrix output
- * @param [in] cweights coefficient weights
- * @param [in] bweights bias weights
- */
-void layerForward(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output,
-                    const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights)
-{
-    if (input.empty() || cweights.empty() || bweights.empty()) {
-        throw std::invalid_argument("Input and weight matrices cannot be empty.");
-    }
-    if (input[0].size() != cweights.size()) {
-        throw std::runtime_error("Input columns and cweights rows mismatch.");
-    }
-    if (cweights.size() != bweights.size() || cweights[0].size() != bweights[0].size()) {
-        throw std::runtime_error("cweights and bweights dimensions must match.");
-    }
-    if (output.size() != input.size() || output[0].size() != cweights[0].size()) {
-        throw std::runtime_error("Output matrix has incorrect dimensions.");
-    }
-
-    // output = (input^n) * cweights + bweights
-    for (size_t i = 0; i < input.size(); ++i) {
-        for (size_t j = 0; j < cweights[0].size(); ++j) {
-            for (size_t k = 0; k < cweights.size(); ++k) {
-                output[i][j] += (input[i][k] * cweights[k][j]) + bweights[i][j];
-            }
-            if (std::isnan(output[i][j])) {
-                output[i][j] = 0.0f;
-            }
-            if (std::isinf(output[i][j])) {
-                output[i][j] = 1.0f;
-            }
-        }
-    }
-}
-
-
-/**
- * @brief monomial operation for single layer in forprop
- * @param [in] input matrix input
- * @param [out] output matrix output
- * @param [in] cweights coefficient weights
- * @param [in] bweights bias weights
- * @param [in] n order of monomial
- */
-void layerForward(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output,
-                    const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights, float n)
-{
-    if (input.empty() || cweights.empty() || bweights.empty()) {
-        throw std::invalid_argument("Input and weight matrices cannot be empty.");
-    }
-    if (input[0].size() != cweights.size()) {
-        throw std::runtime_error("Input columns and cweights rows mismatch.");
-    }
-    if (cweights.size() != bweights.size() || cweights[0].size() != bweights[0].size()) {
-        throw std::runtime_error("cweights and bweights dimensions must match.");
-    }
-    if (output.size() != input.size() || output[0].size() != cweights[0].size()) {
-        throw std::runtime_error("Output matrix has incorrect dimensions.");
-    }
-
-    // output = (input^n) * cweights + bweights
-    std::vector<std::vector<float>> powerIn(input.size(), std::vector<float>(input[0].size(), 0.0f));
-    for (size_t i = 0; i < input.size(); ++i) {
-        powerIn[i] = power(input[i], n);
-    }
-    for (size_t i = 0; i < input.size(); ++i) {
-        for (size_t j = 0; j < cweights[0].size(); ++j) {
-            for (size_t k = 0; k < cweights.size(); ++k) {
-                output[i][j] += (powerIn[i][k] * cweights[k][j]) + bweights[k][j];
-            }
-            if (std::isnan(output[i][j])) {
-                output[i][j] = 0.0f;
-            }
-            if (std::isinf(output[i][j])) {
-                output[i][j] = 1.0f;
-            }
-        }
-    }
-}
-
 //// Backprop -> first layer ////
 
 /**
@@ -201,8 +37,8 @@ void layerBackward(const std::vector<float>& incoming,
     // gradc = alpha * prev_p^T x dl/dz_l, gradb = (1 - alpha) * v1^T x dl/dz_l
     for(int i = 0; i < prev_p.size(); i++) {
         for(int j = 0; j < incoming.size(); j++) {
-            gradc[i][j] = alpha * prev_p[i] * incoming[j];
-            gradb[i][j] = (1.0f - alpha) * incoming[j];
+            gradc[i][j] = alpha * prev_p[i] * incoming[j];      // dL/dC_l
+            gradb[i][j] = (1.0f - alpha) * incoming[j];         // dL/dB_l
         }
     }
 }
@@ -234,8 +70,8 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
     gradb = multiply(v1T, incoming);      // gradb = (1 - alpha) * v1^T x dl/dz_l
     for(int i = 0; i < gradc.size(); i++) {
         for(int j = 0; j < gradc[0].size(); j++) {
-            gradc[i][j] = alpha * gradc[i][j];
-            gradb[i][j] = (1 - alpha) * gradb[i][j];
+            gradc[i][j] = alpha * gradc[i][j];          // dL/dC_l
+            gradb[i][j] = (1 - alpha) * gradb[i][j];    // dL/dB_l
         }
     }
 }
@@ -281,10 +117,11 @@ void layerBackward(const std::vector<float>& incoming,          // width[l]
                     });
 
     // gradc = alpha * prev_p^T x dl/dz_l, gradb = (1 - alpha) * v1^T x dl/dz_l
+    // This is an outer product.
     for(int i = 0; i < prev_p.size(); i++) {
         for(int j = 0; j < incoming.size(); j++) {
-            gradc[i][j] = alpha * prev_p[i] * incoming[j];
-            gradb[i][j] = (1.0f - alpha) * incoming[j];
+            gradc[i][j] = alpha * prev_p[i] * incoming[j];  // dL/dC_l
+            gradb[i][j] = (1.0f - alpha) * incoming[j];     // dL/dB_l
         }
     }
 
@@ -295,7 +132,7 @@ void layerBackward(const std::vector<float>& incoming,          // width[l]
     outgoing.clear(); outgoing.resize(prevAct.size(), 0.0f);
     outgoing = multiply(incoming, C_T);         // width[l-1]
     outgoing = multiply(outgoing, dprev_p);     // width[l-1]
-    outgoing = multiply(outgoing, dprevAct);    // width[l-1]
+    outgoing = multiply(outgoing, dprevAct);    // width[l-1], element-wise products
 }
 
 
@@ -339,19 +176,6 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
     }
     // derivativ of prevAct (activation is softmax)
     std::vector<std::vector<float>> dprevAct = reshape(softmaxDer(flatten(dotProds)), dotProds.size(), dotProds[0].size());
-
-    // outgoing gradient = (dl/dz_l x C^T) . dprev_p . dprevAct
-    std::vector<std::vector<float>> C_T = transpose(C);
-    outgoing.clear();
-    outgoing.resize(dprev_p.size(), std::vector<float>(dprev_p[0].size(), 0.0f));
-
-    outgoing = multiply(incoming, C_T);         // incoming gradient x C^T
-    for(int i = 0; i < outgoing.size(); i++) {
-        for(int j = 0; j < outgoing[0].size(); j++) {
-            outgoing[i][j] = outgoing[i][j] * dprev_p[i][j] * dprevAct[i][j];
-        }
-    }
-
     // gradc = prev_p^T x dl/dz_l, gradc = (1 - alpha) * v1^T x dl/dz_l
     gradc = multiply(transpose(prev_p), incoming);
     gradb = multiply(v1T, incoming);
@@ -359,6 +183,17 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
         for(int j = 0; j < gradc[0].size(); j++) {
             gradc[i][j] = alpha * gradc[i][j];
             gradb[i][j] = (1.0f - alpha) * gradb[i][j];
+        }
+    }
+
+    // outgoing gradient = (dl/dz_l x C^T) . dprev_p . dprevAct
+    std::vector<std::vector<float>> C_T = transpose(C);
+    outgoing.clear();
+    outgoing.resize(dprev_p.size(), std::vector<float>(dprev_p[0].size(), 0.0f));
+    outgoing = multiply(incoming, C_T);         // incoming gradient x C^T
+    for(int i = 0; i < outgoing.size(); i++) {
+        for(int j = 0; j < outgoing[0].size(); j++) {
+            outgoing[i][j] = outgoing[i][j] * dprev_p[i][j] * dprevAct[i][j];
         }
     }
 }

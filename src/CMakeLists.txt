@@ -17,7 +17,8 @@ set(MNN_SOURCES
 
 if(USE_CPU)
     list(APPEND MNN_SOURCES
-        mnn/cpp/layer.cpp
+        mnn/cpp/forproplayer.cpp
+        mnn/cpp/backproplayer.cpp
         mnn/cpp/forprop.cpp
         mnn/cpp/backprop.cpp
         mnn/cpp/train.cpp
@@ -41,15 +42,15 @@ elseif(USE_CL)
         mnn/cl/forprop.cl
         mnn/cl/kernels.cpp
         mnn/cl/clforprop.cpp
-        mnn/cl/clforpropb.cpp
+        mnn/cl/clForpropb.cpp
         mnn/cl/clbackprop.cpp
         mnn/cl/clBackBatch.cpp
         mnn/cl/cltrain.cpp
     )
 endif()
 
-add_library(mnn STATIC ${MNN_SOURCES})
-target_link_libraries(mnn
+add_library(mono STATIC ${MNN_SOURCES})
+target_link_libraries(mono
     PUBLIC # Important: Make OpenCL and CUDA linking public
         ${OpenCL_LIBRARIES}
         ${CUDAToolkit_LIBRARIES}

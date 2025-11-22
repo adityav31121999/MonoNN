@@ -4,6 +4,8 @@
 #include <vector>
 #include <iostream>
 
+// Backprop for mnn
+
 /**
  * @brief Backpropagation for the mnn class (1D data).
  * @param expected The expected output vector.
@@ -76,6 +78,8 @@ void mnn::backprop(const std::vector<std::vector<float>>& expected)
         updateWeights(bweights[i], bgradients[i], learningRate, type);
     }
 }
+
+// Backprop for mnn2d
 
 /**
  * @brief Backpropagation for the mnn2d class (2D data).

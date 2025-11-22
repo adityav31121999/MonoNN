@@ -15,6 +15,9 @@
 #define WEIGHT_DECAY 0.001f         // weight decay parameter
 #define SOFTMAX_TEMP 1.5f           // softmax temperature
 #define EPOCH 100                   // epochs for single set training
+#define SESSION_SIZE 10             // number of batches in single session
+#define BATCH_SIZE 50               // number of inputs in single batch
+#define ALPHA 0.9f                  // gradient splitting factor
 
 /**
  * @brief Class representing a Monomial Neural Network (MNN).
@@ -88,7 +91,7 @@ public:
         void backprop(const std::vector<std::vector<float>>& target);
         void train(const std::vector<float>& input, const std::vector<float>& target);
         void trainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets);
-        void thredTrain(const std::vector<float>& input, const std::vector<float>& target);
+        void threadTrain(const std::vector<float>& input, const std::vector<float>& target);
         void threadTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets);
 
     #elif USE_CU

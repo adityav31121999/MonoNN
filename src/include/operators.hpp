@@ -319,21 +319,21 @@ inline dim3 calculate_grid_2d(int dim_x, int dim_y, int block_x, int block_y) {
 }
 
 // actvations and derivative
-extern "C" __global__ void sigmoid(float* x, float* out, int size);
-extern "C" __global__ void sigmoidDer(float* x, float* out, int size);
-extern "C" __global__ void softmax_reduce(const float* input, float* partial_results, float* local_max, float* local_sum, int size, float temp);
+extern "C" __global__ void sigmoid(const float* x, float* out, int size);
+extern "C" __global__ void sigmoidDer(const float* x, float* out, int size);
+extern "C" __global__ void softmax_reduce(const float* input, float* partial_results, int size, float temp);
 extern "C" __global__ void softmax_normalize(const float* input, float* output, int size, float temp, float global_max, float global_sum);
 extern "C" __global__ void softmaxDer_normalize(const float* input, float* output, int size, float temp, float global_max, float global_sum);
-extern "C" __global__ void softmax(float* x, float* out, float temp, int size);
-extern "C" __global__ void softmaxDer(float* x, float* out, float temp, int size);
+extern "C" __global__ void softmax(const float* x, float* out, float temp, int size);
+extern "C" __global__ void softmaxDer(const float* x, float* out, float temp, int size);
 // maths
-extern "C" __global__ void add(float* x, float* y, float* out, int size);
-extern "C" __global__ void subtract(float* x, float* y, float* out, int size);
-extern "C" __global__ void scaleByValue(float* x, float* out, float val, int size);
-extern "C" __global__ void power(float* x, float* out, float n, int size);
-extern "C" __global__ void dPower(float* x, float* out, float n, int size);
-extern "C" __global__ void meanPool(float* in, float* out, int inRows, int inCols, int poolSize);
-extern "C" __global__ void maxPool(float* in, float* out, int inRows, int inCols, int poolSize);
+extern "C" __global__ void add(const float* x, const float* y, float* out, int size);
+extern "C" __global__ void subtract(const float* x, const float* y, float* out, int size);
+extern "C" __global__ void scaleByValue(const float* x, float* out, float val, int size);
+extern "C" __global__ void power(const float* x, float* out, float n, int size);
+extern "C" __global__ void dPower(const float* x, float* out, float n, int size);
+extern "C" __global__ void meanPool(const float* in, float* out, int inRows, int inCols, int poolSize);
+extern "C" __global__ void maxPool(const float* in, float* out, int inRows, int inCols, int poolSize);
 extern "C" __global__ void transpose(const float* in, float* out, int rows, int cols);
 extern "C" __global__ void vecxvec2vec(const float* x1, const float* x2, float* result, int size);
 extern "C" __global__ void vecxvec2mat(const float* x1, const float* x2, float* result, int x1size, int x2size);
@@ -341,7 +341,6 @@ extern "C" __global__ void vecxmat2vec(const float* vec, const float* mat, float
 extern "C" __global__ void matxmat2mat(const float* mat1, const float* mat2, float* result, int mat1Rows, int mat1Cols, int mat2cols);
 extern "C" __global__ void matxvec2vec(const float* mat, const float* vec, float* result, int matRows, int matCols);
 extern "C" __global__ void hadamard(const float* mat1, const float* mat2, float* result, int mat1Rows, int mat1Cols);
-extern "C" __global__ void fill(float* out, float val, int size);
 extern "C" __global__ void hadamard2(const float* mat1, const float* mat2, const float* mat3, float* result, int mat1Rows, int mat1Cols);
 extern "C" __global__ void matrix_vector_average(const float* inputBuffer, float* outputBuffer, const int N, const int Rows, const int Cols);
 extern "C" __global__ void matrix_vector_sum(const float* inputBuffer, float* outputBuffer, const int Rows, const int Cols);

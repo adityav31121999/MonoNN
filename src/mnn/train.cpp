@@ -101,6 +101,9 @@ void mnn::train(const std::string &dataSetPath, int batchSize)
             // If a session size is defined and reached, stop training for this session
             if (this->mnnPrg.sessionSize > 0 && fileCount >= this->mnnPrg.sessionSize) {
                 std::cout << "Session batch limit (" << this->mnnPrg.sessionSize << ") reached." << std::endl;
+                // diagnostic log at session end
+                std::cout << "=== Diagnostic Statistics at session end ===" << std::endl;
+                computeStats(cweights, bweights, cgradients, bgradients, activate);
                 auto endTime = std::chrono::high_resolution_clock::now();
                 this->mnnPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
                 this->mnnPrg.timeTakenForTraining = previousTrainingTime + this->mnnPrg.timeForCurrentSession;
@@ -168,6 +171,9 @@ void mnn::train(const std::string &dataSetPath, int batchSize)
             // If a session size is defined and reached, stop training for this session
             if (this->mnnPrg.sessionSize > 0 && batchesProcessed >= this->mnnPrg.sessionSize) {
                 std::cout << "Session batch limit (" << this->mnnPrg.sessionSize << ") reached." << std::endl;
+                // diagnostic log at session end
+                std::cout << "=== Diagnostic Statistics at session end ===" << std::endl;
+                computeStats(cweights, bweights, cgradients, bgradients, actBatch);
                 auto endTime = std::chrono::high_resolution_clock::now();
                 this->mnnPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
                 this->mnnPrg.timeTakenForTraining = previousTrainingTime + this->mnnPrg.timeForCurrentSession;
@@ -230,7 +236,8 @@ void mnn2d::train(const std::string &dataSetPath, int batchSize)
         std::cout << "No progress file found or file is empty. Starting fresh training." << std::endl;
         this->mnn2dPrg = {}; // Reset progress
         this->mnn2dPrg.currentLearningRate = this->learningRate;
-    } else {
+    }
+    else {
         std::cout << "Successfully loaded progress. Resuming training." << std::endl;
         this->learningRate = this->mnn2dPrg.currentLearningRate; // Use the learning rate from the last session
         previousTrainingTime = this->mnn2dPrg.timeTakenForTraining; // Carry over total time
@@ -282,6 +289,9 @@ void mnn2d::train(const std::string &dataSetPath, int batchSize)
             // If a session size is defined and reached, stop training for this session
             if (this->mnn2dPrg.sessionSize > 0 && fileCount >= this->mnn2dPrg.sessionSize) {
                 std::cout << "Session batch limit (" << this->mnn2dPrg.sessionSize << ") reached." << std::endl;
+                // diagnostic log at session end
+                std::cout << "=== Diagnostic Statistics at session end ===" << std::endl;
+                computeStats(cweights, bweights, cgradients, bgradients, activate);
                 auto endTime = std::chrono::high_resolution_clock::now();
                 this->mnn2dPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
                 this->mnn2dPrg.timeTakenForTraining = previousTrainingTime + this->mnn2dPrg.timeForCurrentSession;
@@ -353,6 +363,9 @@ void mnn2d::train(const std::string &dataSetPath, int batchSize)
             // If a session size is defined and reached, stop training for this session
             if (this->mnn2dPrg.sessionSize > 0 && batchesProcessed >= this->mnn2dPrg.sessionSize) {
                 std::cout << "Session batch limit (" << this->mnn2dPrg.sessionSize << ") reached." << std::endl;
+                // diagnostic log at session end
+                std::cout << "=== Diagnostic Statistics at session end ===" << std::endl;
+                computeStats(cweights, bweights, cgradients, bgradients, actBatch);
                 auto endTime = std::chrono::high_resolution_clock::now();
                 this->mnn2dPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
                 this->mnn2dPrg.timeTakenForTraining = previousTrainingTime + this->mnn2dPrg.timeForCurrentSession;

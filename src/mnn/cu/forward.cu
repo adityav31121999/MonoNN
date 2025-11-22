@@ -62,8 +62,8 @@ extern "C" __global__ void kernelLayerForward3(const float* input, float* output
                                   const float* cweights, const float* bweights,
                                   int inHeight, int inWidth, int outSize)
 {
-    int i = blockIdx.y * blockDim.y + threadIdx.y;
-    int j = blockIdx.x * blockDim.x + threadIdx.x;
+    int i = blockIdx.x * blockDim.x + threadIdx.x; // Row index (matches get_global_id(0))
+    int j = blockIdx.y * blockDim.y + threadIdx.y; // Column index (matches get_global_id(1))
 
     if (i < inHeight && j < outSize) {
         float dotProd_ij = 0.0f;
@@ -85,8 +85,8 @@ extern "C" __global__ void kernelLayerForward4(const float* input, float* output
                                   const float* cweights, const float* bweights,
                                   int inHeight, int inWidth, int outSize, float n)
 {
-    int i = blockIdx.y * blockDim.y + threadIdx.y;
-    int j = blockIdx.x * blockDim.x + threadIdx.x;
+    int i = blockIdx.x * blockDim.x + threadIdx.x; // Row index (matches get_global_id(0))
+    int j = blockIdx.y * blockDim.y + threadIdx.y; // Column index (matches get_global_id(1))
 
     if (i < inHeight && j < outSize) {
         float dotProd_ij = 0.0f;
@@ -110,8 +110,8 @@ extern "C" __global__ void kernelLayerForwardBatch1(const float* input, float* o
                                   const float* cweights, const float* bweights,
                                   int batchSize, int inSize, int outSize)
 {
-    int batch_idx = blockIdx.y * blockDim.y + threadIdx.y; // Batch index
-    int j = blockIdx.x * blockDim.x + threadIdx.x;         // Index for the output vector
+    int batch_idx = blockIdx.x * blockDim.x + threadIdx.x; // Batch index (matches get_global_id(0))
+    int j = blockIdx.y * blockDim.y + threadIdx.y;         // Index for the output vector (matches get_global_id(1))
 
     if (batch_idx < batchSize && j < outSize) {
         int input_offset = batch_idx * inSize;
@@ -139,8 +139,8 @@ extern "C" __global__ void kernelLayerForwardBatch1(const float* input, float* o
 extern "C" __global__ void kernelLayerForwardBatch2(const float* input, float* output,
                                   const float* cweights, const float* bweights,
                                   int batchSize, int inSize, int outSize, float n) {
-    int batch_idx = blockIdx.y * blockDim.y + threadIdx.y; // Batch index
-    int j = blockIdx.x * blockDim.x + threadIdx.x;         // Index for the output vector
+    int batch_idx = blockIdx.x * blockDim.x + threadIdx.x; // Batch index (matches get_global_id(0))
+    int j = blockIdx.y * blockDim.y + threadIdx.y;         // Index for the output vector (matches get_global_id(1))
 
     if (batch_idx < batchSize && j < outSize) {
         int input_offset = batch_idx * inSize;
@@ -169,9 +169,9 @@ extern "C" __global__ void kernelLayerForwardBatch2(const float* input, float* o
 extern "C" __global__ void kernelLayerForwardBatch3(const float* input, float* output,
                                   const float* cweights, const float* bweights,
                                   int batchSize, int inHeight, int inWidth, int outSize) {
-    int batch_idx = blockIdx.z * blockDim.z + threadIdx.z; // Batch index
-    int i = blockIdx.y * blockDim.y + threadIdx.y;         // Row index for the output matrix (0 to inHeight-1)
-    int j = blockIdx.x * blockDim.x + threadIdx.x;         // Column index for the output matrix (0 to outSize-1)
+    int batch_idx = blockIdx.x * blockDim.x + threadIdx.x; // Batch index (matches get_global_id(0))
+    int i = blockIdx.y * blockDim.y + threadIdx.y;         // Row index (matches get_global_id(1))
+    int j = blockIdx.z * blockDim.z + threadIdx.z;         // Column index (matches get_global_id(2))
 
     if (batch_idx < batchSize && i < inHeight && j < outSize) {
         int input_batch_offset = batch_idx * inHeight * inWidth;
@@ -199,9 +199,9 @@ extern "C" __global__ void kernelLayerForwardBatch4(const float* input, float* o
                                   const float* cweights, const float* bweights,
                                   int batchSize, int inHeight, int inWidth, int outSize, float n) 
 {
-    int batch_idx = blockIdx.z * blockDim.z + threadIdx.z; // Batch index
-    int i = blockIdx.y * blockDim.y + threadIdx.y;         // Row index for the output matrix (0 to inHeight-1)
-    int j = blockIdx.x * blockDim.x + threadIdx.x;         // Column index for the output matrix (0 to outSize-1)
+    int batch_idx = blockIdx.x * blockDim.x + threadIdx.x; // Batch index (matches get_global_id(0))
+    int i = blockIdx.y * blockDim.y + threadIdx.y;         // Row index (matches get_global_id(1))
+    int j = blockIdx.z * blockDim.z + threadIdx.z;         // Column index (matches get_global_id(2))
 
     if (batch_idx < batchSize && i < inHeight && j < outSize) {
         int input_batch_offset = batch_idx * inHeight * inWidth;

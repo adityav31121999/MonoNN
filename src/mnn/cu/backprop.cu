@@ -343,9 +343,7 @@ void mnn2d::cuBackprop(const std::vector<float>& expected)
                 size_t partial_results_buffer_size = num_work_groups * 2;
                 float *d_partial_results = nullptr;
                 CUDA_CHECK(cudaMalloc(&d_partial_results, sizeof(float) * partial_results_buffer_size));
-                softmax_reduce<<<num_work_groups, block_1d, 2 * WORKSIZE_1D * sizeof(float)>>>(
-                    d_dotProds[layer-1], d_partial_results, nullptr, nullptr, (int)prev_dot_size, SOFTMAX_TEMP
-                );
+                softmax_reduce<<<num_work_groups, block_1d, 2 * WORKSIZE_1D * sizeof(float)>>>(d_dotProds[layer-1], d_partial_results, (int)prev_dot_size, SOFTMAX_TEMP);
 
                 std::vector<float> h_partial_results(partial_results_buffer_size);
                 CUDA_CHECK(cudaMemcpy(h_partial_results.data(), d_partial_results, sizeof(float) * partial_results_buffer_size, cudaMemcpyDeviceToHost));

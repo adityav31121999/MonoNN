@@ -5,11 +5,18 @@
 #include "operators.hpp"
 #include "device_functions.cuh" // Include the new header for device functions
 
-// Helper macro/function for parallel reduction within a thread block.
+// Helper macro for parallel reduction within a thread block.
+#define WORK_GROUP_REDUCE(OP, INIT_VAL) \
+    for (unsigned int s = blockDim.x / 2; s > 0; s /= 2) { \
+        __syncthreads(); \
+        if (threadIdx.x < s) { \
+            local_buffer[threadIdx.x] = OP(local_buffer[threadIdx.x], local_buffer[threadIdx.x + s]); \
+        } \
+    }
 
 /// ----------------- Activations and their Derivatives ----------------- ///
 
-extern "C" __global__ void sigmoid(float* x, float* out, int size)
+extern "C" __global__ void sigmoid(const float* x, float* out, int size)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < size) {
@@ -17,7 +24,7 @@ extern "C" __global__ void sigmoid(float* x, float* out, int size)
     }
 }
 
-extern "C" __global__ void sigmoidDer(float* x, float* out, int size)
+extern "C" __global__ void sigmoidDer(const float* x, float* out, int size)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < size) {
@@ -26,13 +33,12 @@ extern "C" __global__ void sigmoidDer(float* x, float* out, int size)
     }
 }
 
-extern "C" __global__ void softmax_reduce(const float* input, float* partial_results,
-                                         float* local_max_dummy, // Dummy, not used
-                                         float* local_sum_dummy, // Dummy, not used
+extern "C" __global__ void softmax_reduce(const float* input,
+                                         float* partial_results,
                                          int size, float temp)
 {
     extern __shared__ float shared_mem[];       // dynamic memory, divided into two part
-    float* local_max = shared_mem;
+    float* local_max_ptr = shared_mem;
     float* local_sum = &shared_mem[blockDim.x];
 
     int global_id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -46,20 +52,20 @@ extern "C" __global__ void softmax_reduce(const float* input, float* partial_res
     for (int i = global_id; i < size; i += global_size) {
         my_max = fmaxf(my_max, input[i]);
     }
-    local_max[local_id] = my_max;
+    local_max_ptr[local_id] = my_max;
 
     __syncthreads();
 
     // Parallel reduction to find the single max for the entire work-group
     for (int offset = local_size / 2; offset > 0; offset /= 2) {
         if (local_id < offset) {
-            local_max[local_id] = fmaxf(local_max[local_id], local_max[local_id + offset]);
+            local_max_ptr[local_id] = fmaxf(local_max_ptr[local_id], local_max_ptr[local_id + offset]);
         }
         __syncthreads();
     }
 
     //sum of exponentials
-    float group_max = local_max[0];
+    float group_max = local_max_ptr[0];
     float my_sum = 0.0f;
     for (int i = global_id; i < size; i += global_size) {
         my_sum += expf((input[i] - group_max) / temp);
@@ -117,7 +123,7 @@ extern "C" __global__ void softmaxDer_normalize(const float* input,
     }
 }
 
-extern "C" __global__ void softmax(float* x, float* out, float temp, int size)
+extern "C" __global__ void softmax(const float* x, float* out, float temp, int size)
 {
     int global_id = blockIdx.x * blockDim.x + threadIdx.x;
     int local_id = threadIdx.x;
@@ -161,7 +167,7 @@ extern "C" __global__ void softmax(float* x, float* out, float temp, int size)
     }
 }
 
-extern "C" __global__ void softmaxDer(float* x, float* out, float temp, int size)
+extern "C" __global__ void softmaxDer(const float* x, float* out, float temp, int size)
 {
     int global_id = blockIdx.x * blockDim.x + threadIdx.x;
     int local_id = threadIdx.x;

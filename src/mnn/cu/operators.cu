@@ -8,7 +8,7 @@
 
 /// ----------------- Math Functions ----------------- ///
 
-extern "C" __global__ void add(float* x, float* y, float* out, int size)
+extern "C" __global__ void add(const float* x, const float* y, float* out, int size)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < size) {
@@ -16,7 +16,7 @@ extern "C" __global__ void add(float* x, float* y, float* out, int size)
     }
 }
 
-extern "C" __global__ void subtract(float* x, float* y, float* out, int size)
+extern "C" __global__ void subtract(const float* x, const float* y, float* out, int size)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < size) {
@@ -24,7 +24,7 @@ extern "C" __global__ void subtract(float* x, float* y, float* out, int size)
     }
 }
 
-extern "C" __global__ void scaleByValue(float* x, float* out, float val, int size)
+extern "C" __global__ void scaleByValue(const float* x, float* out, float val, int size)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < size) {
@@ -32,7 +32,7 @@ extern "C" __global__ void scaleByValue(float* x, float* out, float val, int siz
     }
 }
 
-extern "C" __global__ void power(float* x, float* out, float n, int size)
+extern "C" __global__ void power(const float* x, float* out, float n, int size)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < size) {
@@ -40,7 +40,7 @@ extern "C" __global__ void power(float* x, float* out, float n, int size)
     }
 }
 
-extern "C" __global__ void dPower(float* x, float* out, float n, int size)
+extern "C" __global__ void dPower(const float* x, float* out, float n, int size)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < size) {
@@ -48,7 +48,7 @@ extern "C" __global__ void dPower(float* x, float* out, float n, int size)
     }
 }
 
-extern "C" __global__ void meanPool(float* in, float* out, int inRows, int inCols, int poolSize)
+extern "C" __global__ void meanPool(const float* in, float* out, int inRows, int inCols, int poolSize)
 {
     int c = blockIdx.x * blockDim.x + threadIdx.x;
     if (c < inCols) {
@@ -60,7 +60,7 @@ extern "C" __global__ void meanPool(float* in, float* out, int inRows, int inCol
     }
 }
 
-extern "C" __global__ void maxPool(float* in, float* out, int inRows, int inCols, int poolSize)
+extern "C" __global__ void maxPool(const float* in, float* out, int inRows, int inCols, int poolSize)
 {
     int r = blockIdx.y * blockDim.y + threadIdx.y;
     int c = blockIdx.x * blockDim.x + threadIdx.x;
@@ -122,20 +122,19 @@ extern "C" __global__ void vecxmat2vec(const float* vec, const float* mat, float
 }
 
 extern "C" __global__ void matxmat2mat(const float* mat1, const float* mat2,
-                            float* result, int mat1Rows, int mat1Cols, int mat2cols)
+                            float* result, int mat1Rows, int mat1Cols, int mat2cols) 
 {
-    int c = blockIdx.x * blockDim.x + threadIdx.x; // Column of result matrix
-    int r = blockIdx.y * blockDim.y + threadIdx.y; // Row of result matrix
+    int r = blockIdx.y * blockDim.y + threadIdx.y; // Row index in mat1 and result (M)
+    int c = blockIdx.x * blockDim.x + threadIdx.x; // Col index in mat2 and result (N)
 
     if (r < mat1Rows && c < mat2cols) {
-        int i = r * mat2cols + c; // Linear index for the result matrix
-        int K = mat1Cols; // Inner dimension for multiplication
+        int K = mat1Cols; // Inner dimension
 
         float sum = 0.0f;
         for (int k = 0; k < K; k++) {
-            sum += mat1[r * mat1Cols + k] * mat2[k * mat2cols + c];
+            sum += mat1[r * K + k] * mat2[k * mat2cols + c];
         }
-        result[i] = sum;
+        result[r * mat2cols + c] = sum;
     }
 }
 
@@ -148,15 +147,6 @@ extern "C" __global__ void matxvec2vec(const float* mat, const float* vec, float
             sum += mat[i * matCols + j] * vec[j];
         }
         result[i] = sum;
-    }
-}
-
-extern "C" __global__ void fill(float* out, float val, int size)
-{
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i < size)
-    {
-        out[i] = val;
     }
 }
 
@@ -214,7 +204,7 @@ extern "C" __global__ void matrix_vector_sum(
     const int Cols)
 {
     // This is a simple, non-parallelized sum for demonstration.
-    if (threadIdx.x == 0 && blockIdx.x == 0) {
+    if (threadIdx.x == 0 && blockIdx.x == 0 && threadIdx.y == 0 && blockIdx.y == 0) {
         float sum = 0.0f;
         for (int i = 0; i < Rows * Cols; ++i) {
             sum += inputBuffer[i];
@@ -225,7 +215,7 @@ extern "C" __global__ void matrix_vector_sum(
 
 /// ----------------- Update Weights ----------------- ///
 
-extern "C" __global__ void kernelUpdateWeights(float* weights,
+extern "C" __global__ void kernelUpdateWeights(float* weights, 
                                 float* gweights,
                                 float learning_rate,
                                 int totalElements)
