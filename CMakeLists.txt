@@ -4,6 +4,11 @@ set(VERSION 0.0.1)
 message("> Project Name: ${PROJECT_NAME} | Version: ${VERSION}")
 message("> Experimental Implementation of Monomial Neural Network")
 
+# backend for computations
+set(USE_CL ON)
+set(USE_CU OFF)
+set(USE_CPU OFF)
+
 # binaries for debug and release
 set(OSbit 32)
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -16,14 +21,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${FullOutputDir}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${FullOutputDir}")
 add_compile_definitions(MONO_NN_SRC_DIR="${CMAKE_SOURCE_DIR}")
 
-set(USE_CL OFF)
-set(USE_CU OFF)
-set(USE_CPU ON)
-
 # language settings
-set(LANGUAGES 
-    C
-    CXX
+set(LANGUAGES C CXX
     if(USE_CU)
         CUDA
     endif()

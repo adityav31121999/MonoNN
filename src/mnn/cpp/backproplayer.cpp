@@ -71,8 +71,8 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
     gradb = multiply(v1T, incoming);      // gradb = (1 - alpha) * v1^T x dl/dz_l
     for(int i = 0; i < gradc.size(); i++) {
         for(int j = 0; j < gradc[0].size(); j++) {
-            gradc[i][j] = alpha * gradc[i][j];          // dL/dC_l
-            gradb[i][j] = (1 - alpha) * gradb[i][j];    // dL/dB_l
+            gradc[i][j] *= alpha;          // dL/dC_l
+            gradb[i][j] *= (1.0f - alpha); // dL/dB_l
         }
     }
 }
@@ -182,8 +182,8 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
     gradb = multiply(v1T, incoming);
     for(int i = 0; i < gradc.size(); i++) {
         for(int j = 0; j < gradc[0].size(); j++) {
-            gradc[i][j] = alpha * gradc[i][j];
-            gradb[i][j] = (1.0f - alpha) * gradb[i][j];
+            gradc[i][j] *= alpha;
+            gradb[i][j] *= (1.0f - alpha);
         }
     }
 

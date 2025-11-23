@@ -331,7 +331,7 @@ void mnn2d::train(const std::string &dataSetPath, int batchSize)
         std::cout << "Starting from file index " << startFileIndex << " to align with batches." << std::endl;
 
         for(int i = startFileIndex; i < totalFiles; i += batchSize) {
-            std::cout << i << std::endl;
+            std::cout << "Processing from file index: " << i << " to " << i + batchSize << std::endl;
             std::vector<std::vector<std::vector<float>>> inBatch;
             std::vector<std::vector<float>> expBatch;
             int currentBatchEnd = std::min<int>(i + batchSize, totalFiles);

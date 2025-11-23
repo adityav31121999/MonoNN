@@ -119,7 +119,7 @@ void mnn::cuTrainBatch(const std::vector<std::vector<float>>& inputs, const std:
 
         if (totalEpochs >= this->epochs) {
             std::cout << correct_predictions << "/" << inputs.size() << " correct. Increasing epochs by 10 and continuing cuTraining." << std::endl;
-            this->epochs += 10;
+            this->epochs += 50;
         }
     }
 }
@@ -239,7 +239,7 @@ void mnn2d::cuTrainBatch(const std::vector<std::vector<std::vector<float>>>& inp
 
         if (totalEpochs >= this->epochs) {
             std::cout << correct_predictions << "/" << inputs.size() << " correct. Increasing epochs by 10 and continuing cuTraining." << std::endl;
-            this->epochs += 10;
+            this->epochs += 50;
         }
     }
 }

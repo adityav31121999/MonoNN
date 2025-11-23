@@ -104,17 +104,14 @@ void mnn::cuBackprop(const std::vector<float>& expected) {
             vecxvec2mat<<<gridWeightGrad, block_1d>>>(
                 d_activate[layer - 1], d_incoming[layer], d_gradC[layer], cweight_rows, cweight_cols
             );
-            scaleByValue<<<gridWeightGrad, block_1d>>>(
-                d_gradC[layer], d_gradC[layer], alpha, (int)cweight_flat_size
-            );
 
             // dL/dB_l (Outer Product: ones x d_incoming[L])
             vecxvec2mat<<<gridWeightGrad, block_1d>>>(
                 d_ones, d_incoming[layer], d_gradB[layer], cweight_rows, cweight_cols
             );
-            scaleByValue<<<gridWeightGrad, block_1d>>>(
-                d_gradB[layer], d_gradB[layer], alpha, (int)cweight_flat_size
-            );
+
+            scaleByValue<<<gridWeightGrad, block_1d>>>(d_gradB[layer], d_gradB[layer], 1.0f - alpha, (int)cweight_flat_size);
+            scaleByValue<<<gridWeightGrad, block_1d>>>(d_gradC[layer], d_gradC[layer], alpha, (int)cweight_flat_size);
 
             // Outgoing Gradient Calculation (for layer-1)
             float *d_C_T = nullptr;
@@ -160,7 +157,7 @@ void mnn::cuBackprop(const std::vector<float>& expected) {
         vecxvec2mat<<<gridWeightGrad, block_1d>>>(
             d_ones, d_incoming[0], d_gradB[0], cweight_rows, cweight_cols
         );
-        scaleByValue<<<gridWeightGrad, block_1d>>>(d_gradB[0], d_gradB[0], alpha, (int)cweight_flat_size);
+        scaleByValue<<<gridWeightGrad, block_1d>>>(d_gradB[0], d_gradB[0], 1.0f - alpha, (int)cweight_flat_size);
 
         // --- Update Weights and Copy Results Back ---
         for (int i = 0; i < this->layers; ++i) {

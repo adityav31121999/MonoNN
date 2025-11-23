@@ -67,7 +67,7 @@ mnn2d::mnn2d(int inw, int inh, int outw, int layers, float order, std::string bi
     makeBinFile(binFileAddress);
     std::cout << "Network initialized with " << param << " parameters." 
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
-    #ifdef USE_CL
+#ifdef USE_CL
     // Initialize OpenCL context and command queue
     try {    
         // --- Enhanced OpenCL Initialization with Debug Info ---
@@ -100,7 +100,38 @@ mnn2d::mnn2d(int inw, int inh, int outw, int layers, float order, std::string bi
         std::cerr << e.what() << std::endl;
         throw;
     }
-    #endif
+#elif USE_CU
+    try {
+        // --- Enhanced CUDA Initialization with Debug Info ---
+        // print available devices
+        int deviceCount = 0;
+        cudaError_t cudaStatus = cudaGetDeviceCount(&deviceCount);
+        if (cudaStatus != cudaSuccess) {
+            throw std::runtime_error("Failed to get CUDA device count: " + std::string(cudaGetErrorString(cudaStatus)));
+        }
+        if (deviceCount == 0) {
+            throw std::runtime_error("No CUDA devices found. Check your CUDA installation and drivers.");
+        }
+        std::cout << "--- Found CUDA Devices (mnn2d) ---" << std::endl;
+        for (int device = 0; device < deviceCount; ++device) {
+            cudaDeviceProp deviceProp;
+            cudaStatus = cudaGetDeviceProperties(&deviceProp, device);
+            if (cudaStatus != cudaSuccess) {
+                throw std::runtime_error("Failed to get properties for CUDA device " + std::to_string(device) + ": " + std::string(cudaGetErrorString(cudaStatus)));
+            }
+            std::cout << "Device " << device << ": " << deviceProp.name << std::endl;
+            std::cout << "  Max Threads per Block: " << deviceProp.maxThreadsPerBlock << std::endl;
+            std::cout << "  Max Threads Dim (1D, 2D, 3D): (" << deviceProp.maxThreadsDim[0] << ", " << deviceProp.maxThreadsDim[1] << ", " << deviceProp.maxThreadsDim[2] << ")" << std::endl;
+            std::cout << "  Max Grid Size: (" << deviceProp.maxGridSize[0] << ", " << deviceProp.maxGridSize[1] << ", " << deviceProp.maxGridSize[2] << ")" << std::endl;
+        }
+        std::cout << "----------------------------------" << std::endl;
+    }
+    catch (const std::runtime_error& e) {
+        std::cerr << "\n!! FATAL CUDA INITIALIZATION ERROR (mnn2d) !!" << std::endl;
+        std::cerr << e.what() << std::endl;
+        throw;
+    }
+#endif
 }
 
 /**
@@ -166,7 +197,7 @@ mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::
     makeBinFile(binFileAddress);
     std::cout << "Network initialized with " << param << " parameters." 
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
-    #ifdef USE_CL
+#ifdef USE_CL
     // Initialize OpenCL context and command queue
     try {    
         // --- Enhanced OpenCL Initialization with Debug Info ---
@@ -199,7 +230,32 @@ mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::
         std::cerr << e.what() << std::endl;
         throw;
     }
-    #endif
+#elif USE_CU
+    try {
+        // --- Enhanced CUDA Initialization with Debug Info ---
+        // print available devices
+        int deviceCount = 0;
+        cudaError_t cudaStatus = cudaGetDeviceCount(&deviceCount);
+        if (cudaStatus != cudaSuccess) {
+            throw std::runtime_error("Failed to get CUDA device count: " + std::string(cudaGetErrorString(cudaStatus)));
+        }
+        if (deviceCount == 0) {
+            throw std::runtime_error("No CUDA devices found. Check your CUDA installation and drivers.");
+        }
+        for (int device = 0; device < deviceCount; ++device) {
+            cudaDeviceProp deviceProp;
+            cudaStatus = cudaGetDeviceProperties(&deviceProp, device);
+            if (cudaStatus != cudaSuccess) {
+                throw std::runtime_error("Failed to get properties for CUDA device " + std::to_string(device) + ": " + std::string(cudaGetErrorString(cudaStatus)));
+            }
+        }
+    }
+    catch (const std::runtime_error& e) {
+        std::cerr << "\n!! FATAL CUDA INITIALIZATION ERROR !!" << std::endl;
+        std::cerr << e.what() << std::endl;
+        throw; 
+    }
+#endif
 }
 
 /**
@@ -262,7 +318,7 @@ mnn2d::mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, st
     makeBinFile(binFileAddress);
     std::cout << "Network initialized with " << param << " parameters." 
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
-    #ifdef USE_CL
+#ifdef USE_CL
     // Initialize OpenCL context and command queue
     try {    
         // --- Enhanced OpenCL Initialization with Debug Info ---
@@ -299,7 +355,38 @@ mnn2d::mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, st
         std::cerr << e.what() << std::endl;
         throw;
     }
-    #endif
+#elif USE_CU
+    try {
+        // --- Enhanced CUDA Initialization with Debug Info ---
+        // print available devices
+        int deviceCount = 0;
+        cudaError_t cudaStatus = cudaGetDeviceCount(&deviceCount);
+        if (cudaStatus != cudaSuccess) {
+            throw std::runtime_error("Failed to get CUDA device count: " + std::string(cudaGetErrorString(cudaStatus)));
+        }
+        if (deviceCount == 0) {
+            throw std::runtime_error("No CUDA devices found. Check your CUDA installation and drivers.");
+        }
+        std::cout << "--- Found CUDA Devices (mnn2d) ---" << std::endl;
+        for (int device = 0; device < deviceCount; ++device) {
+            cudaDeviceProp deviceProp;
+            cudaStatus = cudaGetDeviceProperties(&deviceProp, device);
+            if (cudaStatus != cudaSuccess) {
+                throw std::runtime_error("Failed to get properties for CUDA device " + std::to_string(device) + ": " + std::string(cudaGetErrorString(cudaStatus)));
+            }
+            std::cout << "Device " << device << ": " << deviceProp.name << std::endl;
+            std::cout << "  Max Threads per Block: " << deviceProp.maxThreadsPerBlock << std::endl;
+            std::cout << "  Max Threads Dim (1D, 2D, 3D): (" << deviceProp.maxThreadsDim[0] << ", " << deviceProp.maxThreadsDim[1] << ", " << deviceProp.maxThreadsDim[2] << ")" << std::endl;
+            std::cout << "  Max Grid Size: (" << deviceProp.maxGridSize[0] << ", " << deviceProp.maxGridSize[1] << ", " << deviceProp.maxGridSize[2] << ")" << std::endl;
+        }
+        std::cout << "----------------------------------" << std::endl;
+    }
+    catch (const std::runtime_error& e) {
+        std::cerr << "\n!! FATAL CUDA INITIALIZATION ERROR (mnn2d) !!" << std::endl;
+        std::cerr << e.what() << std::endl;
+        throw;
+    }
+#endif
 }
 
 /**

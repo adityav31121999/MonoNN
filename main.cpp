@@ -37,7 +37,7 @@ int main() {
         mnn2d network2(inh, inw, outSize, hidden_layers2, order, binFileAddress3);
         network2.loadNetwork();
         network2.path2progress = progressData3;
-        network2.batchSize = 2;
+        network2.batchSize = 10;
         network2.mnn2dPrg.sessionSize = 50;
         network2.learningRate = 0.01f;
         network2.train(digitTrain, network2.batchSize);

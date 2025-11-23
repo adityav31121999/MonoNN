@@ -90,6 +90,31 @@ mnn::mnn(int insize, int outsize, int layers, float order, std::string binFileAd
         std::cerr << e.what() << std::endl;
         throw; 
     }
+#elif USE_CU
+    try {
+        // --- Enhanced CUDA Initialization with Debug Info ---
+        // print available devices
+        int deviceCount = 0;
+        cudaError_t cudaStatus = cudaGetDeviceCount(&deviceCount);
+        if (cudaStatus != cudaSuccess) {
+            throw std::runtime_error("Failed to get CUDA device count: " + std::string(cudaGetErrorString(cudaStatus)));
+        }
+        if (deviceCount == 0) {
+            throw std::runtime_error("No CUDA devices found. Check your CUDA installation and drivers.");
+        }
+        for (int device = 0; device < deviceCount; ++device) {
+            cudaDeviceProp deviceProp;
+            cudaStatus = cudaGetDeviceProperties(&deviceProp, device);
+            if (cudaStatus != cudaSuccess) {
+                throw std::runtime_error("Failed to get properties for CUDA device " + std::to_string(device) + ": " + std::string(cudaGetErrorString(cudaStatus)));
+            }
+        }
+    }
+    catch (const std::runtime_error& e) {
+        std::cerr << "\n!! FATAL CUDA INITIALIZATION ERROR !!" << std::endl;
+        std::cerr << e.what() << std::endl;
+        throw; 
+    }
 #endif
 }
 
@@ -178,6 +203,31 @@ mnn::mnn(int insize, int outsize, int dim, int layers, float order, std::string 
         std::cerr << e.what() << std::endl;
         throw; 
     }
+#elif USE_CU
+    try {
+        // --- Enhanced CUDA Initialization with Debug Info ---
+        // print available devices
+        int deviceCount = 0;
+        cudaError_t cudaStatus = cudaGetDeviceCount(&deviceCount);
+        if (cudaStatus != cudaSuccess) {
+            throw std::runtime_error("Failed to get CUDA device count: " + std::string(cudaGetErrorString(cudaStatus)));
+        }
+        if (deviceCount == 0) {
+            throw std::runtime_error("No CUDA devices found. Check your CUDA installation and drivers.");
+        }
+        for (int device = 0; device < deviceCount; ++device) {
+            cudaDeviceProp deviceProp;
+            cudaStatus = cudaGetDeviceProperties(&deviceProp, device);
+            if (cudaStatus != cudaSuccess) {
+                throw std::runtime_error("Failed to get properties for CUDA device " + std::to_string(device) + ": " + std::string(cudaGetErrorString(cudaStatus)));
+            }
+        }
+    }
+    catch (const std::runtime_error& e) {
+        std::cerr << "\n!! FATAL CUDA INITIALIZATION ERROR !!" << std::endl;
+        std::cerr << e.what() << std::endl;
+        throw; 
+    }
 #endif
 }
 
@@ -255,6 +305,31 @@ mnn::mnn(int insize, int outsize, std::vector<int> width, float order, std::stri
  
     } catch (const std::runtime_error& e) {
         std::cerr << "\n!! FATAL OPENCL INITIALIZATION ERROR !!" << std::endl;
+        std::cerr << e.what() << std::endl;
+        throw; 
+    }
+#elif USE_CU
+    try {
+        // --- Enhanced CUDA Initialization with Debug Info ---
+        // print available devices
+        int deviceCount = 0;
+        cudaError_t cudaStatus = cudaGetDeviceCount(&deviceCount);
+        if (cudaStatus != cudaSuccess) {
+            throw std::runtime_error("Failed to get CUDA device count: " + std::string(cudaGetErrorString(cudaStatus)));
+        }
+        if (deviceCount == 0) {
+            throw std::runtime_error("No CUDA devices found. Check your CUDA installation and drivers.");
+        }
+        for (int device = 0; device < deviceCount; ++device) {
+            cudaDeviceProp deviceProp;
+            cudaStatus = cudaGetDeviceProperties(&deviceProp, device);
+            if (cudaStatus != cudaSuccess) {
+                throw std::runtime_error("Failed to get properties for CUDA device " + std::to_string(device) + ": " + std::string(cudaGetErrorString(cudaStatus)));
+            }
+        }
+    }
+    catch (const std::runtime_error& e) {
+        std::cerr << "\n!! FATAL CUDA INITIALIZATION ERROR !!" << std::endl;
         std::cerr << e.what() << std::endl;
         throw; 
     }

@@ -25,7 +25,6 @@ std::vector<float> operator+(const std::vector<float>& a, const std::vector<floa
     return result;
 }
 
-
 /**
  * @brief Overloaded operator for matrix addition.
  * @param a Input matrix A.
@@ -46,7 +45,6 @@ std::vector<std::vector<float>> operator+(const std::vector<std::vector<float>>&
     }
     return result;
 }
-
 
 /**
  * @brief Overloaded operator for vector-matrix multiplication.
@@ -69,7 +67,6 @@ std::vector<float> operator*(const std::vector<float>& a, const std::vector<std:
 
     return result;
 }
-
 
 /**
  * @brief Overloaded operator for matrix-matrix multiplication.

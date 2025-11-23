@@ -165,7 +165,7 @@ void mnn::cuBackprop(const std::vector<std::vector<float>>& expected) {
             
             // Scale by alpha / 1-alpha (done during averaging/update in CL, but here it's separate)
             scaleByValue<<<gridWeightGrad, block_1d>>>(d_gradC[layer], d_gradC[layer], alpha, (int)cweight_flat_size);
-            scaleByValue<<<gridWeightGrad, block_1d>>>(d_gradB[layer], d_gradB[layer], alpha, (int)cweight_flat_size); // CL uses alpha for both
+            scaleByValue<<<gridWeightGrad, block_1d>>>(d_gradB[layer], d_gradB[layer], 1.0f - alpha, (int)cweight_flat_size); // CL uses alpha for both
         }
 
         // --- Backpropagation for the First Layer (Layer 0) ---
@@ -199,12 +199,8 @@ void mnn::cuBackprop(const std::vector<std::vector<float>>& expected) {
         );
         
         // Scale by alpha / 1-alpha
-        scaleByValue<<<gridWeightGradFirst, block_1d>>>(
-            d_gradC[0], d_gradC[0], alpha, (int)cweight_flat_size
-        );
-        scaleByValue<<<gridWeightGradFirst, block_1d>>>(
-            d_gradB[0], d_gradB[0], 1.0f, (int)cweight_flat_size
-        );
+        scaleByValue<<<gridWeightGradFirst, block_1d>>>(d_gradC[0], d_gradC[0], alpha, (int)cweight_flat_size);
+        scaleByValue<<<gridWeightGradFirst, block_1d>>>(d_gradB[0], d_gradB[0], 1.0f - alpha, (int)cweight_flat_size);
 
         // --- Update Weights and Copy Results Back ---
         for (int i = 0; i < this->layers; ++i) {
@@ -351,7 +347,9 @@ void mnn2d::cuBackprop(const std::vector<std::vector<float>>& expected) {
             std::vector<std::vector<float>> equalGrads(actBatch[layers-1][i].size(), std::vector<float>(actBatch[layers-1][i][0].size()));
             for(size_t r = 0; r < actBatch[layers-1][i].size(); ++r) {
                 for(size_t c = 0; c < actBatch[layers-1][i][0].size(); ++c) {
-                    equalGrads[r][c] = out_err_host[c];
+                    if (c < out_err_host.size()) {
+                        equalGrads[r][c] = out_err_host[c];
+                    }
                 }
             }
             std::vector<float> last_layer_err = flatten(equalGrads);
@@ -498,12 +496,8 @@ void mnn2d::cuBackprop(const std::vector<std::vector<float>>& expected) {
             d_totalBgrad, d_gradB[0], batchSize, cweight_rows_first, cweight_cols_first
         );
         // Scale by value
-        scaleByValue<<<calculate_grid_1d(cweight_flat_size_first, WORKSIZE_1D), block_1d>>>(
-            d_gradC[0], d_gradC[0], alpha, (int)cweight_flat_size_first
-        );
-        scaleByValue<<<calculate_grid_1d(cweight_flat_size_first, WORKSIZE_1D), block_1d>>>(
-            d_gradB[0], d_gradB[0], (1.0f - alpha), (int)cweight_flat_size_first
-        );
+        scaleByValue<<<calculate_grid_1d(cweight_flat_size_first, WORKSIZE_1D), block_1d>>>(d_gradC[0], d_gradC[0], alpha, (int)cweight_flat_size_first);
+        scaleByValue<<<calculate_grid_1d(cweight_flat_size_first, WORKSIZE_1D), block_1d>>>(d_gradB[0], d_gradB[0], (1.0f - alpha), (int)cweight_flat_size_first);
  
         // --- Update Weights and Copy Results Back --- (Same as mnn)
         for (int i = 0; i < this->layers; ++i) {

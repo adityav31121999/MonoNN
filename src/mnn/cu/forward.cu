@@ -1,7 +1,7 @@
 #ifdef USE_CU
 #include "operators.hpp"
-#include <cfloat> // For FLT_MAX
-#include <cmath>  // For signbit, pow, exp
+#include <cfloat>
+#include <cmath>
 #include <cuda_runtime.h>
 #include <cuda.h>
 

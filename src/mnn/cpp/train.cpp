@@ -44,7 +44,7 @@ void mnn::train(const std::vector<float>& input, const std::vector<float>& targe
 }
 
 /**
- * @brief trains the mnn network on a batch of data.
+ * @brief trains the mnn network on a batch of data (input-target pairs).
  * @param inputs A vector of input vectors.
  * @param targets A vector of target vectors.
  */
@@ -83,6 +83,7 @@ void mnn::trainBatch(const std::vector<std::vector<float>>& inputs, const std::v
 
     int totalEpochs = 0;
     if (this->epochs < 1) this->epochs = 100;
+    std::vector<int> correct(input.size(), -1);
  
     while (true) {
         float total_loss = 0.0f;
@@ -99,14 +100,16 @@ void mnn::trainBatch(const std::vector<std::vector<float>>& inputs, const std::v
             computeStats(cweights, bweights, cgradients, bgradients, activate);
         }
 */
-        backprop(const_cast<std::vector<std::vector<float>>&>(targets));
  
         int correct_predictions = 0;
         for (size_t i = 0; i < inputs.size(); ++i) {
             // Use outputBatch for checking accuracy to avoid re-computation
             if (maxIndex(outputBatch[i]) == maxIndex(targets[i])) {
                 correct_predictions++;
+                correct[i] = 1;
             }
+            else
+                correct[i] = 0;
         }
 
         if (correct_predictions == inputs.size()) {
@@ -114,13 +117,18 @@ void mnn::trainBatch(const std::vector<std::vector<float>>& inputs, const std::v
             break;
         }
         else {
-            std::cout << "Epoch: " << totalEpochs << " \t|\t predictions: " << correct_predictions << "/" << inputs.size() << " \t|\t Average CE Loss: " << total_loss / inputs.size() << std::endl;
+            std::cout << "Correct Predictions: ";
+            for (size_t i = 0; i < inputs.size(); ++i) {
+                std::cout << correct[i] << " ";
+            }
+            std::cout << "\nEpoch: " << totalEpochs << " \t|\t predictions: " << correct_predictions << "/" << inputs.size() << " \t|\t Average CE Loss: " << total_loss / inputs.size() << std::endl;
         }
 
         if (totalEpochs >= this->epochs) {
             std::cout << correct_predictions << "/" << inputs.size() << " correct. Increasing epochs by 10 and continuing training." << std::endl;
             this->epochs += 10;
         }
+        backprop(const_cast<std::vector<std::vector<float>>&>(targets));
     }
 }
 
@@ -163,7 +171,7 @@ void mnn2d::train(const std::vector<std::vector<float>>& input, const std::vecto
 }
 
 /**
- * @brief trains the mnn2d network on a batch of data.
+ * @brief trains the mnn2d network on a batch of data (input-target pairs).
  * @param inputs A vector of input matrices.
  * @param targets A vector of target vectors.
  */
@@ -203,6 +211,7 @@ void mnn2d::trainBatch(const std::vector<std::vector<std::vector<float>>>& input
 
     int totalEpochs = 0;
     if (this->epochs < 1) this->epochs = 100;
+    std::vector<int> correct(input.size(), -1);
 
     while (true) {
         float total_loss = 0.0f;
@@ -219,14 +228,16 @@ void mnn2d::trainBatch(const std::vector<std::vector<std::vector<float>>>& input
             computeStats(cweights, bweights, cgradients, bgradients, activate);
         }
 */
-        backprop(const_cast<std::vector<std::vector<float>>&>(targets));
 
         int correct_predictions = 0;
         for (size_t i = 0; i < inputs.size(); ++i) {
             // Use outputBatch for checking accuracy to avoid re-computation
             if (maxIndex(outputBatch[i]) == maxIndex(targets[i])) {
                 correct_predictions++;
+                correct[i] = 1;
             }
+            else
+                correct[i] = 0;
         }
 
         if (correct_predictions == inputs.size()) {
@@ -234,13 +245,18 @@ void mnn2d::trainBatch(const std::vector<std::vector<std::vector<float>>>& input
             break;
         }
         else {
-            std::cout << "Epoch: " << totalEpochs << " \t|\t predictions: " << correct_predictions << "/" << inputs.size() << " \t|\t Average CE Loss: " << total_loss / inputs.size() << std::endl;
+            std::cout << "Correct Predictions: ";
+            for (size_t i = 0; i < inputs.size(); ++i) {
+                std::cout << correct[i] << " ";
+            }
+            std::cout << "\nEpoch: " << totalEpochs << " \t|\t predictions: " << correct_predictions << "/" << inputs.size() << " \t|\t Average CE Loss: " << total_loss / inputs.size() << std::endl;
         }
 
         if (totalEpochs >= this->epochs) {
             std::cout << correct_predictions << "/" << inputs.size() << " correct. Increasing epochs by 10 and continuing training." << std::endl;
             this->epochs += 10;
         }
+        backprop(const_cast<std::vector<std::vector<float>>&>(targets));
     }
 }
 

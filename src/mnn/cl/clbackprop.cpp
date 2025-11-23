@@ -461,7 +461,7 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
             // scale dL/dB_layer by 1- alpha
             kernelScale.setArg(0, d_gradB[layer]);
             kernelScale.setArg(1, d_gradB[layer]);
-            kernelScale.setArg(2, 1.0f);
+            kernelScale.setArg(2, 1.0f - alpha);
             kernelScale.setArg(3, (int)(prev_cols * curr_cols));
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelScale, cl::NullRange, calculate_global_1d(WORKSIZE_1D, prev_cols * curr_cols), local_1d));
         }
@@ -515,7 +515,7 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
         // scale by 1
         kernelScale.setArg(0, d_gradB[0]);
         kernelScale.setArg(1, d_gradB[0]);
-        kernelScale.setArg(2, 1.0f);
+        kernelScale.setArg(2, 1.0f - alpha);
         kernelScale.setArg(3, (int)(inWidth * firstLayerCols));
         CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelScale, cl::NullRange, calculate_global_1d(WORKSIZE_1D, inWidth * firstLayerCols), local_1d));
 
