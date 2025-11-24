@@ -16,7 +16,7 @@
   - Neural Network Structure
   - Calculation for single input training
   - Backend support for compute
-- **0.0.1**: Batch Training (in progress)
+- **0.0.2**: Batch Training (in progress)
   - Calculation for batch input training
 
 ## Project Structure
@@ -186,6 +186,20 @@ Gradient calculation is done in following manner:
       - Incoming gradient for M2: `dL/dz1 = dL/dz2 * dz2/da1 * da1/dz1`
       - Gradient for C1: `∂L/∂C1 = ∂L/∂z1 * ∂z1/∂C1`
       - Gradient for B1: `∂L/∂B1 = ∂L/∂z1 * ∂z1/∂B1`
+
+### _Gradients for Network:_
+
+- Similar to perceptron, the whole mechanism follows similar math, though for `MNN` and `MNN2D` it is different.
+- For **MNN**:
+  - 
+- For **MNN2D**:
+  - 
+
+### _Gradients for Network In Batches:_
+- For **MNN**:
+  - 
+- For **MNN2D**:
+  - 
 
 ## Theorem Sketch
 

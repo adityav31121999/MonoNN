@@ -210,8 +210,10 @@ void layerForwardBatch(const std::vector<std::vector<float>>& input, std::vector
         }
         
         for(int j=0; j<outSize; ++j) {
-             if (std::isnan(output[b][j])) output[b][j] = 0.0f;
-             else if (std::isinf(output[b][j])) output[b][j] = 1.0f;
+            if (std::isnan(output[b][j]))
+                output[b][j] = 0.0f;
+            else if (std::isinf(output[b][j]))
+                output[b][j] = 1.0f;
         }
     }
 }
@@ -254,8 +256,10 @@ void layerForwardBatch(const std::vector<std::vector<float>>& input, std::vector
         }
 
         for(int j=0; j<outSize; ++j) {
-             if (std::isnan(output[b][j])) output[b][j] = 0.0f;
-             else if (std::isinf(output[b][j])) output[b][j] = 1.0f;
+            if (std::isnan(output[b][j]))
+                output[b][j] = 0.0f;
+            else if (std::isinf(output[b][j]))
+                output[b][j] = 1.0f;
         }
     }
 }
@@ -286,13 +290,15 @@ void layerForwardBatch(const std::vector<std::vector<std::vector<float>>>& input
             for(int k=0; k<inWidth; ++k) {
                 float in_val = input[b][r][k];
                 for(int c=0; c<outWidth; ++c) {
-                    output[b][r][c] += in_val * cweights[k][c];
+                    output[b][r][c] += (in_val * cweights[k][c]);
                 }
             }
 
             for(int c=0; c<outWidth; ++c) {
-                if (std::isnan(output[b][r][c])) output[b][r][c] = 0.0f;
-                else if (std::isinf(output[b][r][c])) output[b][r][c] = 1.0f;
+                if (std::isnan(output[b][r][c])) 
+                    output[b][r][c] = 0.0f;
+                else if (std::isinf(output[b][r][c]))
+                    output[b][r][c] = 1.0f;
             }
         }
     }
@@ -327,13 +333,15 @@ void layerForwardBatch(const std::vector<std::vector<std::vector<float>>>& input
             for(int k=0; k<inWidth; ++k) {
                 float in_val = powerIn[r][k];
                 for(int c=0; c<outWidth; ++c) {
-                    output[b][r][c] += in_val * cweights[k][c];
+                    output[b][r][c] += (in_val * cweights[k][c]);
                 }
             }
 
             for(int c=0; c<outWidth; ++c) {
-                if (std::isnan(output[b][r][c])) output[b][r][c] = 0.0f;
-                else if (std::isinf(output[b][r][c])) output[b][r][c] = 1.0f;
+                if (std::isnan(output[b][r][c])) 
+                    output[b][r][c] = 0.0f;
+                else if (std::isinf(output[b][r][c]))
+                    output[b][r][c] = 1.0f;
             }
         }
     }
