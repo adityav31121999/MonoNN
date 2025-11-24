@@ -132,7 +132,7 @@ void layerBackward(const std::vector<float>& incoming,          // width[l]
     C_T = transpose(C);     // width[l] * width[l-1], l = layer count
     outgoing.clear(); outgoing.resize(prevAct.size(), 0.0f);
     outgoing = multiply(incoming, C_T);         // width[l-1]
-    outgoing = multiply(outgoing, dprev_p);     // width[l-1]
+    outgoing = multiply(outgoing, dprev_p);     // width[l-1], element-wise products
     outgoing = multiply(outgoing, dprevAct);    // width[l-1], element-wise products
 }
 

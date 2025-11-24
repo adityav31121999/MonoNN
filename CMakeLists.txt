@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 3.30.0 FATAL_ERROR)
 project(monoNN)
-set(VERSION 0.0.1)
+set(VERSION 0.0.2)
 message("> Project Name: ${PROJECT_NAME} | Version: ${VERSION}")
 message("> Experimental Implementation of Monomial Neural Network")
 
 # backend for computations
-set(USE_CL ON)
+set(USE_CL OFF)
 set(USE_CU OFF)
-set(USE_CPU OFF)
+set(USE_CPU ON)
 
 # binaries for debug and release
 set(OSbit 32)
@@ -80,10 +80,10 @@ add_subdirectory(src)
 include_directories(src)
 
 # FOR EXECUTABLE
-# add_executable(${PROJECT_NAME} main.cpp mnn.h)
-# target_link_libraries(${PROJECT_NAME} PRIVATE mono)
-# if(USE_CU)
-#     target_link_libraries(${PROJECT_NAME} PRIVATE CUDA::cudart)
-# elseif(USE_CL)
-#     target_link_libraries(${PROJECT_NAME} PRIVATE OpenCL::OpenCL)
-# endif()
+add_executable(${PROJECT_NAME} main.cpp mnn.h)
+target_link_libraries(${PROJECT_NAME} PRIVATE mono)
+if(USE_CU)
+    target_link_libraries(${PROJECT_NAME} PRIVATE CUDA::cudart)
+elseif(USE_CL)
+    target_link_libraries(${PROJECT_NAME} PRIVATE OpenCL::OpenCL)
+endif()

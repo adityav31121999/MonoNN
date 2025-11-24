@@ -1,4 +1,4 @@
-# MonoNN: Monomial Neural Network
+# MonoNN: Monomial Neural Network (EXPERIMENTAL)
 
 - This is an experimental project to study the modification to multi-layer perception from linear to monomial-based neurons.
 - The monomial is of the form: `f(x) = c*(x^n) + b`
@@ -9,6 +9,15 @@
   - Both c and b are trainable parameters.
 - Here the `b` term is intentionally added to represent the `bias` as used in nerual neworks.
 - This modification is done to understand the nature of non-linearity over linear nature of mlp, direct impact of non-linearity to results of mlp and optimisation of weights and how much variation compared to standard mlp.
+
+## Project Versions
+
+- **0.0.1**: Basic Structure and File-by-File Training (complete)
+  - Neural Network Structure
+  - Calculation for single input training
+  - Backend support for compute
+- **0.0.1**: Batch Training (in progress)
+  - Calculation for batch input training
 
 ## Project Structure
 
@@ -28,6 +37,10 @@
   - For 2D i/o, it has 2D product and Activations per layer.
     - Output is calculated via Mean/Max/Weighted Mean Pooling.
   - Hyperparameters such as learning rate, decay rate and regularisation parameters are also provided.
+  - 2D bias matrix for each weight matrix.
+    - The reason behind this is simple, an MLP will have bias vector, and element wise added to the output obtained by product of previous activation and current weight.
+    - Single bias value can tune the signal obtained by product of row and column vector. For monomial nature, this can be tricky, since it can explode.
+    - Hence, each weight value has its own bias and alpha is use to make coefficients to absorb the major change compared to biases that absorb the minor part.
 
 ## Features
 
