@@ -1,14 +1,152 @@
 # MonoNN: Monomial Neural Network (EXPERIMENTAL)
 
 - This is an experimental project to study the modification to multi-layer perception from linear to monomial-based neurons.
-- The monomial is of the form: `f(x) = c*(x^n) + b`
+- The monomial is of the form: `f(x) = c*(x^m) + b`
   - `x`: input to monimial
-  - `n`: order of monomial, neurons and mlp
-  - `c`: coefficient of $ x^n $
+  - `m`: order of monomial, neurons and mlp
+  - `c`: coefficient of $ x^m $
   - `b`: constant
   - Both c and b are trainable parameters.
 - Here the `b` term is intentionally added to represent the `bias` as used in nerual neworks.
 - This modification is done to understand the nature of non-linearity over linear nature of mlp, direct impact of non-linearity to results of mlp and optimisation of weights and how much variation compared to standard mlp.
+- Derivative of Monomial is given as: `f'(x) = m*c*(x^(m-1))`
+
+## Neural Network
+
+- Two types of neural networks are defined based on input: MNN and MNN2D
+  - MNN takes 1D vector input
+  - MNN2D takes 2D matrix input
+  - Both produce 1D output vector
+- Both networks have similar mechanism and weight structure, with gradient storing per layer.
+  - For 1D i/o, it has 1D product and Activations per layer.
+  - For 2D i/o, it has 2D product and Activations per layer.
+  - Output is calculated via Mean/Max/Weighted Mean Pooling in MNN2D.
+  - 2D bias matrix for each weight matrix.
+    - The reason behind this is simple, an MLP will have bias vector, and element wise added to the output obtained by product of previous activation and current weight.
+    - Single bias value can tune the signal obtained by product of row and column vector. For monomial nature, this can be tricky, since it can explode or restrain the value.
+    - Hence, each weight value has its own bias.
+    - An alpha value (0.6) is utilised to make coefficients to absorb the major change, compared to biases that absorb the minor part.
+
+## Gradients
+
+Gradient calculation is done in following manner:
+
+### _Gradients to update monomial:_
+
+- Let a(.) be activation functon and a'(.) be its derivative.
+  - v = a(c(x^m) + b) is the output of the monomial neuron after activation.
+  - To properly update the coefficients `c` and `b` when an activation function is involved, we must use the chain rule from calculus. The goal is to find the partial derivative of the Loss function `E` with respect to `c` and `b`.
+  - Let `z = c(x^m) + b` be the pre-activation output. The output of the neuron is `v = a(z)`.
+  - The gradients for `c` and `b` are calculated as follows:
+    - `∂E/∂c = ∂E/∂v * ∂v/∂z * ∂z/∂c`
+    - `∂E/∂b = ∂E/∂v * ∂v/∂z * ∂z/∂b`
+  - Where:
+    - `∂E/∂v` is the error signal propagated backward from the next layer.
+    - `∂v/∂z = a'(z) = a'(c(x^m) + b)` is the derivative of the activation function.
+    - `∂z/∂c = x^m`
+    - `∂z/∂b = 1`
+  - Substituting these in, we get the gradients:
+    - **Gradient for c**: `∂E/∂c = (∂E/∂v) * a'(c(x^m) + b) * (x^m)`
+    - **Gradient for b**: `∂E/∂b = (∂E/∂v) * a'(c(x^m) + b)`
+  - The final update rules using the learning rate `L` are:
+    - `c <- c - L * (∂E/∂v) * a'(c(x^m) + b) * (x^m)`
+    - `b <- b - L * (∂E/∂v) * a'(c(x^m) + b)`
+
+### _Gradients for perceptron:_
+
+- Consider a perceptron with two neurons as follows:
+
+  ```
+             ____                       ____
+            |    |  z1                 |    | z2
+    I ----> | M1 | ---> a(.) = a1 ---> | M2 | ---> a(.) = a2 ---> O
+            |____|                     |____|
+
+  ```
+
+  - I and O indicate the input and output, with M1 and M2 being the monomial neurons, z1 and z2 are their respective output.
+  - Hence the gradients for these are as follows, which in general is also similar to Larger networks:
+    - `M1 = C1*(x^m) + B1, M2 = C2*(x^m) + B2`
+    - Let L be the loss: `∂L/∂O = O - Expected`
+    - For monomial M2:
+      - Incoming gradient for M2: `∂L/∂z2 = ∂L/∂O * ∂O/∂z2`
+      - Gradient for C2: `∂L/∂C2 = ∂L/∂z2 * ∂z2/∂C2`
+      - Gradient for B2: `∂L/∂B2 = ∂L/∂z2 * ∂z2/∂B2`
+      - Outgoing gradient: `∂L/∂z1 = ∂L/∂z2 * ∂z2/∂a1 * ∂a1/∂z1`
+    - For Monomial M1:
+      - Incoming gradient for M2: `dL/dz1 = dL/dz2 * dz2/da1 * da1/dz1`
+      - Gradient for C1: `∂L/∂C1 = ∂L/∂z1 * ∂z1/∂C1`
+      - Gradient for B1: `∂L/∂B1 = ∂L/∂z1 * ∂z1/∂B1`
+    - `∂a1/∂z1` and `∂a2/∂z2` are derivative of the activation.
+
+- **For batch of input and output on this perceptron, the gradients will be:**
+  ```
+      I(1)                                                            O(1)
+      I(2)                                                            O(2)
+      I(3)                                                            O(3)
+       :         ____                       ____                       :
+       :        |    |  z1                 |    | z2                   :
+       :  ----> | M1 | ---> a(.) = a1 ---> | M2 | ---> a(.) = a2 --->  :
+       :        |____|                     |____|                      :
+       :                                                               :
+       :                                                               :
+       :                                                               :
+      I(n)                                                            O(n)
+  ```
+
+  - `I(i)`: ith input, `O(i)`: ith output, `E(i)`: ith expected output
+  - `z1(i)`: ith input's M1 output, `z2(i)`: ith input's M2 output
+  - `a1(i)`: activation of z1(i), `a2(i)`: activation of z2(i)
+  - `L(i)`: Loss recorded for ith output
+  - Gradient of Error for ith will be: `∂L(i)/∂O(i) = O(i) - E(i)`
+  - 
+
+## Gradients for Network
+
+- Similar to perceptron, the whole mechanism follows similar math, though for `MNN` and `MNN2D` it is different.
+- Though the process is similar, in `MNN` the gradients are passed as vectors and in `MNN2D` they are passes matrices.
+- Final results are almost similar in notation.
+- Loss for both is calculated from cross entropy: 
+  - For MNN: `CE = -sum(T(i)logP(i))`
+  - For MNN2D: `CE = -sum(T(i, j)logP(i, j))`
+  - `T`: Target (expected output from neural network)
+  - `P`: Prediction (output of neural network)
+
+### _Gradients for MNN:_
+- **For Sigle Input:**
+  - Lets say there are `l` layers of hidden weights.
+  - The gradient from loss w.r.t. `∂L/∂zl = ∂(CE)/∂zl = P - T = δ(l)` (element-wise subtraction)
+  - This loss gradient is used to backpropagate till first layer for both coefficients and weights.
+  - From last to second layer:
+    - gradient for layer `i-1`: `∂L/∂z(i-1) = ∂L/∂zi * ∂zi/∂a(i-1) * ∂a(i-1)/∂z(i-1)`
+    - `δ(i-1) = ∂L/∂z(i-1) = (∂L/∂zi * Ci^T) . (m * (a(i-1)^(m-1))) . (a'(i-1))`
+    - `δ(i)` is used to update Cl and Bl weights
+  - For all layer weights, C and B:
+    - `∂L/∂Bi = ∂L/∂zi * ∂zi/∂Bi`, and `∂L/∂Ci = ∂L/∂zi * ∂zi/∂Bi`
+    - For C: `∂L/∂Ci = p(l-1) * ∂L/∂zi`, here `p(l-1) = a(l-1) ^ m`
+    - For B: `∂L/∂Bi = v1 * ∂L/∂zi`, here `v1` is the column vector of 1s with same size of a(i-1)
+
+- **For Batch Input:**
+  - 
+
+### _Gradients for MNN2D:_
+- Here also, the process and notations are pretty similar.
+- **For Sigle Input:**
+  - The gradient from loss w.r.t. `∂L/∂zl = ∂(CE)/∂zl = P - T = δ(l)` (element-wise subtraction)
+  - This loss gradient is used to backpropagate till first layer for both coefficients and weights.
+  - From last to second layer:
+    - gradient for layer `i-1`: `∂L/∂z(i-1) = ∂L/∂zi * ∂zi/∂a(i-1) * ∂a(i-1)/∂z(i-1)`
+    - `δ(i-1) = ∂L/∂z(i-1) = (∂L/∂zi * Ci^T) . (m * (a(i-1)^(m-1))) . (a'(i-1))`
+    - `δ(i)` is used to update Cl and Bl weights
+  - For all layer weights, C and B:
+    - `∂L/∂Bi = ∂L/∂zi * ∂zi/∂Bi`, and `∂L/∂Ci = ∂L/∂zi * ∂zi/∂Bi`
+    - For C: `∂L/∂Ci = (p(l-1)^T) * ∂L/∂zi`, here `p(l-1) = a(l-1) ^ m`
+    - For B: `∂L/∂Bi = v1 * ∂L/∂zi`, here `v1` is the matrix of 1s with dimension {rows of Ci x rows of input matrix}
+
+- **For Batch Input:**
+  - 
+
+---
 
 ## Project Versions
 
@@ -21,7 +159,12 @@
 
 ## Project Structure
 
-- The core logic is planned within the `src` directory. The implementation defines two main classes in `src/mnn.hpp`:
+- `src/operators.hpp` is provided to have C++, CUDA and OpenCL support.
+  - Hyperparameters such as learning rate, decay rate and regularisation parameters are provided.
+  - `OpenCL` context function is declared alongwith error support.
+  - `Cuda` kernel declarations are provided.
+  - `C++` operations and functions are declared here too.
+- The core logic is planned within the `src` directory. The implementation defines two main classes in `src/mnn.hpp` and `src/mnn2.hpp`:
   - **`mnn`**: A class designed to represent a Monomial Neural Network for 1-dimensional input and output data (vectors).
   - **`mnn2d`**: A class designed to represent a Monomial Neural Network for 2-dimensional input and output data (matrices/images).
   - Headers for loss, activations and class definitions are provided separately.
@@ -30,21 +173,9 @@
 - Certain common functions are commonly used in all code for data access and modification.
 - Binary files are used for weights storage (serialisation and deserialisation).
 
-## Neural Network structure
-
-- Both MonoNN have similar mechanism and weight structure, with gradient storing also per hidden layer.
-  - For 1D i/o, it has 1D product and Activations per layer.
-  - For 2D i/o, it has 2D product and Activations per layer.
-    - Output is calculated via Mean/Max/Weighted Mean Pooling.
-  - Hyperparameters such as learning rate, decay rate and regularisation parameters are also provided.
-  - 2D bias matrix for each weight matrix.
-    - The reason behind this is simple, an MLP will have bias vector, and element wise added to the output obtained by product of previous activation and current weight.
-    - Single bias value can tune the signal obtained by product of row and column vector. For monomial nature, this can be tricky, since it can explode.
-    - Hence, each weight value has its own bias and alpha is use to make coefficients to absorb the major change compared to biases that absorb the minor part.
-
 ## Features
 
-- The library is built with a modular approach, separating functionalities into different files.
+The library is built with a modular approach, separating functionalities into different files.
 
 ### _Backend Support_
 
@@ -82,9 +213,9 @@
 
 ### _Activation Functions_
 
-- **Sigmoid**: `sigmoid` function and its derivative.
-- **ReLU**: Rectified Linear Unit (`relu`) and its derivative.
-- **Softmax**: `softmax` function with optional temperature parameter for probability distribution control.
+- **Sigmoid**: `sigmoid` function and its derivative (for `MNN`)
+- **ReLU**: Rectified Linear Unit (`relu`) and its derivative (Not Utilised)
+- **Softmax**: `softmax` function with optional temperature parameter for probability distribution (for `MNN2D`)
 
 ### _Loss Functions_
 
@@ -121,91 +252,12 @@
   - `LAMBDA_L1` / `LAMBDA_L2`: 0.001
   - `SOFTMAX_TEMP`: 1.5
 
-## Gradients
-
-Gradient calculation is done in following manner:
-
-### _Simple derivative based gradient:_
-
-- The gradient of Neurons are calculated as:
-  - Derivative of Monomial is given as: g => `f'(x) = nc(x^(n-1))`
-  - Parameter is updated as `w <- w - L.g`
-    - `w` = weight to be updated
-    - `L` = learning rate
-    - `g` = gradient
-    - `<-` signifies update applied to w
-  - When the gradient is applied to, the `b` term will remain unaffected, hence a part of the gradient will be applied to it.
-  - Hence: `w <- (c*(x^n) + b) - L.(nc(x^(n-1))) = c(1 - (L.n/x))(x^n) + b`
-  - The term `1 - (L.n/x)` solely updates the `c` coefficient of monomial not the `b` term.
-    - `c <- (1-(L.n/x)) * c`
-- This is an assumption, since i have not included application of activation on monomial and its deriavative in update of coefficient.
-
-### _Gradients After Application of Activation:_
-
-- Let a(.) be activation functon and a'(.) be its derivative.
-  - v = a(c(x^n) + b) is the output of the monomial neuron after activation.
-  - To properly update the coefficients `c` and `b` when an activation function is involved, we must use the chain rule from calculus. The goal is to find the partial derivative of the Loss function `E` with respect to `c` and `b`.
-  - Let `z = c(x^n) + b` be the pre-activation output. The output of the neuron is `v = a(z)`.
-  - The gradients for `c` and `b` are calculated as follows:
-    - `∂E/∂c = ∂E/∂v * ∂v/∂z * ∂z/∂c`
-    - `∂E/∂b = ∂E/∂v * ∂v/∂z * ∂z/∂b`
-  - Where:
-    - `∂E/∂v` is the error signal propagated backward from the next layer.
-    - `∂v/∂z = a'(z) = a'(c(x^n) + b)` is the derivative of the activation function.
-    - `∂z/∂c = x^n`
-    - `∂z/∂b = 1`
-  - Substituting these in, we get the gradients:
-    - **Gradient for c**: `∂E/∂c = (∂E/∂v) * a'(c(x^n) + b) * (x^n)`
-    - **Gradient for b**: `∂E/∂b = (∂E/∂v) * a'(c(x^n) + b)`
-  - The final update rules using the learning rate `L` are:
-    - `c <- c - L * (∂E/∂v) * a'(c(x^n) + b) * (x^n)`
-    - `b <- b - L * (∂E/∂v) * a'(c(x^n) + b)`
-
-### _Gradients With Chain rule over perceptron:_
-
-- Consider a perceptron with two neurons as follows:
-
-  ```
-             ____                       ____
-            |    |  z1                 |    | z2
-    I ----> | M1 | ---> a(.) = a1 ---> | M2 | ---> a(.) = a2 ---> O
-            |____|                     |____|
-
-  ```
-
-  - I and O indicate the input and output, with M1 and M2 being the monomial neurons, z1 and z2 are their respective output.
-  - Hence the gradients for these are as follows, which in general is also similar to Larger networks:
-    - `M1 = C1*(x^m) + B1, M2 = C2*(x^m) + B2`
-    - Let L be the loss: `∂L/∂O = O - Expected`
-    - For monomial M2:
-      - Incoming gradient for M2: `∂L/∂z2 = ∂L/∂O * ∂O/∂z2`
-      - Gradient for C2: `∂L/∂C2 = ∂L/∂z2 * ∂z2/∂C2`
-      - Gradient for B2: `∂L/∂B2 = ∂L/∂z2 * ∂z2/∂B2`
-      - Outgoing gradient: `∂L/∂z1 = ∂L/∂z2 * ∂z2/∂a1 * ∂a1/∂z1`
-    - For Monomial M1:
-      - Incoming gradient for M2: `dL/dz1 = dL/dz2 * dz2/da1 * da1/dz1`
-      - Gradient for C1: `∂L/∂C1 = ∂L/∂z1 * ∂z1/∂C1`
-      - Gradient for B1: `∂L/∂B1 = ∂L/∂z1 * ∂z1/∂B1`
-
-### _Gradients for Network:_
-
-- Similar to perceptron, the whole mechanism follows similar math, though for `MNN` and `MNN2D` it is different.
-- For **MNN**:
-  - 
-- For **MNN2D**:
-  - 
-
-### _Gradients for Network In Batches:_
-- For **MNN**:
-  - 
-- For **MNN2D**:
-  - 
 
 ## Theorem Sketch
 
 ### **Universal Approximation (generated by Grok)**
 
-- Monomial networks with fixed $ m \geq 2 $ and sufficient layers/neurons can approximate any continuous function on compact sets. Why?
-  - Powers $ x^m $ span nonlinear basis
+- Monomial networks with fixed `m >= 2` and sufficient layers/neurons can approximate any continuous function on compact sets. Why?
+  - Powers `x^m` span nonlinear basis
   - Layer composition generates dense function class
   - More expressive than linear MLPs for same width/depth

@@ -8,10 +8,10 @@
 
 /**
  * @brief Class representing a Monomial Neural Network (MNN).
- *      - The monomial is of the form f(x) = c*(x^n) + b
+ *      - The monomial is of the form f(x) = c*(x^m) + b
  *          - n: order of monomials
  *          - x: input to monimial`d mlp
- *          - c: coefficient of x^n
+ *          - c: coefficient of x^m
  *          - b: constant
  *          - Both c and b are trainable parameters.
  */

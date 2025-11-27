@@ -199,7 +199,6 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
     }
 }
 
-
 //// Batch Backprop Variants ////
 
 /**
