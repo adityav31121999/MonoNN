@@ -1,6 +1,6 @@
 #include <iostream>
 #include <random>
-#include "mnn.h"
+#include "mononn.h"
 
 int main() {
     std::cout << "THIS IS MONOMIAL NEURAL NETWORK  IMPLEMENTATION" << std::endl;

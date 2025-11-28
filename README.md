@@ -1,150 +1,169 @@
-# MonoNN: Monomial Neural Network (EXPERIMENTAL)
+# **MonoNN: Monomial Neural Network (EXPERIMENTAL)**
 
 - This is an experimental project to study the modification to multi-layer perception from linear to monomial-based neurons.
-- The monomial is of the form: `f(x) = c*(x^m) + b`
-  - `x`: input to monimial
-  - `m`: order of monomial, neurons and mlp
-  - `c`: coefficient of $ x^m $
-  - `b`: constant
-  - Both c and b are trainable parameters.
-- Here the `b` term is intentionally added to represent the `bias` as used in nerual neworks.
-- This modification is done to understand the nature of non-linearity over linear nature of mlp, direct impact of non-linearity to results of mlp and optimisation of weights and how much variation compared to standard mlp.
-- Derivative of Monomial is given as: `f'(x) = m*c*(x^(m-1))`
+- The monomial is of the form: 
+  $$ f(x) = c \cdot x^m + b $$
+  - $x$: input to monomial
+  - $m$: order of monomial, neurons, and MLP
+  - $c$: coefficient of $x^m$
+  - $b$: constant (bias)
+  - Both $c$ and $b$ are trainable parameters.
+- Here the $b$ term is intentionally added to represent the `bias` as used in neural networks.
+- This modification is done to understand the nature of non-linearity over the linear nature of MLP, the direct impact of non-linearity on results, optimization of weights, and variation compared to standard MLP.
+- **Derivative of Monomial:**
+  $$ f'(x) = m \cdot c \cdot x^{m-1} $$
 
 ## Neural Network
 
-- Two types of neural networks are defined based on input: MNN and MNN2D
-  - MNN takes 1D vector input
-  - MNN2D takes 2D matrix input
-  - Both produce 1D output vector
-- Both networks have similar mechanism and weight structure, with gradient storing per layer.
+- Two types of neural networks are defined based on input: **MNN** and **MNN2D**.
+  - **MNN** takes 1D vector input.
+  - **MNN2D** takes 2D matrix input.
+  - Both produce a 1D output vector.
+- Both networks have similar mechanisms and weight structures, with gradient storing per layer.
   - For 1D i/o, it has 1D product and Activations per layer.
   - For 2D i/o, it has 2D product and Activations per layer.
-  - Output is calculated via Mean/Max/Weighted Mean Pooling in MNN2D.
-  - 2D bias matrix for each weight matrix.
-    - The reason behind this is simple, an MLP will have bias vector, and element wise added to the output obtained by product of previous activation and current weight.
-    - Single bias value can tune the signal obtained by product of row and column vector. For monomial nature, this can be tricky, since it can explode or restrain the value.
+    - Output is calculated via Mean/Max/Weighted Mean Pooling in MNN2D.
+  - **2D bias matrix for each weight matrix:**
+    - The reason behind this is simple: an MLP will have a bias vector element-wise added to the output obtained by the product of previous activation and current weight.
+    - A single bias value can tune the signal obtained by the product of a row and column vector. For monomial nature, this can be tricky, since it can explode or restrain the value.
     - Hence, each weight value has its own bias.
-    - An alpha value (0.6) is utilised to make coefficients to absorb the major change, compared to biases that absorb the minor part.
+    - An alpha value ($\alpha \ge 0.8$) is utilized to make coefficients absorb the major change, compared to biases that absorb the minor part.
 
 ## Gradients
 
-Gradient calculation is done in following manner:
+Gradients for Monomial neural nets are calculated in a similar manner to MLPs.
 
 ### _Gradients to update monomial:_
 
-- Let a(.) be activation functon and a'(.) be its derivative.
-  - v = a(c(x^m) + b) is the output of the monomial neuron after activation.
-  - To properly update the coefficients `c` and `b` when an activation function is involved, we must use the chain rule from calculus. The goal is to find the partial derivative of the Loss function `E` with respect to `c` and `b`.
-  - Let `z = c(x^m) + b` be the pre-activation output. The output of the neuron is `v = a(z)`.
-  - The gradients for `c` and `b` are calculated as follows:
-    - `∂E/∂c = ∂E/∂v * ∂v/∂z * ∂z/∂c`
-    - `∂E/∂b = ∂E/∂v * ∂v/∂z * ∂z/∂b`
+- Let $a(\cdot)$ be the activation function and $a'(\cdot)$ be its derivative.
+  - $v = a(c \cdot x^m + b)$ is the output of the monomial neuron after activation.
+  - To properly update the coefficients $c$ and $b$ when an activation function is involved, we must use the chain rule. The goal is to find the partial derivative of the Loss function $E$ with respect to $c$ and $b$.
+  - Let $z = c \cdot x^m + b$ be the pre-activation output. The output of the neuron is $v = a(z)$.
+  - The gradients are calculated as follows:
+    $$ \frac{\partial E}{\partial c} = \frac{\partial E}{\partial v} \cdot \frac{\partial v}{\partial z} \cdot \frac{\partial z}{\partial c} $$
+    $$ \frac{\partial E}{\partial b} = \frac{\partial E}{\partial v} \cdot \frac{\partial v}{\partial z} \cdot \frac{\partial z}{\partial b} $$
   - Where:
-    - `∂E/∂v` is the error signal propagated backward from the next layer.
-    - `∂v/∂z = a'(z) = a'(c(x^m) + b)` is the derivative of the activation function.
-    - `∂z/∂c = x^m`
-    - `∂z/∂b = 1`
+    - $\frac{\partial E}{\partial v}$ is the error signal propagated backward from the next layer.
+    - $\frac{\partial v}{\partial z} = a'(z) = a'(c \cdot x^m + b)$.
+    - $\frac{\partial z}{\partial c} = x^m$.
+    - $\frac{\partial z}{\partial b} = 1$.
   - Substituting these in, we get the gradients:
-    - **Gradient for c**: `∂E/∂c = (∂E/∂v) * a'(c(x^m) + b) * (x^m)`
-    - **Gradient for b**: `∂E/∂b = (∂E/∂v) * a'(c(x^m) + b)`
-  - The final update rules using the learning rate `L` are:
-    - `c <- c - L * (∂E/∂v) * a'(c(x^m) + b) * (x^m)`
-    - `b <- b - L * (∂E/∂v) * a'(c(x^m) + b)`
+    - **Gradient for c**: 
+      $$ \frac{\partial E}{\partial c} = \frac{\partial E}{\partial v} \cdot a'(c \cdot x^m + b) \cdot x^m $$
+    - **Gradient for b**: 
+      $$ \frac{\partial E}{\partial b} = \frac{\partial E}{\partial v} \cdot a'(c \cdot x^m + b) $$
+  - The final update rules using the learning rate $\eta$ are:
+    $$ c \leftarrow c - \eta \cdot \frac{\partial E}{\partial v} \cdot a'(z) \cdot x^m $$
+    $$ b \leftarrow b - \eta \cdot \frac{\partial E}{\partial v} \cdot a'(z) $$
 
 ### _Gradients for perceptron:_
 
 - Consider a perceptron with two neurons as follows:
 
-  ```
-             ____                       ____
-            |    |  z1                 |    | z2
-    I ----> | M1 | ---> a(.) = a1 ---> | M2 | ---> a(.) = a2 ---> O
-            |____|                     |____|
+```
+           ____                       ____
+          |    |  z1                 |    |  z2
+  I ----> | M1 | ---> a(.) = a1 ---> | M2 | ---> a(.) = a2 ---> O
+          |____|                     |____|
+```
 
-  ```
+- $I$ and $O$ indicate the input and output. $M1$ and $M2$ are the monomial neurons, and $z1, z2$ are their respective outputs.
+- The definitions are:
+  - $M1: z_1 = C_1 \cdot x^m + B_1$
+  - $M2: z_2 = C_2 \cdot (a_1)^m + B_2$
+- Let $L$ be the loss: $\frac{\partial L}{\partial O} = O - \text{Expected}$.
+- **For Monomial M2:**
+  - Incoming gradient: $$\frac{\partial L}{\partial z_2} = \frac{\partial L}{\partial O} \cdot \frac{\partial O}{\partial z_2}$$
+  - Gradient for $C_2$: $$\frac{\partial L}{\partial C_2} = \frac{\partial L}{\partial z_2} \cdot \frac{\partial z_2}{\partial C_2}$$
+  - Gradient for $B_2$: $$\frac{\partial L}{\partial B_2} = \frac{\partial L}{\partial z_2} \cdot \frac{\partial z_2}{\partial B_2}$$
+  - Outgoing gradient: $$\frac{\partial L}{\partial z_1} = \frac{\partial L}{\partial z_2} \cdot \frac{\partial z_2}{\partial a_1} \cdot \frac{\partial a_1}{\partial z_1}$$
+- **For Monomial M1:**
+  - Incoming gradient: $$\frac{\partial L}{\partial z_1}$$ (from above)
+  - Gradient for $C_1$: $$\frac{\partial L}{\partial C_1} = \frac{\partial L}{\partial z_1} \cdot \frac{\partial z_1}{\partial C_1}$$
+  - Gradient for $B_1$: $$\frac{\partial L}{\partial B_1} = \frac{\partial L}{\partial z_1} \cdot \frac{\partial z_1}{\partial B_1}$$
 
-  - I and O indicate the input and output, with M1 and M2 being the monomial neurons, z1 and z2 are their respective output.
-  - Hence the gradients for these are as follows, which in general is also similar to Larger networks:
-    - `M1 = C1*(x^m) + B1, M2 = C2*(x^m) + B2`
-    - Let L be the loss: `∂L/∂O = O - Expected`
-    - For monomial M2:
-      - Incoming gradient for M2: `∂L/∂z2 = ∂L/∂O * ∂O/∂z2`
-      - Gradient for C2: `∂L/∂C2 = ∂L/∂z2 * ∂z2/∂C2`
-      - Gradient for B2: `∂L/∂B2 = ∂L/∂z2 * ∂z2/∂B2`
-      - Outgoing gradient: `∂L/∂z1 = ∂L/∂z2 * ∂z2/∂a1 * ∂a1/∂z1`
-    - For Monomial M1:
-      - Incoming gradient for M2: `dL/dz1 = dL/dz2 * dz2/da1 * da1/dz1`
-      - Gradient for C1: `∂L/∂C1 = ∂L/∂z1 * ∂z1/∂C1`
-      - Gradient for B1: `∂L/∂B1 = ∂L/∂z1 * ∂z1/∂B1`
-    - `∂a1/∂z1` and `∂a2/∂z2` are derivative of the activation.
-
-- **For batch of input and output on this perceptron, the gradients will be:**
-  ```
-      I(1)                                                            O(1)
-      I(2)                                                            O(2)
-      I(3)                                                            O(3)
-       :         ____                       ____                       :
-       :        |    |  z1                 |    | z2                   :
-       :  ----> | M1 | ---> a(.) = a1 ---> | M2 | ---> a(.) = a2 --->  :
-       :        |____|                     |____|                      :
-       :                                                               :
-       :                                                               :
-       :                                                               :
-      I(n)                                                            O(n)
-  ```
-
-  - `I(i)`: ith input, `O(i)`: ith output, `E(i)`: ith expected output
-  - `z1(i)`: ith input's M1 output, `z2(i)`: ith input's M2 output
-  - `a1(i)`: activation of z1(i), `a2(i)`: activation of z2(i)
-  - `L(i)`: Loss recorded for ith output
-  - Gradient of Error for ith will be: `∂L(i)/∂O(i) = O(i) - E(i)`
-  - 
+- **For batch of input and output on this perceptron:**
+```
+    I(1)                                                                O(1)
+    I(2)                                                                O(2)
+      :         ____                         ____                        :
+      :        |    | z1(i)                 |    | z2(i)                 :
+      :  ----> | M1 | ---> a(.) = a1(i) --> | M2 | ---> a(.) = a2(i) --> :
+      :        |____|                       |____|                       :
+    I(N)                                                                O(N)
+```
+- Notation:
+  - $N$: Batch size.
+  - $I^{(i)}$: $i$-th input.
+  - $O^{(i)}$: $i$-th output.
+  - $E^{(i)}$: $i$-th expected output.
+  - $L^{(i)}$: Loss for $i$-th output.
+  - $J$: Total Loss $$\rightarrow J = \frac{1}{N} \sum_{i=1}^{N} L^{(i)}$$
+- Gradient of Error for $i$-th sample: $$\frac{\partial L^{(i)}}{\partial O^{(i)}} = O^{(i)} - E^{(i)}$$
+- **For M2:**
+  - $$\nabla C_2 = \frac{\partial J}{\partial C_2} = \frac{1}{N} \sum_{i=1}^{N} \left( \frac{\partial L^{(i)}}{\partial z_2^{(i)}} \cdot \frac{\partial z_2^{(i)}}{\partial C_2} \right)$$
+  - $$\nabla B_2 = \frac{\partial J}{\partial B_2} = \frac{1}{N} \sum_{i=1}^{N} \left( \frac{\partial L^{(i)}}{\partial z_2^{(i)}} \cdot \frac{\partial z_2^{(i)}}{\partial B_2} \right)$$
+- **For M1:**
+  - $$\nabla C_1 = \frac{\partial J}{\partial C_1} = \frac{1}{N} \sum_{i=1}^{N} \left( \frac{\partial L^{(i)}}{\partial z_1^{(i)}} \cdot \frac{\partial z_1^{(i)}}{\partial C_1} \right)$$
+  - $$\nabla B_1 = \frac{\partial J}{\partial B_1} = \frac{1}{N} \sum_{i=1}^{N} \left( \frac{\partial L^{(i)}}{\partial z_1^{(i)}} \cdot \frac{\partial z_1^{(i)}}{\partial B_1} \right)$$
 
 ## Gradients for Network
 
-- Similar to perceptron, the whole mechanism follows similar math, though for `MNN` and `MNN2D` it is different.
-- Though the process is similar, in `MNN` the gradients are passed as vectors and in `MNN2D` they are passes matrices.
-- Final results are almost similar in notation.
-- Loss for both is calculated from cross entropy: 
-  - For MNN: `CE = -sum(T(i)logP(i))`
-  - For MNN2D: `CE = -sum(T(i, j)logP(i, j))`
-  - `T`: Target (expected output from neural network)
-  - `P`: Prediction (output of neural network)
+- Similar to the perceptron, the whole mechanism follows similar math, though for `MNN` and `MNN2D` it differs in dimensions.
+- In `MNN` gradients are passed as vectors; in `MNN2D` they are passed as matrices.
+- **Loss (Cross Entropy):**
+  - For MNN: $$ CE = -\sum_{i=1}^{N} (T_i \log P_i) $$
+  - For MNN2D: $$ CE = -\sum_{i=1}^{N} \sum_{j} (T_{i,j} \log P_{i,j}) $$
+  - $T$: Target, $P$: Prediction.
 
 ### _Gradients for MNN:_
-- **For Sigle Input:**
-  - Lets say there are `l` layers of hidden weights.
-  - The gradient from loss w.r.t. `∂L/∂zl = ∂(CE)/∂zl = P - T = δ(l)` (element-wise subtraction)
-  - This loss gradient is used to backpropagate till first layer for both coefficients and weights.
-  - From last to second layer:
-    - gradient for layer `i-1`: `∂L/∂z(i-1) = ∂L/∂zi * ∂zi/∂a(i-1) * ∂a(i-1)/∂z(i-1)`
-    - `δ(i-1) = ∂L/∂z(i-1) = (∂L/∂zi * Ci^T) . (m * (a(i-1)^(m-1))) . (a'(i-1))`
-    - `δ(i)` is used to update Cl and Bl weights
-  - For all layer weights, C and B:
-    - `∂L/∂Bi = ∂L/∂zi * ∂zi/∂Bi`, and `∂L/∂Ci = ∂L/∂zi * ∂zi/∂Bi`
-    - For C: `∂L/∂Ci = p(l-1) * ∂L/∂zi`, here `p(l-1) = a(l-1) ^ m`
-    - For B: `∂L/∂Bi = v1 * ∂L/∂zi`, here `v1` is the column vector of 1s with same size of a(i-1)
-
-- **For Batch Input:**
-  - 
+- **For Single Input:**
+  - Let there be $l$ layers of hidden weights.
+  - Gradient w.r.t Loss: $$\delta^{(l)} = \frac{\partial L}{\partial z_l} = P - T$$ (element-wise).
+  - **Backpropagation (Layer $l$ to $l-1$):**
+    - $$\delta^{(l-1)} = \frac{\partial L}{\partial z_{l-1}} = \left( \delta^{(l)} \cdot C_l^T \right) \odot \left( m \cdot (a_{l-1})^{m-1} \right) \odot a'_{l-1}$$
+  - **Weight Gradients:**
+    - For $C$: $$\frac{\partial L}{\partial C_l} = (a_{l-1})^m \cdot \delta^{(l)}$$
+    - For $B$: $$\frac{\partial L}{\partial B_l} = \mathbf{1} \cdot \delta^{(l)}$$ (where $\mathbf{1}$ is a vector of 1s) of size equal to size of $ a_{l-1} $.
 
 ### _Gradients for MNN2D:_
-- Here also, the process and notations are pretty similar.
-- **For Sigle Input:**
-  - The gradient from loss w.r.t. `∂L/∂zl = ∂(CE)/∂zl = P - T = δ(l)` (element-wise subtraction)
-  - This loss gradient is used to backpropagate till first layer for both coefficients and weights.
-  - From last to second layer:
-    - gradient for layer `i-1`: `∂L/∂z(i-1) = ∂L/∂zi * ∂zi/∂a(i-1) * ∂a(i-1)/∂z(i-1)`
-    - `δ(i-1) = ∂L/∂z(i-1) = (∂L/∂zi * Ci^T) . (m * (a(i-1)^(m-1))) . (a'(i-1))`
-    - `δ(i)` is used to update Cl and Bl weights
-  - For all layer weights, C and B:
-    - `∂L/∂Bi = ∂L/∂zi * ∂zi/∂Bi`, and `∂L/∂Ci = ∂L/∂zi * ∂zi/∂Bi`
-    - For C: `∂L/∂Ci = (p(l-1)^T) * ∂L/∂zi`, here `p(l-1) = a(l-1) ^ m`
-    - For B: `∂L/∂Bi = v1 * ∂L/∂zi`, here `v1` is the matrix of 1s with dimension {rows of Ci x rows of input matrix}
+- **For Single Input:**
+  - Gradient w.r.t Loss: $\delta^{(l)} = P - T$.
+  - **Backpropagation:**
+    - $$\delta^{(l-1)} = \left( \delta^{(l)} \times C_l^T \right) \odot \left( m \cdot (a_{l-1})^{m-1} \right) \odot a'_{l-1}$$
+    - Note: $\times$ denotes matrix multiplication, $\odot$ denotes element-wise multiplication.
+  - **Weight Gradients:**
+    - For $C$: $$\frac{\partial L}{\partial C_l} = ((a_{l-1})^m)^T \times \delta^{(l)}$$
+    - For $B$: $$\frac{\partial L}{\partial B_l} = \mathbf{1} \times \delta^{(l)}$$ (where $\mathbf{1}$ is a matrix of 1s of dimensions rows of $C_i$ x rows of $I$)
 
-- **For Batch Input:**
-  - 
+### _Gradients for Batch Input (MNN & MNN2D):_
+
+- The process involves accumulating gradients over the batch and averaging them.
+- Let batch size be $N$, and $k$ be the sample index ($1 \dots N$).
+- Total Loss: $$J = \frac{1}{N} \sum_{k=1}^{N} L^{(k)}$$.
+
+#### **1. Batch Gradients for MNN (1D):**
+
+- **Weight Updates (Layer $l$):**
+  - Let $$p^{(l-1, k)} = (a^{(l-1, k)})^m$$.
+  - **Gradient for C:**
+    $$ \frac{\partial J}{\partial C_l} = \frac{1}{N} \sum_{k=1}^{N} \left( [p^{(l-1, k)}]^T \cdot \delta^{(l, k)} \right) $$
+  - **Gradient for B:**
+    $$ \frac{\partial J}{\partial B_l} = \frac{1}{N} \sum_{k=1}^{N} \delta^{(l, k)} $$
+
+- **Error Propagation (to Layer $l-1$):**
+  $$ \delta^{(l-1, k)} = (\delta^{(l, k)} \cdot C_l^T) \odot (m \cdot a^{(l-1, k)})^{(m-1)} \odot a'^{(l-1, k)} $$
+
+#### **2. Batch Gradients for MNN2D (2D):**
+
+- **Weight Updates (Layer $l$):**
+  - **Gradient for C:**
+    $$ \frac{\partial J}{\partial C_l} = \frac{1}{N} \sum_{k=1}^{N} \left( [p^{(l-1, k)}]^T \times \delta^{(l, k)} \right) $$
+  - **Gradient for B:**
+    $$ \frac{\partial J}{\partial B_l} = \frac{1}{N} \sum_{k=1}^{N} \left( \mathbf{1}^T \times \delta^{(l, k)} \right) $$
+
+- **Error Propagation (to Layer $l-1$):**
+  $$ \delta^{(l-1, k)} = (\delta^{(l, k)} \times C_l^T) \odot (m \cdot a^{(l-1, k)})^{(m-1)} \odot a'^{(l-1, k)} $$
 
 ---
 
@@ -159,19 +178,19 @@ Gradient calculation is done in following manner:
 
 ## Project Structure
 
-- `src/operators.hpp` is provided to have C++, CUDA and OpenCL support.
-  - Hyperparameters such as learning rate, decay rate and regularisation parameters are provided.
-  - `OpenCL` context function is declared alongwith error support.
+- `src/operators.hpp` is provided to have C++, CUDA, and OpenCL support.
+  - Hyperparameters such as learning rate, decay rate, and regularization parameters are provided.
+  - `OpenCL` context function is declared along with error support.
   - `Cuda` kernel declarations are provided.
   - `C++` operations and functions are declared here too.
 - The core logic is planned within the `src` directory. The implementation defines two main classes in `src/mnn.hpp` and `src/mnn2.hpp`:
   - **`mnn`**: A class designed to represent a Monomial Neural Network for 1-dimensional input and output data (vectors).
   - **`mnn2d`**: A class designed to represent a Monomial Neural Network for 2-dimensional input and output data (matrices/images).
-  - Headers for loss, activations and class definitions are provided separately.
+  - Headers for loss, activations, and class definitions are provided separately.
   - Source files are provided for functions of specific purpose.
-- `src` directory has `C++`, `OpenCL` and `CUDA` support subdirectory.
-- Certain common functions are commonly used in all code for data access and modification.
-- Binary files are used for weights storage (serialisation and deserialisation).
+- `src` directory has `C++`, `OpenCL`, and `CUDA` support subdirectories.
+- Common functions are used in all code for data access and modification.
+- Binary files are used for weights storage (serialization and deserialization).
 
 ## Features
 
@@ -252,12 +271,11 @@ The library is built with a modular approach, separating functionalities into di
   - `LAMBDA_L1` / `LAMBDA_L2`: 0.001
   - `SOFTMAX_TEMP`: 1.5
 
-
 ## Theorem Sketch
 
 ### **Universal Approximation (generated by Grok)**
 
-- Monomial networks with fixed `m >= 2` and sufficient layers/neurons can approximate any continuous function on compact sets. Why?
-  - Powers `x^m` span nonlinear basis
-  - Layer composition generates dense function class
-  - More expressive than linear MLPs for same width/depth
+- Monomial networks with fixed $m \ge 2$ and sufficient layers/neurons can approximate any continuous function on compact sets. Why?
+  - Powers $x^m$ span a nonlinear basis.
+  - Layer composition generates a dense function class.
+  - More expressive than linear MLPs for the same width/depth.

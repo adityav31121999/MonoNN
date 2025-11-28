@@ -6,8 +6,8 @@ message("> Experimental Implementation of Monomial Neural Network")
 
 # backend for computations
 set(USE_CL OFF)
-set(USE_CU OFF)
-set(USE_CPU ON)
+set(USE_CU ON)
+set(USE_CPU OFF)
 
 # binaries for debug and release
 set(OSbit 32)
@@ -80,7 +80,7 @@ add_subdirectory(src)
 include_directories(src)
 
 # FOR EXECUTABLE
-add_executable(${PROJECT_NAME} main.cpp mnn.h)
+add_executable(${PROJECT_NAME} main.cpp mononn.h)
 target_link_libraries(${PROJECT_NAME} PRIVATE mono)
 if(USE_CU)
     target_link_libraries(${PROJECT_NAME} PRIVATE CUDA::cudart)
