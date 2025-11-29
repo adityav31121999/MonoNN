@@ -1,6 +1,0 @@
-/home/adi23444/code/MonoNN/build/CMakeFiles/monoNN.dir
-/home/adi23444/code/MonoNN/build/CMakeFiles/edit_cache.dir
-/home/adi23444/code/MonoNN/build/CMakeFiles/rebuild_cache.dir
-/home/adi23444/code/MonoNN/build/src/CMakeFiles/mono.dir
-/home/adi23444/code/MonoNN/build/src/CMakeFiles/edit_cache.dir
-/home/adi23444/code/MonoNN/build/src/CMakeFiles/rebuild_cache.dir
