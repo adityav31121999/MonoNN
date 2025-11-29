@@ -1,7 +1,7 @@
 # **MonoNN: Monomial Neural Network (EXPERIMENTAL)**
 
 - This is an experimental project to study the modification to multi-layer perception from linear to monomial-based neurons.
-- The monomial is of the form: $ f(x) = c \cdot x^m + b $
+- The monomial is of the form: $f(x) = c \cdot x^m + b$
   - $x$: input to monomial
   - $m$: order of monomial, neurons, and MLP
   - $c$: coefficient of $x^m$
@@ -9,7 +9,7 @@
   - Both $c$ and $b$ are trainable parameters.
 - Here the $b$ term is intentionally added to represent the `bias` as used in neural networks.
 - This modification is done to understand the nature of non-linearity over the linear nature of MLP, the direct impact of non-linearity on results, optimization of weights, and variation compared to standard MLP.
-- **Derivative of Monomial:** $ f'(x) = m \cdot c \cdot x^{m-1} $
+- **Derivative of Monomial:** $f'(x) = m \cdot c \cdot x^{m-1}$
 
 ## Neural Network
 
@@ -25,7 +25,7 @@
     - The reason behind this is simple: an MLP will have a bias vector element-wise added to the output obtained by the product of previous activation and current weight.
     - A single bias value can tune the signal obtained by the product of a row and column vector. For monomial nature, this can be tricky, since it can explode or restrain the value.
     - Hence, each weight value has its own bias.
-    - An alpha value ($\alpha \ge 0.8$) is utilized to make coefficients absorb the major change, compared to biases that absorb the minor part.
+    - An ALPHA value ($\ALPHA \ge 0.8$) is utilized to make coefficients absorb the major change, compared to biases that absorb the minor part.
 
 ## Gradients
 
@@ -47,12 +47,12 @@ Gradients for Monomial neural nets are calculated in a similar manner to MLPs.
     - $\frac{\partial z}{\partial b} = 1$.
   - Substituting these in, we get the gradients:
     - **Gradient for c**: 
-      $ \frac{\partial E}{\partial c} = \frac{\partial E}{\partial v} \cdot a'(c \cdot x^m + b) \cdot x^m $
+      $\frac{\partial E}{\partial c} = \frac{\partial E}{\partial v} \cdot a'(c \cdot x^m + b) \cdot x^m $
     - **Gradient for b**: 
-      $ \frac{\partial E}{\partial b} = \frac{\partial E}{\partial v} \cdot a'(c \cdot x^m + b) $
+      $\frac{\partial E}{\partial b} = \frac{\partial E}{\partial v} \cdot a'(c \cdot x^m + b) $
   - The final update rules using the learning rate $\eta$ are
-    $ c \leftarrow c - \eta \cdot \frac{\partial E}{\partial v} \cdot a'(z) \cdot x^m $
-    $ b \leftarrow b - \eta \cdot \frac{\partial E}{\partial v} \cdot a'(z) $
+    $c \leftarrow c - \eta \cdot \frac{\partial E}{\partial v} \cdot a'(z) \cdot x^m $
+    $b \leftarrow b - \eta \cdot \frac{\partial E}{\partial v} \cdot a'(z) $
 
 ### _Gradients for perceptron:_
 

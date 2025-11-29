@@ -15,10 +15,10 @@ int main() {
     std::string digitTest       =   path2Folder + "/digits_mnist/test";
     std::string fashionTrain    =   path2Folder + "/fashion_mnist/train";
     std::string fashionTest     =   path2Folder + "/fashion_mnist/test";
-    std::string progressData1   =   path2Folder + "/progress/progress1.txt";   // mnn digits
-    std::string progressData2   =   path2Folder + "/progress/progress2.txt";   // mnn fashion
-    std::string progressData3   =   path2Folder + "/progress/progress3.txt";   // mnn2d digits
-    std::string progressData4   =   path2Folder + "/progress/progress4.txt";   // mnn2d fashion
+    std::string progressData1   =   path2Folder + "/progress/progress1.csv";   // mnn digits
+    std::string progressData2   =   path2Folder + "/progress/progress2.csv";   // mnn fashion
+    std::string progressData3   =   path2Folder + "/progress/progress3.csv";   // mnn2d digits
+    std::string progressData4   =   path2Folder + "/progress/progress4.csv";   // mnn2d fashion
     std::string binFileAddress1 =   path2Folder + "/weightsMNNdigits.bin";
     std::string binFileAddress2 =   path2Folder + "/weightsMNNfashion.bin";
     std::string binFileAddress3 =   path2Folder + "/weightsMNN2Ddigits.bin";

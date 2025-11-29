@@ -58,6 +58,7 @@ void mnn::train(const std::string &dataSetPath, int batchSize)
     // Update progress struct with file and batch info
     this->mnnPrg.totalTrainFiles = totalFiles;
     this->mnnPrg.batchSize = batchSize;
+    int filesInSingleSession = this->mnnPrg.sessionSize * this->mnnPrg.batchSize;
 
     // Train based on batch size
     if (batchSize == 1) {
@@ -94,14 +95,14 @@ void mnn::train(const std::string &dataSetPath, int batchSize)
 
             this->mnnPrg.filesProcessed++;
             fileCount++;
-
-            if (fileCount % 100 == 0 || fileCount == totalFiles) {
-                std::cout << "Processed " << fileCount << "/" << totalFiles << " files..." << std::endl;
-                computeStats(cweights, bweights, cgradients, bgradients, activate);
+            // one session completed
+            if(fileCount % filesInSingleSession == 0) {
+                mnnPrg.sessionSize++;
             }
-            // If a session size is defined and reached, stop training for this session
-            if (this->mnnPrg.sessionSize > 0 && fileCount >= this->mnnPrg.sessionSize) {
-                std::cout << "Session batch limit (" << this->mnnPrg.sessionSize << ") reached." << std::endl;
+
+            if (fileCount % filesInSingleSession == 0 || fileCount == totalFiles) {
+                std::cout << "Processed " << fileCount << "/" << totalFiles << " files..." << std::endl;
+                std::cout << "Session limit (" << filesInSingleSession << ") reached." << std::endl;
                 // diagnostic log at session end
                 std::cout << "=== Diagnostic Statistics at session end ===" << std::endl;
                 computeStats(cweights, bweights, cgradients, bgradients, activate);
@@ -109,12 +110,13 @@ void mnn::train(const std::string &dataSetPath, int batchSize)
                 this->mnnPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
                 this->mnnPrg.timeTakenForTraining = previousTrainingTime + this->mnnPrg.timeForCurrentSession;
                 this->learningRate = this->mnnPrg.currentLearningRate;
+                serializeWeights(cweights, bweights, binFileAddress);
                 logProgressToCSV(this->mnnPrg, this->path2progress);
-                break;
             }
         }
     }
     else if (batchSize > 1) {
+        int fileCount = 0;
         this->inputBatch.resize(batchSize);
         this->outputBatch.resize(batchSize);
         this->targetBatch.resize(batchSize);
@@ -166,26 +168,28 @@ void mnn::train(const std::string &dataSetPath, int batchSize)
             #elif USE_CL
                 clTrainBatch(inBatch, expBatch);
             #endif
+
             batchesProcessed++;
+            fileCount += batchSize;
             this->mnnPrg.filesProcessed += inBatch.size();
+            if(batchesProcessed % this->mnnPrg.sessionSize == 0) {
+                // session completed
+                this->mnnPrg.sessionSize++;
+            }
 
             // If a session size is defined and reached, stop training for this session
-            if (this->mnnPrg.sessionSize > 0 && batchesProcessed >= this->mnnPrg.sessionSize) {
-                std::cout << "Session batch limit (" << this->mnnPrg.sessionSize << ") reached." << std::endl;
+            if (batchesProcessed % this->mnnPrg.sessionSize == 0 || fileCount == totalFiles) {
+                std::cout << "Processed " << fileCount << "/" << totalFiles << " files..." << std::endl;
+                std::cout << "Session limit (" << filesInSingleSession << ") reached." << std::endl;
                 // diagnostic log at session end
                 std::cout << "=== Diagnostic Statistics at session end ===" << std::endl;
-                computeStats(cweights, bweights, cgradients, bgradients, actBatch);
+                computeStats(cweights, bweights, cgradients, bgradients, activate);
                 auto endTime = std::chrono::high_resolution_clock::now();
                 this->mnnPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
                 this->mnnPrg.timeTakenForTraining = previousTrainingTime + this->mnnPrg.timeForCurrentSession;
                 this->learningRate = this->mnnPrg.currentLearningRate;
                 serializeWeights(cweights, bweights, binFileAddress);
                 logProgressToCSV(this->mnnPrg, this->path2progress);
-                break;
-            }
-            if (batchesProcessed % 10 == 0 || batchesProcessed == totalBatches) {
-                std::cout << "Processed batch " << batchesProcessed << "/" << totalBatches << "..." << std::endl;
-                computeStats(cweights, bweights, cgradients, bgradients, actBatch);
             }
         }
     }
@@ -248,6 +252,7 @@ void mnn2d::train(const std::string &dataSetPath, int batchSize)
     // Update progress struct with file and batch info
     this->mnn2dPrg.totalTrainFiles = totalFiles;
     this->mnn2dPrg.batchSize = batchSize;
+    int filesInSingleSession = this->mnn2dPrg.sessionSize * this->mnn2dPrg.batchSize;
 
     // 3. Train based on batch size
     if (batchSize == 1) {
@@ -282,14 +287,14 @@ void mnn2d::train(const std::string &dataSetPath, int batchSize)
 
             this->mnn2dPrg.filesProcessed++;
             fileCount++;
-
-            if (fileCount % 100 == 0 || fileCount == totalFiles) {
-                std::cout << "Processed " << fileCount << "/" << totalFiles << " files..." << std::endl;
-                computeStats(cweights, bweights, cgradients, bgradients, activate);
+            // one session completed
+            if(fileCount % filesInSingleSession == 0) {
+                mnn2dPrg.sessionSize++;
             }
-            // If a session size is defined and reached, stop training for this session
-            if (this->mnn2dPrg.sessionSize > 0 && fileCount >= this->mnn2dPrg.sessionSize) {
-                std::cout << "Session batch limit (" << this->mnn2dPrg.sessionSize << ") reached." << std::endl;
+
+            if (fileCount % filesInSingleSession == 0 || fileCount == totalFiles) {
+                std::cout << "Processed " << fileCount << "/" << totalFiles << " files..." << std::endl;
+                std::cout << "Session limit (" << filesInSingleSession << ") reached." << std::endl;
                 // diagnostic log at session end
                 std::cout << "=== Diagnostic Statistics at session end ===" << std::endl;
                 computeStats(cweights, bweights, cgradients, bgradients, activate);
@@ -297,12 +302,13 @@ void mnn2d::train(const std::string &dataSetPath, int batchSize)
                 this->mnn2dPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
                 this->mnn2dPrg.timeTakenForTraining = previousTrainingTime + this->mnn2dPrg.timeForCurrentSession;
                 this->learningRate = this->mnn2dPrg.currentLearningRate;
+                serializeWeights(cweights, bweights, binFileAddress);
                 logProgressToCSV(this->mnn2dPrg, this->path2progress);
-                break;
             }
         }
     }
     else if (batchSize > 1) {
+        int fileCount = 0;
         std::cout << "Training With BatchSize of " << batchSize << std::endl;
         this->inputBatch.resize(batchSize);
         this->outputBatch.resize(batchSize);
@@ -358,26 +364,28 @@ void mnn2d::train(const std::string &dataSetPath, int batchSize)
             #elif USE_CL
                 clTrainBatch(inBatch, expBatch);
             #endif
+
             batchesProcessed++;
+            fileCount += batchSize;
             this->mnn2dPrg.filesProcessed += inBatch.size();
+            if(batchesProcessed % this->mnn2dPrg.sessionSize == 0) {
+                // session completed
+                this->mnn2dPrg.sessionSize++;
+            }
 
             // If a session size is defined and reached, stop training for this session
-            if (this->mnn2dPrg.sessionSize > 0 && batchesProcessed >= this->mnn2dPrg.sessionSize) {
-                std::cout << "Session batch limit (" << this->mnn2dPrg.sessionSize << ") reached." << std::endl;
+            if (batchesProcessed % this->mnn2dPrg.sessionSize == 0 || fileCount == totalFiles) {
+                std::cout << "Processed " << fileCount << "/" << totalFiles << " files..." << std::endl;
+                std::cout << "Session limit (" << filesInSingleSession << ") reached." << std::endl;
                 // diagnostic log at session end
                 std::cout << "=== Diagnostic Statistics at session end ===" << std::endl;
-                computeStats(cweights, bweights, cgradients, bgradients, actBatch);
+                computeStats(cweights, bweights, cgradients, bgradients, activate);
                 auto endTime = std::chrono::high_resolution_clock::now();
                 this->mnn2dPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
                 this->mnn2dPrg.timeTakenForTraining = previousTrainingTime + this->mnn2dPrg.timeForCurrentSession;
                 this->learningRate = this->mnn2dPrg.currentLearningRate;
                 serializeWeights(cweights, bweights, binFileAddress);
                 logProgressToCSV(this->mnn2dPrg, this->path2progress);
-                break;
-            }
-            if (batchesProcessed % 10 == 0 || batchesProcessed == totalBatches) {
-                std::cout << "Processed batch " << batchesProcessed << "/" << totalBatches << "..." << std::endl;
-                computeStats(cweights, bweights, cgradients, bgradients, actBatch);
             }
         }
     }

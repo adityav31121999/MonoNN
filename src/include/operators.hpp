@@ -44,8 +44,8 @@ void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, 
 // single session will have fixed number of batches or files to be trained on
 struct progress {
     // files
-    unsigned int batchSize;             // number of files in single batch
-    unsigned int sessionSize;           // number of batches to be trained in single session
+    unsigned int batchSize;             // number of files in single batch (1 or many)
+    unsigned int sessionSize;           // number of batches to be trained in single session (1 or many)
     unsigned int totalTrainFiles;       // total training files
     unsigned int totalTestFiles;        // total test files
 

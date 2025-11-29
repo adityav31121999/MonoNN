@@ -110,8 +110,8 @@ void mnn::cuBackprop(const std::vector<float>& expected) {
                 d_ones, d_incoming[layer], d_gradB[layer], cweight_rows, cweight_cols
             );
 
-            scaleByValue<<<gridWeightGrad, block_1d>>>(d_gradB[layer], d_gradB[layer], 1.0f - alpha, (int)cweight_flat_size);
-            scaleByValue<<<gridWeightGrad, block_1d>>>(d_gradC[layer], d_gradC[layer], alpha, (int)cweight_flat_size);
+            scaleByValue<<<gridWeightGrad, block_1d>>>(d_gradB[layer], d_gradB[layer], 1.0f - ALPHA, (int)cweight_flat_size);
+            scaleByValue<<<gridWeightGrad, block_1d>>>(d_gradC[layer], d_gradC[layer], ALPHA, (int)cweight_flat_size);
 
             // Outgoing Gradient Calculation (for layer-1)
             float *d_C_T = nullptr;
@@ -152,12 +152,12 @@ void mnn::cuBackprop(const std::vector<float>& expected) {
         vecxvec2mat<<<gridWeightGrad, block_1d>>>(
             d_in, d_incoming[0], d_gradC[0], cweight_rows, cweight_cols
         );
-        scaleByValue<<<gridWeightGrad, block_1d>>>(d_gradC[0], d_gradC[0], alpha, (int)cweight_flat_size);
+        scaleByValue<<<gridWeightGrad, block_1d>>>(d_gradC[0], d_gradC[0], ALPHA, (int)cweight_flat_size);
 
         vecxvec2mat<<<gridWeightGrad, block_1d>>>(
             d_ones, d_incoming[0], d_gradB[0], cweight_rows, cweight_cols
         );
-        scaleByValue<<<gridWeightGrad, block_1d>>>(d_gradB[0], d_gradB[0], 1.0f - alpha, (int)cweight_flat_size);
+        scaleByValue<<<gridWeightGrad, block_1d>>>(d_gradB[0], d_gradB[0], 1.0f - ALPHA, (int)cweight_flat_size);
 
         // --- Update Weights and Copy Results Back ---
         for (int i = 0; i < this->layers; ++i) {
@@ -383,7 +383,7 @@ void mnn2d::cuBackprop(const std::vector<float>& expected)
                 d_prev_p_T, d_incoming[layer], d_gradC[layer], prev_cols, prev_rows, cweight_cols
             );
             scaleByValue<<<grid_cweight_flat, block_1d>>>(
-                d_gradC[layer], d_gradC[layer], alpha, (int)cweight_flat_size
+                d_gradC[layer], d_gradC[layer], ALPHA, (int)cweight_flat_size
             );
             CUDA_CHECK(cudaFree(d_prev_p));
             CUDA_CHECK(cudaFree(d_prev_p_T));
@@ -400,7 +400,7 @@ void mnn2d::cuBackprop(const std::vector<float>& expected)
                 d_onesT, d_incoming[layer], d_gradB[layer], prev_cols, prev_rows, cweight_cols
             );
             scaleByValue<<<grid_cweight_flat, block_1d>>>(
-                d_gradB[layer], d_gradB[layer], (1.0f - alpha), (int)cweight_flat_size
+                d_gradB[layer], d_gradB[layer], (1.0f - ALPHA), (int)cweight_flat_size
             );
             CUDA_CHECK(cudaFree(d_onesT));
 
@@ -434,7 +434,7 @@ void mnn2d::cuBackprop(const std::vector<float>& expected)
             d_input_p_T, d_incoming[0], d_gradC[0], inWidth, inHeight, first_layer_out_cols
         );
         scaleByValue<<<grid_first_layer_cweight_flat, block_1d>>>(
-            d_gradC[0], d_gradC[0], alpha, (int)first_layer_cweight_flat_size
+            d_gradC[0], d_gradC[0], ALPHA, (int)first_layer_cweight_flat_size
         );
         CUDA_CHECK(cudaFree(d_input_p));
         CUDA_CHECK(cudaFree(d_input_p_T));
@@ -450,7 +450,7 @@ void mnn2d::cuBackprop(const std::vector<float>& expected)
             d_onesT, d_incoming[0], d_gradB[0], inWidth, inHeight, first_layer_out_cols
         );
         scaleByValue<<<grid_first_layer_cweight_flat, block_1d>>>(
-            d_gradB[0], d_gradB[0], (1.0f - alpha), (int)first_layer_cweight_flat_size
+            d_gradB[0], d_gradB[0], (1.0f - ALPHA), (int)first_layer_cweight_flat_size
         );
         CUDA_CHECK(cudaFree(d_onesT));
 
