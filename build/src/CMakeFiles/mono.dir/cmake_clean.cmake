@@ -1,0 +1,41 @@
+file(REMOVE_RECURSE
+  "/home/adi23444/code/MonoNN/bin/Linux-x86_64-64/Debug/static_libs/libmono.a"
+  "/home/adi23444/code/MonoNN/bin/Linux-x86_64-64/Debug/static_libs/libmono.pdb"
+  "CMakeFiles/mono.dir/mnn/access.cpp.o"
+  "CMakeFiles/mono.dir/mnn/access.cpp.o.d"
+  "CMakeFiles/mono.dir/mnn/activations.cpp.o"
+  "CMakeFiles/mono.dir/mnn/activations.cpp.o.d"
+  "CMakeFiles/mono.dir/mnn/cpp/backprop.cpp.o"
+  "CMakeFiles/mono.dir/mnn/cpp/backprop.cpp.o.d"
+  "CMakeFiles/mono.dir/mnn/cpp/backproplayer.cpp.o"
+  "CMakeFiles/mono.dir/mnn/cpp/backproplayer.cpp.o.d"
+  "CMakeFiles/mono.dir/mnn/cpp/forprop.cpp.o"
+  "CMakeFiles/mono.dir/mnn/cpp/forprop.cpp.o.d"
+  "CMakeFiles/mono.dir/mnn/cpp/forproplayer.cpp.o"
+  "CMakeFiles/mono.dir/mnn/cpp/forproplayer.cpp.o.d"
+  "CMakeFiles/mono.dir/mnn/cpp/operators.cpp.o"
+  "CMakeFiles/mono.dir/mnn/cpp/operators.cpp.o.d"
+  "CMakeFiles/mono.dir/mnn/cpp/train.cpp.o"
+  "CMakeFiles/mono.dir/mnn/cpp/train.cpp.o.d"
+  "CMakeFiles/mono.dir/mnn/image.cpp.o"
+  "CMakeFiles/mono.dir/mnn/image.cpp.o.d"
+  "CMakeFiles/mono.dir/mnn/loss.cpp.o"
+  "CMakeFiles/mono.dir/mnn/loss.cpp.o.d"
+  "CMakeFiles/mono.dir/mnn/mnn.cpp.o"
+  "CMakeFiles/mono.dir/mnn/mnn.cpp.o.d"
+  "CMakeFiles/mono.dir/mnn/mnn2d.cpp.o"
+  "CMakeFiles/mono.dir/mnn/mnn2d.cpp.o.d"
+  "CMakeFiles/mono.dir/mnn/stats.cpp.o"
+  "CMakeFiles/mono.dir/mnn/stats.cpp.o.d"
+  "CMakeFiles/mono.dir/mnn/test.cpp.o"
+  "CMakeFiles/mono.dir/mnn/test.cpp.o.d"
+  "CMakeFiles/mono.dir/mnn/train.cpp.o"
+  "CMakeFiles/mono.dir/mnn/train.cpp.o.d"
+  "CMakeFiles/mono.dir/mnn/weights.cpp.o"
+  "CMakeFiles/mono.dir/mnn/weights.cpp.o.d"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang CXX)
+  include(CMakeFiles/mono.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

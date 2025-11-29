@@ -17,7 +17,6 @@ mnn2d::mnn2d(int inw, int inh, int outw, int layers, float order, std::string bi
     order(order), inWidth(inw), inHeight(inh), outWidth(outw), layers(layers),
     batchSize(1), binFileAddress(binFileAddress), epochs(100), iterations(0), learningRate(0.01f)
 {
-    alpha = 1.0f;
     // set hidden layers width and height
     int dim = (inw + outw) / 2;
     width.resize(layers, dim);
@@ -148,7 +147,6 @@ mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::
     order(order), inWidth(inw), inHeight(inh), outWidth(outw), layers(layers),
     batchSize(1), binFileAddress(binFileAddress), epochs(100), iterations(0), learningRate(0.01f)
 {
-    alpha = 1.0f;
     // set hidden layers width and height
     width.resize(layers, dim);
     width[layers - 1] = outw;
@@ -199,7 +197,7 @@ mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
 #ifdef USE_CL
     // Initialize OpenCL context and command queue
-    try {    
+    try {
         // --- Enhanced OpenCL Initialization with Debug Info ---
         cl_int err;
         std::vector<cl::Platform> platforms;
@@ -270,7 +268,6 @@ mnn2d::mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, st
     order(order), inWidth(inw), inHeight(inh), outWidth(outw), layers(width.size()),
     width(width), batchSize(1), binFileAddress(binFileAddress), epochs(100), iterations(0), learningRate(0.01f)
 {
-    alpha = 1.0f;
     input.resize(inh, std::vector<float>(inw, 0.0f));
     target.resize(outw, 0.0f);
     output.resize(outw, 0.0f);
@@ -320,7 +317,7 @@ mnn2d::mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, st
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
 #ifdef USE_CL
     // Initialize OpenCL context and command queue
-    try {    
+    try {
         // --- Enhanced OpenCL Initialization with Debug Info ---
         cl_int err;
         std::vector<cl::Platform> platforms;

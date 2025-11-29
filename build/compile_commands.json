@@ -1,0 +1,104 @@
+[
+{
+  "directory": "/home/adi23444/code/MonoNN/build",
+  "command": "/usr/bin/g++ -DMONO_NN_SRC_DIR=\\\"/home/adi23444/code/MonoNN\\\" -DUSE_CPU -I/home/adi23444/code/MonoNN/src -isystem /usr/local/include/opencv4 -g -std=c++20 -o CMakeFiles/monoNN.dir/main.cpp.o -c /home/adi23444/code/MonoNN/main.cpp",
+  "file": "/home/adi23444/code/MonoNN/main.cpp",
+  "output": "CMakeFiles/monoNN.dir/main.cpp.o"
+},
+{
+  "directory": "/home/adi23444/code/MonoNN/build/src",
+  "command": "/usr/bin/g++ -DMONO_NN_SRC_DIR=\\\"/home/adi23444/code/MonoNN\\\" -DUSE_CPU -I/home/adi23444/code/MonoNN/src/include -isystem /usr/local/include/opencv4 -g -std=c++20 -o CMakeFiles/mono.dir/mnn/cpp/operators.cpp.o -c /home/adi23444/code/MonoNN/src/mnn/cpp/operators.cpp",
+  "file": "/home/adi23444/code/MonoNN/src/mnn/cpp/operators.cpp",
+  "output": "src/CMakeFiles/mono.dir/mnn/cpp/operators.cpp.o"
+},
+{
+  "directory": "/home/adi23444/code/MonoNN/build/src",
+  "command": "/usr/bin/g++ -DMONO_NN_SRC_DIR=\\\"/home/adi23444/code/MonoNN\\\" -DUSE_CPU -I/home/adi23444/code/MonoNN/src/include -isystem /usr/local/include/opencv4 -g -std=c++20 -o CMakeFiles/mono.dir/mnn/activations.cpp.o -c /home/adi23444/code/MonoNN/src/mnn/activations.cpp",
+  "file": "/home/adi23444/code/MonoNN/src/mnn/activations.cpp",
+  "output": "src/CMakeFiles/mono.dir/mnn/activations.cpp.o"
+},
+{
+  "directory": "/home/adi23444/code/MonoNN/build/src",
+  "command": "/usr/bin/g++ -DMONO_NN_SRC_DIR=\\\"/home/adi23444/code/MonoNN\\\" -DUSE_CPU -I/home/adi23444/code/MonoNN/src/include -isystem /usr/local/include/opencv4 -g -std=c++20 -o CMakeFiles/mono.dir/mnn/loss.cpp.o -c /home/adi23444/code/MonoNN/src/mnn/loss.cpp",
+  "file": "/home/adi23444/code/MonoNN/src/mnn/loss.cpp",
+  "output": "src/CMakeFiles/mono.dir/mnn/loss.cpp.o"
+},
+{
+  "directory": "/home/adi23444/code/MonoNN/build/src",
+  "command": "/usr/bin/g++ -DMONO_NN_SRC_DIR=\\\"/home/adi23444/code/MonoNN\\\" -DUSE_CPU -I/home/adi23444/code/MonoNN/src/include -isystem /usr/local/include/opencv4 -g -std=c++20 -o CMakeFiles/mono.dir/mnn/weights.cpp.o -c /home/adi23444/code/MonoNN/src/mnn/weights.cpp",
+  "file": "/home/adi23444/code/MonoNN/src/mnn/weights.cpp",
+  "output": "src/CMakeFiles/mono.dir/mnn/weights.cpp.o"
+},
+{
+  "directory": "/home/adi23444/code/MonoNN/build/src",
+  "command": "/usr/bin/g++ -DMONO_NN_SRC_DIR=\\\"/home/adi23444/code/MonoNN\\\" -DUSE_CPU -I/home/adi23444/code/MonoNN/src/include -isystem /usr/local/include/opencv4 -g -std=c++20 -o CMakeFiles/mono.dir/mnn/mnn.cpp.o -c /home/adi23444/code/MonoNN/src/mnn/mnn.cpp",
+  "file": "/home/adi23444/code/MonoNN/src/mnn/mnn.cpp",
+  "output": "src/CMakeFiles/mono.dir/mnn/mnn.cpp.o"
+},
+{
+  "directory": "/home/adi23444/code/MonoNN/build/src",
+  "command": "/usr/bin/g++ -DMONO_NN_SRC_DIR=\\\"/home/adi23444/code/MonoNN\\\" -DUSE_CPU -I/home/adi23444/code/MonoNN/src/include -isystem /usr/local/include/opencv4 -g -std=c++20 -o CMakeFiles/mono.dir/mnn/mnn2d.cpp.o -c /home/adi23444/code/MonoNN/src/mnn/mnn2d.cpp",
+  "file": "/home/adi23444/code/MonoNN/src/mnn/mnn2d.cpp",
+  "output": "src/CMakeFiles/mono.dir/mnn/mnn2d.cpp.o"
+},
+{
+  "directory": "/home/adi23444/code/MonoNN/build/src",
+  "command": "/usr/bin/g++ -DMONO_NN_SRC_DIR=\\\"/home/adi23444/code/MonoNN\\\" -DUSE_CPU -I/home/adi23444/code/MonoNN/src/include -isystem /usr/local/include/opencv4 -g -std=c++20 -o CMakeFiles/mono.dir/mnn/access.cpp.o -c /home/adi23444/code/MonoNN/src/mnn/access.cpp",
+  "file": "/home/adi23444/code/MonoNN/src/mnn/access.cpp",
+  "output": "src/CMakeFiles/mono.dir/mnn/access.cpp.o"
+},
+{
+  "directory": "/home/adi23444/code/MonoNN/build/src",
+  "command": "/usr/bin/g++ -DMONO_NN_SRC_DIR=\\\"/home/adi23444/code/MonoNN\\\" -DUSE_CPU -I/home/adi23444/code/MonoNN/src/include -isystem /usr/local/include/opencv4 -g -std=c++20 -o CMakeFiles/mono.dir/mnn/image.cpp.o -c /home/adi23444/code/MonoNN/src/mnn/image.cpp",
+  "file": "/home/adi23444/code/MonoNN/src/mnn/image.cpp",
+  "output": "src/CMakeFiles/mono.dir/mnn/image.cpp.o"
+},
+{
+  "directory": "/home/adi23444/code/MonoNN/build/src",
+  "command": "/usr/bin/g++ -DMONO_NN_SRC_DIR=\\\"/home/adi23444/code/MonoNN\\\" -DUSE_CPU -I/home/adi23444/code/MonoNN/src/include -isystem /usr/local/include/opencv4 -g -std=c++20 -o CMakeFiles/mono.dir/mnn/train.cpp.o -c /home/adi23444/code/MonoNN/src/mnn/train.cpp",
+  "file": "/home/adi23444/code/MonoNN/src/mnn/train.cpp",
+  "output": "src/CMakeFiles/mono.dir/mnn/train.cpp.o"
+},
+{
+  "directory": "/home/adi23444/code/MonoNN/build/src",
+  "command": "/usr/bin/g++ -DMONO_NN_SRC_DIR=\\\"/home/adi23444/code/MonoNN\\\" -DUSE_CPU -I/home/adi23444/code/MonoNN/src/include -isystem /usr/local/include/opencv4 -g -std=c++20 -o CMakeFiles/mono.dir/mnn/test.cpp.o -c /home/adi23444/code/MonoNN/src/mnn/test.cpp",
+  "file": "/home/adi23444/code/MonoNN/src/mnn/test.cpp",
+  "output": "src/CMakeFiles/mono.dir/mnn/test.cpp.o"
+},
+{
+  "directory": "/home/adi23444/code/MonoNN/build/src",
+  "command": "/usr/bin/g++ -DMONO_NN_SRC_DIR=\\\"/home/adi23444/code/MonoNN\\\" -DUSE_CPU -I/home/adi23444/code/MonoNN/src/include -isystem /usr/local/include/opencv4 -g -std=c++20 -o CMakeFiles/mono.dir/mnn/stats.cpp.o -c /home/adi23444/code/MonoNN/src/mnn/stats.cpp",
+  "file": "/home/adi23444/code/MonoNN/src/mnn/stats.cpp",
+  "output": "src/CMakeFiles/mono.dir/mnn/stats.cpp.o"
+},
+{
+  "directory": "/home/adi23444/code/MonoNN/build/src",
+  "command": "/usr/bin/g++ -DMONO_NN_SRC_DIR=\\\"/home/adi23444/code/MonoNN\\\" -DUSE_CPU -I/home/adi23444/code/MonoNN/src/include -isystem /usr/local/include/opencv4 -g -std=c++20 -o CMakeFiles/mono.dir/mnn/cpp/forproplayer.cpp.o -c /home/adi23444/code/MonoNN/src/mnn/cpp/forproplayer.cpp",
+  "file": "/home/adi23444/code/MonoNN/src/mnn/cpp/forproplayer.cpp",
+  "output": "src/CMakeFiles/mono.dir/mnn/cpp/forproplayer.cpp.o"
+},
+{
+  "directory": "/home/adi23444/code/MonoNN/build/src",
+  "command": "/usr/bin/g++ -DMONO_NN_SRC_DIR=\\\"/home/adi23444/code/MonoNN\\\" -DUSE_CPU -I/home/adi23444/code/MonoNN/src/include -isystem /usr/local/include/opencv4 -g -std=c++20 -o CMakeFiles/mono.dir/mnn/cpp/backproplayer.cpp.o -c /home/adi23444/code/MonoNN/src/mnn/cpp/backproplayer.cpp",
+  "file": "/home/adi23444/code/MonoNN/src/mnn/cpp/backproplayer.cpp",
+  "output": "src/CMakeFiles/mono.dir/mnn/cpp/backproplayer.cpp.o"
+},
+{
+  "directory": "/home/adi23444/code/MonoNN/build/src",
+  "command": "/usr/bin/g++ -DMONO_NN_SRC_DIR=\\\"/home/adi23444/code/MonoNN\\\" -DUSE_CPU -I/home/adi23444/code/MonoNN/src/include -isystem /usr/local/include/opencv4 -g -std=c++20 -o CMakeFiles/mono.dir/mnn/cpp/forprop.cpp.o -c /home/adi23444/code/MonoNN/src/mnn/cpp/forprop.cpp",
+  "file": "/home/adi23444/code/MonoNN/src/mnn/cpp/forprop.cpp",
+  "output": "src/CMakeFiles/mono.dir/mnn/cpp/forprop.cpp.o"
+},
+{
+  "directory": "/home/adi23444/code/MonoNN/build/src",
+  "command": "/usr/bin/g++ -DMONO_NN_SRC_DIR=\\\"/home/adi23444/code/MonoNN\\\" -DUSE_CPU -I/home/adi23444/code/MonoNN/src/include -isystem /usr/local/include/opencv4 -g -std=c++20 -o CMakeFiles/mono.dir/mnn/cpp/backprop.cpp.o -c /home/adi23444/code/MonoNN/src/mnn/cpp/backprop.cpp",
+  "file": "/home/adi23444/code/MonoNN/src/mnn/cpp/backprop.cpp",
+  "output": "src/CMakeFiles/mono.dir/mnn/cpp/backprop.cpp.o"
+},
+{
+  "directory": "/home/adi23444/code/MonoNN/build/src",
+  "command": "/usr/bin/g++ -DMONO_NN_SRC_DIR=\\\"/home/adi23444/code/MonoNN\\\" -DUSE_CPU -I/home/adi23444/code/MonoNN/src/include -isystem /usr/local/include/opencv4 -g -std=c++20 -o CMakeFiles/mono.dir/mnn/cpp/train.cpp.o -c /home/adi23444/code/MonoNN/src/mnn/cpp/train.cpp",
+  "file": "/home/adi23444/code/MonoNN/src/mnn/cpp/train.cpp",
+  "output": "src/CMakeFiles/mono.dir/mnn/cpp/train.cpp.o"
+}
+]

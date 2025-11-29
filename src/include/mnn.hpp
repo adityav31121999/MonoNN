@@ -24,7 +24,6 @@ public:
     int batchSize;              // number of inputs for batch training
     int epochs;                 // number of epochs
     int iterations;             // number of iterations
-    float alpha;                // gradient splitting factor
     float learningRate;         // learning rate
     std::vector<int> width;     // width of each layer and subsequent layers height
 

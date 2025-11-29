@@ -1,8 +1,7 @@
 # **MonoNN: Monomial Neural Network (EXPERIMENTAL)**
 
 - This is an experimental project to study the modification to multi-layer perception from linear to monomial-based neurons.
-- The monomial is of the form: 
-  $$ f(x) = c \cdot x^m + b $$
+- The monomial is of the form: $ f(x) = c \cdot x^m + b $
   - $x$: input to monomial
   - $m$: order of monomial, neurons, and MLP
   - $c$: coefficient of $x^m$
@@ -10,8 +9,7 @@
   - Both $c$ and $b$ are trainable parameters.
 - Here the $b$ term is intentionally added to represent the `bias` as used in neural networks.
 - This modification is done to understand the nature of non-linearity over the linear nature of MLP, the direct impact of non-linearity on results, optimization of weights, and variation compared to standard MLP.
-- **Derivative of Monomial:**
-  $$ f'(x) = m \cdot c \cdot x^{m-1} $$
+- **Derivative of Monomial:** $ f'(x) = m \cdot c \cdot x^{m-1} $
 
 ## Neural Network
 
@@ -40,8 +38,8 @@ Gradients for Monomial neural nets are calculated in a similar manner to MLPs.
   - To properly update the coefficients $c$ and $b$ when an activation function is involved, we must use the chain rule. The goal is to find the partial derivative of the Loss function $E$ with respect to $c$ and $b$.
   - Let $z = c \cdot x^m + b$ be the pre-activation output. The output of the neuron is $v = a(z)$.
   - The gradients are calculated as follows:
-    $$ \frac{\partial E}{\partial c} = \frac{\partial E}{\partial v} \cdot \frac{\partial v}{\partial z} \cdot \frac{\partial z}{\partial c} $$
-    $$ \frac{\partial E}{\partial b} = \frac{\partial E}{\partial v} \cdot \frac{\partial v}{\partial z} \cdot \frac{\partial z}{\partial b} $$
+    $ \frac{\partial E}{\partial c} = \frac{\partial E}{\partial v} \cdot \frac{\partial v}{\partial z} \cdot \frac{\partial z}{\partial c} $
+    $ \frac{\partial E}{\partial b} = \frac{\partial E}{\partial v} \cdot \frac{\partial v}{\partial z} \cdot \frac{\partial z}{\partial b} $
   - Where:
     - $\frac{\partial E}{\partial v}$ is the error signal propagated backward from the next layer.
     - $\frac{\partial v}{\partial z} = a'(z) = a'(c \cdot x^m + b)$.
@@ -49,12 +47,12 @@ Gradients for Monomial neural nets are calculated in a similar manner to MLPs.
     - $\frac{\partial z}{\partial b} = 1$.
   - Substituting these in, we get the gradients:
     - **Gradient for c**: 
-      $$ \frac{\partial E}{\partial c} = \frac{\partial E}{\partial v} \cdot a'(c \cdot x^m + b) \cdot x^m $$
+      $ \frac{\partial E}{\partial c} = \frac{\partial E}{\partial v} \cdot a'(c \cdot x^m + b) \cdot x^m $
     - **Gradient for b**: 
-      $$ \frac{\partial E}{\partial b} = \frac{\partial E}{\partial v} \cdot a'(c \cdot x^m + b) $$
-  - The final update rules using the learning rate $\eta$ are:
-    $$ c \leftarrow c - \eta \cdot \frac{\partial E}{\partial v} \cdot a'(z) \cdot x^m $$
-    $$ b \leftarrow b - \eta \cdot \frac{\partial E}{\partial v} \cdot a'(z) $$
+      $ \frac{\partial E}{\partial b} = \frac{\partial E}{\partial v} \cdot a'(c \cdot x^m + b) $
+  - The final update rules using the learning rate $\eta$ are
+    $ c \leftarrow c - \eta \cdot \frac{\partial E}{\partial v} \cdot a'(z) \cdot x^m $
+    $ b \leftarrow b - \eta \cdot \frac{\partial E}{\partial v} \cdot a'(z) $
 
 ### _Gradients for perceptron:_
 
@@ -73,14 +71,14 @@ Gradients for Monomial neural nets are calculated in a similar manner to MLPs.
   - $M2: z_2 = C_2 \cdot (a_1)^m + B_2$
 - Let $L$ be the loss: $\frac{\partial L}{\partial O} = O - \text{Expected}$.
 - **For Monomial M2:**
-  - Incoming gradient: $$\frac{\partial L}{\partial z_2} = \frac{\partial L}{\partial O} \cdot \frac{\partial O}{\partial z_2}$$
-  - Gradient for $C_2$: $$\frac{\partial L}{\partial C_2} = \frac{\partial L}{\partial z_2} \cdot \frac{\partial z_2}{\partial C_2}$$
-  - Gradient for $B_2$: $$\frac{\partial L}{\partial B_2} = \frac{\partial L}{\partial z_2} \cdot \frac{\partial z_2}{\partial B_2}$$
-  - Outgoing gradient: $$\frac{\partial L}{\partial z_1} = \frac{\partial L}{\partial z_2} \cdot \frac{\partial z_2}{\partial a_1} \cdot \frac{\partial a_1}{\partial z_1}$$
+  - Incoming gradient: $\frac{\partial L}{\partial z_2} = \frac{\partial L}{\partial O} \cdot \frac{\partial O}{\partial z_2}$
+  - Gradient for $C_2$: $\frac{\partial L}{\partial C_2} = \frac{\partial L}{\partial z_2} \cdot \frac{\partial z_2}{\partial C_2}$
+  - Gradient for $B_2$: $\frac{\partial L}{\partial B_2} = \frac{\partial L}{\partial z_2} \cdot \frac{\partial z_2}{\partial B_2}$
+  - Outgoing gradient: $\frac{\partial L}{\partial z_1} = \frac{\partial L}{\partial z_2} \cdot \frac{\partial z_2}{\partial a_1} \cdot \frac{\partial a_1}{\partial z_1}$
 - **For Monomial M1:**
-  - Incoming gradient: $$\frac{\partial L}{\partial z_1}$$ (from above)
-  - Gradient for $C_1$: $$\frac{\partial L}{\partial C_1} = \frac{\partial L}{\partial z_1} \cdot \frac{\partial z_1}{\partial C_1}$$
-  - Gradient for $B_1$: $$\frac{\partial L}{\partial B_1} = \frac{\partial L}{\partial z_1} \cdot \frac{\partial z_1}{\partial B_1}$$
+  - Incoming gradient: $\frac{\partial L}{\partial z_1}$ (from above)
+  - Gradient for $C_1$: $\frac{\partial L}{\partial C_1} = \frac{\partial L}{\partial z_1} \cdot \frac{\partial z_1}{\partial C_1}$
+  - Gradient for $B_1$: $\frac{\partial L}{\partial B_1} = \frac{\partial L}{\partial z_1} \cdot \frac{\partial z_1}{\partial B_1}$
 
 - **For batch of input and output on this perceptron:**
 ```
@@ -98,72 +96,72 @@ Gradients for Monomial neural nets are calculated in a similar manner to MLPs.
   - $O^{(i)}$: $i$-th output.
   - $E^{(i)}$: $i$-th expected output.
   - $L^{(i)}$: Loss for $i$-th output.
-  - $J$: Total Loss $$\rightarrow J = \frac{1}{N} \sum_{i=1}^{N} L^{(i)}$$
-- Gradient of Error for $i$-th sample: $$\frac{\partial L^{(i)}}{\partial O^{(i)}} = O^{(i)} - E^{(i)}$$
+  - $J$: Total Loss $\rightarrow J = \frac{1}{N} \sum_{i=1}^{N} L^{(i)}$
+- Gradient of Error for $i$-th sample: $\frac{\partial L^{(i)}}{\partial O^{(i)}} = O^{(i)} - E^{(i)}$
 - **For M2:**
-  - $$\nabla C_2 = \frac{\partial J}{\partial C_2} = \frac{1}{N} \sum_{i=1}^{N} \left( \frac{\partial L^{(i)}}{\partial z_2^{(i)}} \cdot \frac{\partial z_2^{(i)}}{\partial C_2} \right)$$
-  - $$\nabla B_2 = \frac{\partial J}{\partial B_2} = \frac{1}{N} \sum_{i=1}^{N} \left( \frac{\partial L^{(i)}}{\partial z_2^{(i)}} \cdot \frac{\partial z_2^{(i)}}{\partial B_2} \right)$$
+  - $\nabla C_2 = \frac{\partial J}{\partial C_2} = \frac{1}{N} \sum_{i=1}^{N} \left( \frac{\partial L^{(i)}}{\partial z_2^{(i)}} \cdot \frac{\partial z_2^{(i)}}{\partial C_2} \right)$
+  - $\nabla B_2 = \frac{\partial J}{\partial B_2} = \frac{1}{N} \sum_{i=1}^{N} \left( \frac{\partial L^{(i)}}{\partial z_2^{(i)}} \cdot \frac{\partial z_2^{(i)}}{\partial B_2} \right)$
 - **For M1:**
-  - $$\nabla C_1 = \frac{\partial J}{\partial C_1} = \frac{1}{N} \sum_{i=1}^{N} \left( \frac{\partial L^{(i)}}{\partial z_1^{(i)}} \cdot \frac{\partial z_1^{(i)}}{\partial C_1} \right)$$
-  - $$\nabla B_1 = \frac{\partial J}{\partial B_1} = \frac{1}{N} \sum_{i=1}^{N} \left( \frac{\partial L^{(i)}}{\partial z_1^{(i)}} \cdot \frac{\partial z_1^{(i)}}{\partial B_1} \right)$$
+  - $\nabla C_1 = \frac{\partial J}{\partial C_1} = \frac{1}{N} \sum_{i=1}^{N} \left( \frac{\partial L^{(i)}}{\partial z_1^{(i)}} \cdot \frac{\partial z_1^{(i)}}{\partial C_1} \right)$
+  - $\nabla B_1 = \frac{\partial J}{\partial B_1} = \frac{1}{N} \sum_{i=1}^{N} \left( \frac{\partial L^{(i)}}{\partial z_1^{(i)}} \cdot \frac{\partial z_1^{(i)}}{\partial B_1} \right)$
 
 ## Gradients for Network
 
 - Similar to the perceptron, the whole mechanism follows similar math, though for `MNN` and `MNN2D` it differs in dimensions.
 - In `MNN` gradients are passed as vectors; in `MNN2D` they are passed as matrices.
 - **Loss (Cross Entropy):**
-  - For MNN: $$ CE = -\sum_{i=1}^{N} (T_i \log P_i) $$
-  - For MNN2D: $$ CE = -\sum_{i=1}^{N} \sum_{j} (T_{i,j} \log P_{i,j}) $$
+  - For MNN: $ CE = -\sum_{i=1}^{N} (T_i \log P_i) $
+  - For MNN2D: $ CE = -\sum_{i=1}^{N} \sum_{j} (T_{i,j} \log P_{i,j}) $
   - $T$: Target, $P$: Prediction.
 
 ### _Gradients for MNN:_
 - **For Single Input:**
   - Let there be $l$ layers of hidden weights.
-  - Gradient w.r.t Loss: $$\delta^{(l)} = \frac{\partial L}{\partial z_l} = P - T$$ (element-wise).
+  - Gradient w.r.t Loss: $\delta^{(l)} = \frac{\partial L}{\partial z_l} = P - T$ (element-wise).
   - **Backpropagation (Layer $l$ to $l-1$):**
-    - $$\delta^{(l-1)} = \frac{\partial L}{\partial z_{l-1}} = \left( \delta^{(l)} \cdot C_l^T \right) \odot \left( m \cdot (a_{l-1})^{m-1} \right) \odot a'_{l-1}$$
+    - $\delta^{(l-1)} = \frac{\partial L}{\partial z_{l-1}} = \left( \delta^{(l)} \cdot C_l^T \right) \odot \left( m \cdot (a_{l-1})^{m-1} \right) \odot a'_{l-1}$
   - **Weight Gradients:**
-    - For $C$: $$\frac{\partial L}{\partial C_l} = (a_{l-1})^m \cdot \delta^{(l)}$$
-    - For $B$: $$\frac{\partial L}{\partial B_l} = \mathbf{1} \cdot \delta^{(l)}$$ (where $\mathbf{1}$ is a vector of 1s) of size equal to size of $ a_{l-1} $.
+    - For $C$: $\frac{\partial L}{\partial C_l} = (a_{l-1})^m \cdot \delta^{(l)}$
+    - For $B$: $\frac{\partial L}{\partial B_l} = \mathbf{1} \cdot \delta^{(l)}$ (where $\mathbf{1}$ is a vector of 1s) of size equal to size of $ a_{l-1} $.
 
 ### _Gradients for MNN2D:_
 - **For Single Input:**
   - Gradient w.r.t Loss: $\delta^{(l)} = P - T$.
   - **Backpropagation:**
-    - $$\delta^{(l-1)} = \left( \delta^{(l)} \times C_l^T \right) \odot \left( m \cdot (a_{l-1})^{m-1} \right) \odot a'_{l-1}$$
+    - $\delta^{(l-1)} = \left( \delta^{(l)} \times C_l^T \right) \odot \left( m \cdot (a_{l-1})^{m-1} \right) \odot a'_{l-1}$
     - Note: $\times$ denotes matrix multiplication, $\odot$ denotes element-wise multiplication.
   - **Weight Gradients:**
-    - For $C$: $$\frac{\partial L}{\partial C_l} = ((a_{l-1})^m)^T \times \delta^{(l)}$$
-    - For $B$: $$\frac{\partial L}{\partial B_l} = \mathbf{1} \times \delta^{(l)}$$ (where $\mathbf{1}$ is a matrix of 1s of dimensions rows of $C_i$ x rows of $I$)
+    - For $C$: $\frac{\partial L}{\partial C_l} = ((a_{l-1})^m)^T \times \delta^{(l)}$
+    - For $B$: $\frac{\partial L}{\partial B_l} = \mathbf{1} \times \delta^{(l)}$ (where $\mathbf{1}$ is a matrix of 1s of dimensions rows of $C_i$ x rows of $I$)
 
 ### _Gradients for Batch Input (MNN & MNN2D):_
 
 - The process involves accumulating gradients over the batch and averaging them.
 - Let batch size be $N$, and $k$ be the sample index ($1 \dots N$).
-- Total Loss: $$J = \frac{1}{N} \sum_{k=1}^{N} L^{(k)}$$.
+- Total Loss: $J = \frac{1}{N} \sum_{k=1}^{N} L^{(k)}$.
 
 #### **1. Batch Gradients for MNN (1D):**
 
 - **Weight Updates (Layer $l$):**
-  - Let $$p^{(l-1, k)} = (a^{(l-1, k)})^m$$.
+  - Let $p^{(l-1, k)} = (a^{(l-1, k)})^m$.
   - **Gradient for C:**
-    $$ \frac{\partial J}{\partial C_l} = \frac{1}{N} \sum_{k=1}^{N} \left( [p^{(l-1, k)}]^T \cdot \delta^{(l, k)} \right) $$
+    $ \frac{\partial J}{\partial C_l} = \frac{1}{N} \sum_{k=1}^{N} \left( [p^{(l-1, k)}]^T \cdot \delta^{(l, k)} \right) $
   - **Gradient for B:**
-    $$ \frac{\partial J}{\partial B_l} = \frac{1}{N} \sum_{k=1}^{N} \delta^{(l, k)} $$
+    $ \frac{\partial J}{\partial B_l} = \frac{1}{N} \sum_{k=1}^{N} \delta^{(l, k)} $
 
 - **Error Propagation (to Layer $l-1$):**
-  $$ \delta^{(l-1, k)} = (\delta^{(l, k)} \cdot C_l^T) \odot (m \cdot a^{(l-1, k)})^{(m-1)} \odot a'^{(l-1, k)} $$
+  $ \delta^{(l-1, k)} = (\delta^{(l, k)} \cdot C_l^T) \odot (m \cdot a^{(l-1, k)})^{(m-1)} \odot a'^{(l-1, k)} $
 
 #### **2. Batch Gradients for MNN2D (2D):**
 
 - **Weight Updates (Layer $l$):**
   - **Gradient for C:**
-    $$ \frac{\partial J}{\partial C_l} = \frac{1}{N} \sum_{k=1}^{N} \left( [p^{(l-1, k)}]^T \times \delta^{(l, k)} \right) $$
+    $ \frac{\partial J}{\partial C_l} = \frac{1}{N} \sum_{k=1}^{N} \left( [p^{(l-1, k)}]^T \times \delta^{(l, k)} \right) $
   - **Gradient for B:**
-    $$ \frac{\partial J}{\partial B_l} = \frac{1}{N} \sum_{k=1}^{N} \left( \mathbf{1}^T \times \delta^{(l, k)} \right) $$
+    $ \frac{\partial J}{\partial B_l} = \frac{1}{N} \sum_{k=1}^{N} \left( \mathbf{1}^T \times \delta^{(l, k)} \right) $
 
 - **Error Propagation (to Layer $l-1$):**
-  $$ \delta^{(l-1, k)} = (\delta^{(l, k)} \times C_l^T) \odot (m \cdot a^{(l-1, k)})^{(m-1)} \odot a'^{(l-1, k)} $$
+  $ \delta^{(l-1, k)} = (\delta^{(l, k)} \times C_l^T) \odot (m \cdot a^{(l-1, k)})^{(m-1)} \odot a'^{(l-1, k)} $
 
 ---
 
@@ -269,7 +267,7 @@ The library is built with a modular approach, separating functionalities into di
   - `EPOCH`: 100
   - `DROPOUT_RATE`: 0.6
   - `LAMBDA_L1` / `LAMBDA_L2`: 0.001
-  - `SOFTMAX_TEMP`: 1.5
+  - `SOFTMAX_TEMP`: 1.05
 
 ## Theorem Sketch
 

@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <iostream>
 
+// Backprop for single layer
+
 //// Backprop -> first layer ////
 
 /**
@@ -201,6 +203,8 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
 
 //// Batch Backprop Variants ////
 
+//// Backprop -> first layer ////
+
 /**
  * @brief batch layer backprop for mnn for first layer
  * @param[in] incoming batch of incoming gradients (dL/dz_l)
@@ -294,6 +298,8 @@ void layerBackwardBatch(const std::vector<std::vector<std::vector<float>>>& inco
         }
     }
 }
+
+//// Backprop -> last to second layer ////
 
 /**
  * @brief batch layer backprop for mnn hidden layers

@@ -1,5 +1,7 @@
 #ifndef LOSS_HPP
 #define LOSS_HPP 1
+#include <iostream>
+#include <fstream>
 #include <vector>
 #include <cmath>
 #include <string>
@@ -7,16 +9,16 @@
 
 #define LEARNING_MAX 0.01f          // maximum learning rate allowed
 #define LEARNING_MIN 0.00001f       // minimum learning rate allowed
-#define LAMBDA_L1 0.001f            // L1 regularization parameter
-#define LAMBDA_L2 0.001f            // L2 regularization parameter
+#define LAMBDA_L1 0.0001f           // L1 regularization parameter
+#define LAMBDA_L2 0.0025f           // L2 regularization parameter
 #define DROPOUT_RATE 0.6f           // dropout rate
 #define DECAY_RATE 0.001f           // weight decay rate
 #define WEIGHT_DECAY 0.001f         // weight decay parameter
-#define SOFTMAX_TEMP 1.5f           // softmax temperature
+#define SOFTMAX_TEMP 1.05f          // softmax temperature
 #define EPOCH 100                   // epochs for single set training
 #define SESSION_SIZE 10             // number of batches in single session
-#define BATCH_SIZE 50               // number of inputs in single batch
-#define ALPHA 0.9f                  // gradient splitting factor
+#define BATCH_SIZE 10               // number of inputs in single batch
+#define ALPHA 0.85f                 // gradient splitting factor
 
 // struct to hold statistical information about data
 struct Statistics {
