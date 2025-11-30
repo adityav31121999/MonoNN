@@ -1,6 +1,7 @@
-#include "operators.hpp"
+#include "progress.hpp"
 #include <iostream>
 #include <limits>
+#include <cmath>
 
 /**
  * @brief Compute statistics (mean, std, min, max) for a 2D vector.
@@ -25,7 +26,7 @@ Statistics computeStats(const std::vector<float>& data) {
     size_t count = 0;
     stats.min = std::numeric_limits<float>::max();
     stats.max = -std::numeric_limits<float>::max();
-    
+
     for (float val : data) {
         sum += val;
         sum_sq += val * val;
@@ -43,7 +44,7 @@ Statistics computeStats(const std::vector<float>& data) {
     
     stats.mean = sum / count;
     float variance = (sum_sq / count) - (stats.mean * stats.mean);
-    stats.std = std::sqrt(std::max(0.0f, variance));
+    stats.std = std::sqrt(std::max<float>(0.0f, variance));
     
     return stats;
 }
@@ -77,8 +78,8 @@ Statistics computeStats(const std::vector<std::vector<std::vector<float>>>& batc
                 sum += val;
                 sum_sq += val * val;
                 count++;
-                stats.min = std::min(stats.min, val);
-                stats.max = std::max(stats.max, val);
+                stats.min = std::min<float>(stats.min, val);
+                stats.max = std::max<float>(stats.max, val);
             }
         }
     }
@@ -92,7 +93,7 @@ Statistics computeStats(const std::vector<std::vector<std::vector<float>>>& batc
     
     stats.mean = sum / count;
     float variance = (sum_sq / count) - (stats.mean * stats.mean);
-    stats.std = std::sqrt(std::max(0.0f, variance));
+    stats.std = std::sqrt(std::max<float>(0.0f, variance));
     
     return stats;
 }
@@ -126,8 +127,8 @@ Statistics computeStats(const std::vector<std::vector<float>>& data) {
             sum += val;
             sum_sq += val * val;
             count++;
-            stats.min = std::min(stats.min, val);
-            stats.max = std::max(stats.max, val);
+            stats.min = std::min<float>(stats.min, val);
+            stats.max = std::max<float>(stats.max, val);
         }
     }
     
@@ -140,7 +141,7 @@ Statistics computeStats(const std::vector<std::vector<float>>& data) {
     
     stats.mean = sum / count;
     float variance = (sum_sq / count) - (stats.mean * stats.mean);
-    stats.std = std::sqrt(std::max(0.0f, variance));
+    stats.std = std::sqrt(std::max<float>(0.0f, variance));
     
     return stats;
 }

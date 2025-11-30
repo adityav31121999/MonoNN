@@ -5,6 +5,7 @@
 #include <utility>
 #include <map>
 #include "operators.hpp"
+#include "progress.hpp"
 
 /**
  * @brief Class representing a Monomial Neural Network (MNN).

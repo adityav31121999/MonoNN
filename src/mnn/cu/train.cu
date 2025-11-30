@@ -25,7 +25,7 @@ void mnn::cuTrain(const std::vector<float>& input, const std::vector<float>& tar
         i++;
 
         // check for error and break if acceptable
-        float loss = crossEntropy(output, target);
+        float loss = crossEntropy(output, target); this->mnnPrg.accLoss += loss;
         std::cout << "Current CE Loss at epoch " << i << " : " <<loss << std::endl;
 /*
         // Log diagnostic statistics every 10 epochs
@@ -34,11 +34,13 @@ void mnn::cuTrain(const std::vector<float>& input, const std::vector<float>& tar
             computeStats(cweights, bweights, cgradients, bgradients, activate);
         }
 */
-        if (i == EPOCH) break;
         // 2. Backward propagation
         this->target = target;
         cuBackprop(this->target);
+
+        if (i == EPOCH) break;
     }
+    this->mnnPrg.totalCycleCount += i;
 
     std::cout << "cuTraining complete for this input-target pair." << std::endl;
 }
@@ -92,6 +94,7 @@ void mnn::cuTrainBatch(const std::vector<std::vector<float>>& inputs, const std:
             total_loss += crossEntropy(outputBatch[i], targets[i]);
         }
         totalEpochs++;
+        this->mnnPrg.accLoss += total_loss;
 /*
         // Log diagnostic statistics every 10 epochs
         if (totalEpochs % 20 == 0) {
@@ -122,6 +125,7 @@ void mnn::cuTrainBatch(const std::vector<std::vector<float>>& inputs, const std:
             this->epochs += 50;
         }
     }
+    this->mnnPrg.totalCycleCount += totalEpochs;
 }
 
 /**
@@ -143,7 +147,7 @@ void mnn2d::cuTrain(const std::vector<std::vector<float>>& input, const std::vec
         i++;
 
         // check for error and break if acceptable
-        float loss = crossEntropy(output, target);
+        float loss = crossEntropy(output, target); this->mnn2dPrg.accLoss += loss;
         std::cout << "Current CE Loss at epoch " << i << ": " << loss << std::endl;
 /*
         // Log diagnostic statistics every 10 epochs
@@ -153,11 +157,13 @@ void mnn2d::cuTrain(const std::vector<std::vector<float>>& input, const std::vec
         }
 */
         if (i == EPOCH) break;
+        if (i >= this->epochs) break;
 
         // 2. Backward propagation
         this->target = target;
         cuBackprop(this->target);
     }
+    this->mnn2dPrg.totalCycleCount += i;
 
     std::cout << "cuTraining complete for this input-target pair." << std::endl;
 }
@@ -212,6 +218,7 @@ void mnn2d::cuTrainBatch(const std::vector<std::vector<std::vector<float>>>& inp
             total_loss += crossEntropy(outputBatch[i], targets[i]);
         }
         totalEpochs++;
+        this->mnn2dPrg.accLoss += total_loss;
 /*
         // Log diagnostic statistics every 10 epochs
         if (totalEpochs % 20 == 0) {
@@ -242,6 +249,7 @@ void mnn2d::cuTrainBatch(const std::vector<std::vector<std::vector<float>>>& inp
             this->epochs += 50;
         }
     }
+    this->mnn2dPrg.totalCycleCount += totalEpochs;
 }
 
 #endif

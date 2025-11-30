@@ -30,18 +30,18 @@ bool logProgressToCSV(const progress& p, const std::string& filePath) {
 
     // If the file was empty, write the header first
     if (fileIsEmpty) {
-        file << "batchSize,sessionSize,totalTrainFiles,totalTestFiles,currentLearningRate,"
-             << "loss,accLoss,filesProcessed,ongoingCycleCount,totalCycleCount,"
+        file << "batchSize,sessionSize,totalTrainFiles,totalTestFiles,filesProcessed,"
+             << "currentLearningRate,loss,accLoss,totalCycleCount,"
              << "totalSessionsOfTraining,timeForCurrentSession,timeTakenForTraining,"
              << "testError,testAccuracy,correctPredictions\n";
     }
 
     // Append the data row
     file << p.batchSize << "," << p.sessionSize << "," << p.totalTrainFiles << "," << p.totalTestFiles << ","
-         << p.currentLearningRate << "," << p.loss << "," << p.accLoss << "," 
-         << p.filesProcessed << "," << p.ongoingCycleCount << "," << p.totalCycleCount << "," 
-         << p.totalSessionsOfTraining << "," << p.timeForCurrentSession << "," << p.timeTakenForTraining << ","
-         << p.testError << "," << p.testAccuracy << "," << p.correctPredictions << "\n";
+         << p.filesProcessed << "," << p.currentLearningRate << "," << p.loss << "," << p.accLoss << ","
+         << p.totalCycleCount << "," << p.totalSessionsOfTraining << "," << p.timeForCurrentSession << ","
+         << p.timeTakenForTraining << "," << p.testError << "," << p.testAccuracy << "," << p.correctPredictions
+         << "\n";
 
     file.close();
     return true;
@@ -87,11 +87,10 @@ bool loadLastProgress(progress& p, const std::string& filePath) {
         std::getline(ss, token, ','); p.sessionSize = std::stoul(token);
         std::getline(ss, token, ','); p.totalTrainFiles = std::stoul(token);
         std::getline(ss, token, ','); p.totalTestFiles = std::stoul(token);
+        std::getline(ss, token, ','); p.filesProcessed = std::stoul(token);
         std::getline(ss, token, ','); p.currentLearningRate = std::stof(token);
         std::getline(ss, token, ','); p.loss = std::stof(token);
         std::getline(ss, token, ','); p.accLoss = std::stod(token);
-        std::getline(ss, token, ','); p.filesProcessed = std::stoul(token);
-        std::getline(ss, token, ','); p.ongoingCycleCount = std::stoull(token);
         std::getline(ss, token, ','); p.totalCycleCount = std::stoull(token);
         std::getline(ss, token, ','); p.totalSessionsOfTraining = std::stoul(token);
         std::getline(ss, token, ','); p.timeForCurrentSession = std::stod(token);
@@ -117,11 +116,11 @@ bool loadLastProgress(progress& p, const std::string& filePath) {
 void makeBinFile(const std::string& fileAddress, unsigned long long param) 
 {
     FILE* file = nullptr;
-#ifdef _MSC_VER
-    fopen_s(&file, fileAddress.c_str(), "wb");
-#else
-    file = fopen(fileAddress.c_str(), "wb");
-#endif
+    #if defined(_WIN32) || defined(_MSC_VER)
+        fopen_s(&file, fileAddress.c_str(), "wb");
+    #else
+        file = fopen(fileAddress.c_str(), "wb");
+    #endif
 
     if (!file) {
         throw std::runtime_error("Could not open file for writing: " + fileAddress);
@@ -153,9 +152,9 @@ void serializeWeights(const std::vector<std::vector<std::vector<float>>>& cweigh
 {
     FILE* file = nullptr;
     #ifdef _MSC_VER
-        fopen_s(&file, fileAddress.c_str(), "wb");
+        fopen_s(&file, fileAddress.c_str(), "r+b");
     #else
-        file = fopen(fileAddress.c_str(), "wb");
+        file = fopen(fileAddress.c_str(), "r+b");
     #endif
 
     if (!file) {
@@ -177,6 +176,7 @@ void serializeWeights(const std::vector<std::vector<std::vector<float>>>& cweigh
     }
 
     fclose(file);
+    std::cout << "Data to Binary File at " << fileAddress << " saved successfully." << std::endl;
 }
 
 
@@ -195,9 +195,9 @@ void deserializeWeights(std::vector<float>& cweights, std::vector<float>& bweigh
 
     FILE* file = nullptr;
     #ifdef _MSC_VER
-        fopen_s(&file, fileAddress.c_str(), "rb");
+        fopen_s(&file, fileAddress.c_str(), "r+b");
     #else
-        file = fopen(fileAddress.c_str(), "rb");
+        file = fopen(fileAddress.c_str(), "r+b");
     #endif
 
     if (!file) {
@@ -244,9 +244,9 @@ void deserializeWeights(std::vector<std::vector<std::vector<float>>>& cweights,
 {
     FILE* file = nullptr;
     #ifdef _MSC_VER
-        fopen_s(&file, fileAddress.c_str(), "rb");
+        fopen_s(&file, fileAddress.c_str(), "r+b");
     #else
-        file = fopen(fileAddress.c_str(), "rb");
+        file = fopen(fileAddress.c_str(), "r+b");
     #endif
 
     if (!file) {
