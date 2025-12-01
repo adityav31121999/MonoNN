@@ -36,7 +36,7 @@ void mnn::forprop(const std::vector<std::vector<float>>& input)
     // first layer
     layerForwardBatch(input, dotBatch[0], cweights[0], bweights[0], order);
     for(int i = 0; i < batchSize; i++) {
-        actBatch[0][i] = softmax(dotBatch[0][i]);
+        actBatch[0][i] = sigmoid(dotBatch[0][i]);
     }
 
     // from 2nd to last

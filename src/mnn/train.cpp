@@ -191,9 +191,9 @@ void mnn::train(const std::string &dataSetPath, int batchSize)
             #endif
 
             // for progress tracking
-            fileCount++;
-            this->mnnPrg.filesProcessed++;
-            filesInCurrentSession++;
+            fileCount += batchSize;
+            this->mnnPrg.filesProcessed += batchSize;
+            filesInCurrentSession += batchSize;
             bool sessionEnd = 0;
             if (sessionFiles > 0 && filesInCurrentSession == this->mnnPrg.sessionSize) {
                 std::cout << "Session file limit (" << this->mnnPrg.sessionSize << ") reached." << std::endl;
@@ -422,9 +422,9 @@ void mnn2d::train(const std::string &dataSetPath, int batchSize)
             #endif
 
             // for progress tracking
-            fileCount++;
-            this->mnn2dPrg.filesProcessed++;
-            filesInCurrentSession++;
+            fileCount += batchSize;
+            this->mnn2dPrg.filesProcessed += batchSize;
+            filesInCurrentSession += batchSize;
             bool sessionEnd = 0;
             if (sessionFiles > 0 && filesInCurrentSession == this->mnn2dPrg.sessionSize) {
                 std::cout << "Session file limit (" << this->mnn2dPrg.sessionSize << ") reached." << std::endl;

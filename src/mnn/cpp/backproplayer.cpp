@@ -18,14 +18,14 @@
  * @param[out] gradc gradients for C matrix
  * @param[out] gradb gradeitns for B matrix
  * @param[in] m order of monomial
- * @param[in] ALPHA major gradient for C
+ * @param[in] alpha major gradient for C
  */
 void layerBackward(const std::vector<float>& incoming,
                     const std::vector<float>& prevAct, 
                     std::vector<std::vector<float>>& C,
                     std::vector<std::vector<float>>& gradc,
                     std::vector<std::vector<float>>& gradb,
-                    float m, float ALPHA)
+                    float m, float alpha)
 {
     // std::vector<float> v1(gradb.size(), 1.0f);           // dz_l/dB_l
     std::vector<float> prev_p = power(prevAct, m);          // dz_l/dC_l
@@ -37,11 +37,11 @@ void layerBackward(const std::vector<float>& incoming,
                     }
                 );
 
-    // gradc = ALPHA * prev_p^T x dl/dz_l, gradb = (1 - ALPHA) * v1^T x dl/dz_l
+    // gradc = alpha * prev_p^T x dl/dz_l, gradb = (1 - alpha) * v1^T x dl/dz_l
     for(int i = 0; i < prev_p.size(); i++) {
         for(int j = 0; j < incoming.size(); j++) {
-            gradc[i][j] = ALPHA * prev_p[i] * incoming[j];      // dL/dC_l
-            gradb[i][j] = (1.0f - ALPHA) * incoming[j];         // dL/dB_l
+            gradc[i][j] = alpha * prev_p[i] * incoming[j];      // dL/dC_l
+            gradb[i][j] = (1.0f - alpha) * incoming[j];         // dL/dB_l
         }
     }
 }
@@ -55,26 +55,26 @@ void layerBackward(const std::vector<float>& incoming,
  * @param[out] gradc gradients for C matrix
  * @param[out] gradb gradeitns for B matrix
  * @param[in] m order of monomial
- * @param[in] ALPHA major gradient for C
+ * @param[in] alpha major gradient for C
  */
 void layerBackward(const std::vector<std::vector<float>>& incoming,
                     const std::vector<std::vector<float>>& prevAct,
                     std::vector<std::vector<float>>& C,
                     std::vector<std::vector<float>>& gradc,
                     std::vector<std::vector<float>>& gradb,
-                    float m, float ALPHA)
+                    float m, float alpha)
 {
     // dz_l/dB_l = v1^T
     std::vector<std::vector<float>> v1T(prevAct[0].size(), std::vector<float>(prevAct.size(), 1.0f));
     // dz_l/dC_l
     std::vector<std::vector<float>> prev_p = power(prevAct, m);
 
-    gradc = multiply(transpose(prev_p), incoming);  // gradc = ALPHA * prev_p^T x dl/dz_l
-    gradb = multiply(v1T, incoming);      // gradb = (1 - ALPHA) * v1^T x dl/dz_l
+    gradc = multiply(transpose(prev_p), incoming);  // gradc = alpha * prev_p^T x dl/dz_l
+    gradb = multiply(v1T, incoming);      // gradb = (1 - alpha) * v1^T x dl/dz_l
     for(int i = 0; i < gradc.size(); i++) {
         for(int j = 0; j < gradc[0].size(); j++) {
-            gradc[i][j] *= ALPHA;          // dL/dC_l
-            gradb[i][j] *= (1.0f - ALPHA); // dL/dB_l
+            gradc[i][j] *= alpha;          // dL/dC_l
+            gradb[i][j] *= (1.0f - alpha); // dL/dB_l
         }
     }
 }
@@ -90,7 +90,7 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
  * @param[out] gradc gradients for C matrix
  * @param[out] gradb gradeitns for B matrix
  * @param[in] m order of monomial
- * @param[in] ALPHA major gradient for C
+ * @param[in] alpha major gradient for C
  */
 void layerBackward(const std::vector<float>& incoming,          // width[l]
                     std::vector<float>& outgoing,               // width[l-1]
@@ -98,7 +98,7 @@ void layerBackward(const std::vector<float>& incoming,          // width[l]
                     std::vector<std::vector<float>>& C,         // width[l-1] x width[l]
                     std::vector<std::vector<float>>& gradc,     // width[l-1] x width[l] 
                     std::vector<std::vector<float>>& gradb,     // width[l-1] x width[l]
-                    float m, float ALPHA)
+                    float m, float alpha)
 {
     std::vector<float> prev_p = power(prevAct, m);      // dz_l/dC_l
     // derivative of (prevAct^m) w.r.t prevAct
@@ -119,12 +119,12 @@ void layerBackward(const std::vector<float>& incoming,          // width[l]
                         return x*(1.0f - x); 
                     });
 
-    // gradc = ALPHA * prev_p^T x dl/dz_l, gradb = (1 - ALPHA) * v1^T x dl/dz_l
+    // gradc = alpha * prev_p^T x dl/dz_l, gradb = (1 - alpha) * v1^T x dl/dz_l
     // This is an outer product.
     for(int i = 0; i < prev_p.size(); i++) {
         for(int j = 0; j < incoming.size(); j++) {
-            gradc[i][j] = ALPHA * prev_p[i] * incoming[j];  // dL/dC_l
-            gradb[i][j] = (1.0f - ALPHA) * incoming[j];     // dL/dB_l
+            gradc[i][j] = alpha * prev_p[i] * incoming[j];  // dL/dC_l
+            gradb[i][j] = (1.0f - alpha) * incoming[j];     // dL/dB_l
         }
     }
 
@@ -149,7 +149,7 @@ void layerBackward(const std::vector<float>& incoming,          // width[l]
  * @param[out] gradc gradients for C matrix
  * @param[out] gradb gradeitns for B matrix
  * @param[in] m order of monomial
- * @param[in] ALPHA major gradient for C
+ * @param[in] alpha major gradient for C
  */
 void layerBackward(const std::vector<std::vector<float>>& incoming,
                     std::vector<std::vector<float>>& outgoing,
@@ -158,7 +158,7 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
                     std::vector<std::vector<float>>& C,
                     std::vector<std::vector<float>>& gradc,
                     std::vector<std::vector<float>>& gradb,
-                    float m, float ALPHA)
+                    float m, float alpha)
 {
     // dz_l/dB_l = V1^T
     std::vector<std::vector<float>> v1T(prevAct[0].size(), std::vector<float>(prevAct.size(), 1.0f));
@@ -179,13 +179,13 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
     }
     // derivativ of prevAct (activation is softmax)
     std::vector<std::vector<float>> dprevAct = reshape(softmaxDer(flatten(dotProds)), dotProds.size(), dotProds[0].size());
-    // gradc = prev_p^T x dl/dz_l, gradc = (1 - ALPHA) * v1^T x dl/dz_l
+    // gradc = prev_p^T x dl/dz_l, gradc = (1 - alpha) * v1^T x dl/dz_l
     gradc = multiply(transpose(prev_p), incoming);
     gradb = multiply(v1T, incoming);
     for(int i = 0; i < gradc.size(); i++) {
         for(int j = 0; j < gradc[0].size(); j++) {
-            gradc[i][j] *= ALPHA;
-            gradb[i][j] *= (1.0f - ALPHA);
+            gradc[i][j] *= alpha;
+            gradb[i][j] *= (1.0f - alpha);
         }
     }
 
@@ -213,14 +213,14 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
  * @param[out] gradc accumulated gradients for C matrix
  * @param[out] gradb accumulated gradients for B matrix
  * @param[in] m order of monomial
- * @param[in] ALPHA major gradient for C
+ * @param[in] alpha major gradient for C
  */
 void layerBackwardBatch(const std::vector<std::vector<float>>& incoming,
                     const std::vector<std::vector<float>>& prevAct, 
                     std::vector<std::vector<float>>& C,
                     std::vector<std::vector<float>>& gradc,
                     std::vector<std::vector<float>>& gradb,
-                    float m, float ALPHA)
+                    float m, float alpha)
 {
     // Initialize gradients to 0
     for(auto& row : gradc) std::fill(row.begin(), row.end(), 0.0f);
@@ -233,8 +233,8 @@ void layerBackwardBatch(const std::vector<std::vector<float>>& incoming,
         
         for(int i = 0; i < prev_p.size(); i++) {
             for(int j = 0; j < incoming[b].size(); j++) {
-                gradc[i][j] += ALPHA * prev_p[i] * incoming[b][j];
-                gradb[i][j] += (1.0f - ALPHA) * incoming[b][j];
+                gradc[i][j] += alpha * prev_p[i] * incoming[b][j];
+                gradb[i][j] += (1.0f - alpha) * incoming[b][j];
             }
         }
     }
@@ -257,14 +257,14 @@ void layerBackwardBatch(const std::vector<std::vector<float>>& incoming,
  * @param[out] gradc accumulated gradients for C matrix
  * @param[out] gradb accumulated gradients for B matrix
  * @param[in] m order of monomial
- * @param[in] ALPHA major gradient for C
+ * @param[in] alpha major gradient for C
  */
 void layerBackwardBatch(const std::vector<std::vector<std::vector<float>>>& incoming,
                     const std::vector<std::vector<std::vector<float>>>& prevAct,
                     std::vector<std::vector<float>>& C,
                     std::vector<std::vector<float>>& gradc,
                     std::vector<std::vector<float>>& gradb,
-                    float m, float ALPHA)
+                    float m, float alpha)
 {
     // Initialize gradients to 0
     for(auto& row : gradc) std::fill(row.begin(), row.end(), 0.0f);
@@ -283,8 +283,8 @@ void layerBackwardBatch(const std::vector<std::vector<std::vector<float>>>& inco
 
         for(int i = 0; i < gradc.size(); i++) {
             for(int j = 0; j < gradc[0].size(); j++) {
-                gradc[i][j] += ALPHA * cur_gradc[i][j];
-                gradb[i][j] += (1.0f - ALPHA) * cur_gradb[i][j];
+                gradc[i][j] += alpha * cur_gradc[i][j];
+                gradb[i][j] += (1.0f - alpha) * cur_gradb[i][j];
             }
         }
     }
@@ -310,7 +310,7 @@ void layerBackwardBatch(const std::vector<std::vector<std::vector<float>>>& inco
  * @param[out] gradc accumulated gradients for C matrix
  * @param[out] gradb accumulated gradients for B matrix
  * @param[in] m order of monomial
- * @param[in] ALPHA major gradient for C
+ * @param[in] alpha major gradient for C
  */
 void layerBackwardBatch(const std::vector<std::vector<float>>& incoming,
                     std::vector<std::vector<float>>& outgoing,
@@ -318,7 +318,7 @@ void layerBackwardBatch(const std::vector<std::vector<float>>& incoming,
                     std::vector<std::vector<float>>& C,
                     std::vector<std::vector<float>>& gradc,
                     std::vector<std::vector<float>>& gradb,
-                    float m, float ALPHA)
+                    float m, float alpha)
 {
     // Initialize gradients to 0
     for(auto& row : gradc) std::fill(row.begin(), row.end(), 0.0f);
@@ -335,8 +335,8 @@ void layerBackwardBatch(const std::vector<std::vector<float>>& incoming,
         // Accumulate gradients
         for(int i = 0; i < prev_p.size(); i++) {
             for(int j = 0; j < incoming[b].size(); j++) {
-                gradc[i][j] += ALPHA * prev_p[i] * incoming[b][j];
-                gradb[i][j] += (1.0f - ALPHA) * incoming[b][j];
+                gradc[i][j] += alpha * prev_p[i] * incoming[b][j];
+                gradb[i][j] += (1.0f - alpha) * incoming[b][j];
             }
         }
 
@@ -380,7 +380,7 @@ void layerBackwardBatch(const std::vector<std::vector<float>>& incoming,
  * @param[out] gradc accumulated gradients for C matrix
  * @param[out] gradb accumulated gradients for B matrix
  * @param[in] m order of monomial
- * @param[in] ALPHA major gradient for C
+ * @param[in] alpha major gradient for C
  */
 void layerBackwardBatch(const std::vector<std::vector<std::vector<float>>>& incoming,
                     std::vector<std::vector<std::vector<float>>>& outgoing,
@@ -389,7 +389,7 @@ void layerBackwardBatch(const std::vector<std::vector<std::vector<float>>>& inco
                     std::vector<std::vector<float>>& C,
                     std::vector<std::vector<float>>& gradc,
                     std::vector<std::vector<float>>& gradb,
-                    float m, float ALPHA)
+                    float m, float alpha)
 {
     // Initialize gradients to 0
     for(auto& row : gradc) std::fill(row.begin(), row.end(), 0.0f);
@@ -410,8 +410,8 @@ void layerBackwardBatch(const std::vector<std::vector<std::vector<float>>>& inco
 
         for(int i = 0; i < gradc.size(); i++) {
             for(int j = 0; j < gradc[0].size(); j++) {
-                gradc[i][j] += ALPHA * cur_gradc[i][j];
-                gradb[i][j] += (1.0f - ALPHA) * cur_gradb[i][j];
+                gradc[i][j] += alpha * cur_gradc[i][j];
+                gradb[i][j] += (1.0f - alpha) * cur_gradb[i][j];
             }
         }
 
