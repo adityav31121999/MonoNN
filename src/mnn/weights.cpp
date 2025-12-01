@@ -16,8 +16,11 @@
 void updateWeights(std::vector<std::vector<float>>& weights, std::vector<std::vector<float>>& gradients, float& learningRate) {
     for (size_t i = 0; i < weights.size(); ++i) {
         std::transform(weights[i].begin(), weights[i].end(), gradients[i].begin(), weights[i].begin(),
-            [learningRate](float w, float g) { 
-                return w - learningRate * g; 
+            [learningRate](float w, float g) {
+                float u = w - learningRate * g;
+                if(std::isnan(u)) u = 0.0f;
+                if(std::isinf(u)) u = 1.0f;
+                return u;
             }
         );
     }
@@ -35,7 +38,10 @@ void updateWeightsL1(std::vector<std::vector<float>>& weights, std::vector<std::
         std::transform(weights[i].begin(), weights[i].end(), gradients[i].begin(), weights[i].begin(),
             [learningRate, lambdaL1](float w, float g) {
                 float l1_grad = (w > 0.0f) ? lambdaL1 : ((w < 0.0f) ? -lambdaL1 : 0.0f);
-                return w - learningRate * (g + l1_grad);
+                float u = w - learningRate * (g + l1_grad);
+                if(std::isnan(u)) u = 0.0f;
+                if(std::isinf(u)) u = 1.0f;
+                return u;
             }
         );
     }
@@ -53,7 +59,10 @@ void updateWeightsL2(std::vector<std::vector<float>>& weights, std::vector<std::
         std::transform(weights[i].begin(), weights[i].end(), gradients[i].begin(), weights[i].begin(),
             [learningRate, lambdaL2](float w, float g) {
                 float l2_grad = 2.0f * lambdaL2 * w;
-                return w - learningRate * (g + l2_grad);
+                float u = w - learningRate * (g + l2_grad);
+                if(std::isnan(u)) u = 0.0f;
+                if(std::isinf(u)) u = 1.0f;
+                return u;
             });
     }
 }
@@ -72,7 +81,10 @@ void updateWeightsElastic(std::vector<std::vector<float>>& weights, std::vector<
             [learningRate, lambdaL1, lambdaL2](float w, float g) {
                 float l1_grad = (w > 0.0f) ? lambdaL1 : ((w < 0.0f) ? -lambdaL1 : 0.0f);
                 float l2_grad = 2.0f * lambdaL2 * w;
-                return w - learningRate * (g + l1_grad + l2_grad);
+                float u = w - learningRate * (g + l1_grad + l2_grad);
+                if(std::isnan(u)) u = 0.0f;
+                if(std::isinf(u)) u = 1.0f;
+                return u;
             });
     }
 }
@@ -88,7 +100,10 @@ void updateWeightsWeightDecay(std::vector<std::vector<float>>& weights, std::vec
     for (size_t i = 0; i < weights.size(); ++i) {
         std::transform(weights[i].begin(), weights[i].end(), gradients[i].begin(), weights[i].begin(),
             [learningRate, decayRate](float w, float g) {
-                return w * (1.0f - decayRate) - learningRate * g;
+                float u = w * (1.0f - decayRate) - learningRate * g;
+                if(std::isnan(u)) u = 0.0f;
+                if(std::isinf(u)) u = 1.0f;
+                return u;
             });
     }
 }
@@ -112,7 +127,10 @@ void updateWeightsDropout(std::vector<std::vector<float>>& weights, std::vector<
                 if (dis(gen) < dropoutRate) {
                     return w; // Keep weight unchanged (gradient is effectively zero)
                 }
-                return w - learningRate * g;
+                float u = w - learningRate * g;
+                if(std::isnan(u)) u = 0.0f;
+                if(std::isinf(u)) u = 1.0f;
+                return u;
             });
     }
 }

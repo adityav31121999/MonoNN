@@ -31,26 +31,17 @@ Statistics computeStats(const std::vector<float>& data) {
         sum += val;
         sum_sq += val * val;
         count++;
-        stats.min = std::min<float>(stats.min, val);
-        stats.max = std::max<float>(stats.max, val);
+        stats.min = std::min(stats.min, val);
+        stats.max = std::max(stats.max, val);
     }
     
-    // Handle empty data case
-    if (count == 0) {
-        stats.mean = 0.0f;
-        stats.std = 0.0f;
-        stats.min = 0.0f;
-        stats.max = 0.0f;
-        return stats;
-    }
-
     // Handle single element case
     if (count == 1) {
         stats.mean = sum;
         stats.std = 0.0f;
         return stats;
     }
-
+    
     stats.mean = sum / count;
     float variance = (sum_sq / count) - (stats.mean * stats.mean);
     stats.std = std::sqrt(std::max<float>(0.0f, variance));
@@ -93,15 +84,6 @@ Statistics computeStats(const std::vector<std::vector<std::vector<float>>>& batc
         }
     }
     
-    // Handle empty data case
-    if (count == 0) {
-        stats.mean = 0.0f;
-        stats.std = 0.0f;
-        stats.min = 0.0f;
-        stats.max = 0.0f;
-        return stats;
-    }
-
     // Handle single element case
     if (count == 1) {
         stats.mean = sum;
@@ -150,15 +132,6 @@ Statistics computeStats(const std::vector<std::vector<float>>& data) {
         }
     }
     
-    // Handle empty data case
-    if (count == 0) {
-        stats.mean = 0.0f;
-        stats.std = 0.0f;
-        stats.min = 0.0f;
-        stats.max = 0.0f;
-        return stats;
-    }
-
     // Handle single element case
     if (count == 1) {
         stats.mean = sum;

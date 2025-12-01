@@ -155,8 +155,6 @@ std::vector<std::vector<float>> multiply(const std::vector<std::vector<float>>& 
         for (size_t i = 0; i < a.size(); ++i) {
             for (size_t j = 0; j < a[0].size(); ++j) {
                 result[i][j] = a[i][j] * b[i][j];
-                if(std::isnan(result[i][j])) result[i][j] = 0.0f;
-                if(std::isinf(result[i][j])) result[i][j] = 1.0f;
             }
         }
         return result;
@@ -191,18 +189,17 @@ std::vector<float> power(const std::vector<float>& input, const float& powerOfVa
     std::vector<float> result(input.size());
     // each element of input is raised to powerOfValues
     std::transform(input.begin(), input.end(), result.begin(),
-                   [powerOfValues](float val) 
-                        {
-                            float pow_result = std::pow(val, powerOfValues);
-                            // Check for NaN or infinity
-                            if (std::isnan(pow_result)) {
-                                return 0.0f;
-                            }
-                            else if (std::isinf(pow_result)) {
-                                return 1.0f;
-                            }
-                            return pow_result;
-                        });
+                    [powerOfValues](float val) {
+                        float pow_result = std::pow(val, powerOfValues);
+                        // Check for NaN or infinity
+                        if (std::isnan(pow_result)) {
+                            return 0.0f;
+                        }
+                        else if (std::isinf(pow_result)) {
+                            return 0.0f;
+                        }
+                        return pow_result;
+                    });
     return result;
 }
 
@@ -220,15 +217,14 @@ std::vector<std::vector<float>> power(const std::vector<std::vector<float>>& inp
                    [powerOfValues](const std::vector<float>& row) {
                        std::vector<float> new_row(row.size());
                        std::transform(row.begin(), row.end(), new_row.begin(),
-                                    [powerOfValues](float val) 
-                                        { 
+                                        [powerOfValues](float val) { 
                                             float pow_result = std::pow(val, powerOfValues);
                                             // Check for NaN or infinity
                                             if (std::isnan(pow_result)) {
                                                 return 0.0f;
                                             }
                                             else if (std::isinf(pow_result)) {
-                                                return 1.0f;
+                                                return 0.0f;
                                             }
                                             return pow_result;
                                         });
@@ -250,9 +246,9 @@ std::vector<float> meanPool(const std::vector<std::vector<float>>& input) {
         }
     }
     for (auto& val : result) {
+        val /= input.size();
         if(std::isnan(val)) val = 0.0f;
         if(std::isinf(val)) val = 1.0f;
-        val /= input.size();
     }
     return result;
 }
@@ -366,14 +362,16 @@ std::vector<std::vector<float>> average(const std::vector<std::vector<std::vecto
         for(int j = 0; j < input[i].size(); j++) {
             for(int k = 0; k < input[i][j].size(); k++) {
                 result[j][k] += input[i][j][k];
+                if(std::isnan(result[j][k])) result[j][k] = 0.0f;
+                if(std::isinf(result[j][k])) result[j][k] = 1.0f;
             }
         }
     }
     for(int j = 0; j < result.size(); j++) {
         for(int k = 0; k < result[j].size(); k++) {
-            if(std::isnan(result[j][k])) result[j][k] = 0.0f;
-            if(std::isinf(result[j][k])) result[j][k] = 1.0f;
             result[j][k] /= n;
+            if (std::isnan(result[j][k])) result[j][k] = 0.0f;
+            if (std::isinf(result[j][k])) result[j][k] = 1.0f;
         }
     }
     return result;
@@ -399,8 +397,6 @@ void clipGradients(std::vector<std::vector<float>>& gradients, float max_norm) {
         for (float val : row) {
             total_norm += val * val;
         }
-        if(std::isnan(total_norm)) total_norm = 0.0f;
-        if(std::isinf(total_norm)) total_norm = 1.0f;
     }
     total_norm = std::sqrt(total_norm);
     

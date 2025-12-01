@@ -74,6 +74,8 @@ void layerForward(const std::vector<float>& input, std::vector<float>& output, c
         for(int j = 0; j < cweights[0].size(); j++) {
             output[j] += (powerIn[i]*cweights[i][j]) + bweights[i][j];
         }
+    }
+    for(int i = 0; i < output.size(); i++) {
         if (std::isnan(output[i])) {
             output[i] = 0.0f;
         }
@@ -159,13 +161,13 @@ void layerForward(const std::vector<std::vector<float>>& input, std::vector<std:
             for (size_t k = 0; k < cweights.size(); ++k) {
                 dotProd_ij += (powerIn[i][k] * cweights[k][j]) + bweights[k][j];
             }
+            output[i][j] = dotProd_ij; // Assign the final sum
             if (std::isnan(output[i][j])) {
-                dotProd_ij = 0.0f;
+                output[i][j] = 0.0f;
             }
             if (std::isinf(output[i][j])) {
-                dotProd_ij = 1.0f;
+                output[i][j] = 1.0f;
             }
-            output[i][j] = dotProd_ij; // Assign the final sum
         }
     }
 }
@@ -188,11 +190,22 @@ void layerForwardBatch(const std::vector<std::vector<float>>& input, std::vector
     int inSize = cweights.size();
     int outSize = cweights[0].size();
 
+    // Precompute bias sum
+    std::vector<float> b_sum(outSize, 0.0f);
+    for(int i=0; i<inSize; ++i) {
+        for(int j=0; j<outSize; ++j) {
+            b_sum[j] += bweights[i][j];
+        }
+    }
+
     for(int b=0; b<batchSize; ++b) {
+        // Add bias sum
+        for(int j=0; j<outSize; ++j) output[b][j] += b_sum[j];
+
         for(int i=0; i<inSize; ++i) {
             float in_val = input[b][i];
             for(int j=0; j<outSize; ++j) {
-                output[b][j] += in_val * cweights[i][j] + bweights[i][j];
+                output[b][j] += in_val * cweights[i][j];
             }
         }
         
@@ -221,13 +234,24 @@ void layerForwardBatch(const std::vector<std::vector<float>>& input, std::vector
     int inSize = cweights.size();
     int outSize = cweights[0].size();
 
+    // Precompute bias sum
+    std::vector<float> b_sum(outSize, 0.0f);
+    for(int i=0; i<inSize; ++i) {
+        for(int j=0; j<outSize; ++j) {
+            b_sum[j] += bweights[i][j];
+        }
+    }
+
     for(int b=0; b<batchSize; ++b) {
         std::vector<float> powerIn = power(input[b], n);
         
+        // Add bias sum
+        for(int j=0; j<outSize; ++j) output[b][j] += b_sum[j];
+
         for(int i=0; i<inSize; ++i) {
             float in_val = powerIn[i];
             for(int j=0; j<outSize; ++j) {
-                output[b][j] += in_val * cweights[i][j] + bweights[i][j];
+                output[b][j] += in_val * cweights[i][j];
             }
         }
 
@@ -258,10 +282,15 @@ void layerForwardBatch(const std::vector<std::vector<std::vector<float>>>& input
 
     for(int b=0; b<batchSize; ++b) {
         for(int r=0; r<inHeight; ++r) {
+            // Add bias term (bweights[r][c] * inWidth)
+            for(int c=0; c<outWidth; ++c) {
+                output[b][r][c] += bweights[r][c] * inWidth;
+            }
+
             for(int k=0; k<inWidth; ++k) {
                 float in_val = input[b][r][k];
                 for(int c=0; c<outWidth; ++c) {
-                    output[b][r][c] += (in_val * cweights[k][c]) + bweights[r][c];
+                    output[b][r][c] += (in_val * cweights[k][c]);
                 }
             }
 
@@ -296,10 +325,15 @@ void layerForwardBatch(const std::vector<std::vector<std::vector<float>>>& input
         std::vector<std::vector<float>> powerIn = power(input[b], n);
 
         for(int r=0; r<inHeight; ++r) {
+            // Add bias term
+            for(int c=0; c<outWidth; ++c) {
+                output[b][r][c] += bweights[r][c] * inWidth;
+            }
+
             for(int k=0; k<inWidth; ++k) {
                 float in_val = powerIn[r][k];
                 for(int c=0; c<outWidth; ++c) {
-                    output[b][r][c] += (in_val * cweights[k][c]) + bweights[r][c];
+                    output[b][r][c] += (in_val * cweights[k][c]);
                 }
             }
 

@@ -38,8 +38,8 @@ Gradients for Monomial neural nets are calculated in a similar manner to MLPs.
   - To properly update the coefficients $c$ and $b$ when an activation function is involved, we must use the chain rule. The goal is to find the partial derivative of the Loss function $E$ with respect to $c$ and $b$.
   - Let $z = c \cdot x^m + b$ be the pre-activation output. The output of the neuron is $v = a(z)$.
   - The gradients are calculated as follows:
-    $\frac{\partial E}{\partial c} = \frac{\partial E}{\partial v} \cdot \frac{\partial v}{\partial z} \cdot \frac{\partial z}{\partial c}$
-    $\frac{\partial E}{\partial b} = \frac{\partial E}{\partial v} \cdot \frac{\partial v}{\partial z} \cdot \frac{\partial z}{\partial b}$
+    $ \frac{\partial E}{\partial c} = \frac{\partial E}{\partial v} \cdot \frac{\partial v}{\partial z} \cdot \frac{\partial z}{\partial c} $
+    $ \frac{\partial E}{\partial b} = \frac{\partial E}{\partial v} \cdot \frac{\partial v}{\partial z} \cdot \frac{\partial z}{\partial b} $
   - Where:
     - $\frac{\partial E}{\partial v}$ is the error signal propagated backward from the next layer.
     - $\frac{\partial v}{\partial z} = a'(z) = a'(c \cdot x^m + b)$.
@@ -47,12 +47,12 @@ Gradients for Monomial neural nets are calculated in a similar manner to MLPs.
     - $\frac{\partial z}{\partial b} = 1$.
   - Substituting these in, we get the gradients:
     - **Gradient for c**: 
-      $\frac{\partial E}{\partial c} = \frac{\partial E}{\partial v} \cdot a'(c \cdot x^m + b) \cdot x^m$
+      $\frac{\partial E}{\partial c} = \frac{\partial E}{\partial v} \cdot a'(c \cdot x^m + b) \cdot x^m $
     - **Gradient for b**: 
-      $\frac{\partial E}{\partial b} = \frac{\partial E}{\partial v} \cdot a'(c \cdot x^m + b)$
+      $\frac{\partial E}{\partial b} = \frac{\partial E}{\partial v} \cdot a'(c \cdot x^m + b) $
   - The final update rules using the learning rate $\eta$ are
-    $c \leftarrow c - \eta \cdot \frac{\partial E}{\partial v} \cdot a'(z) \cdot x^m$
-    $b \leftarrow b - \eta \cdot \frac{\partial E}{\partial v} \cdot a'(z)$
+    $c \leftarrow c - \eta \cdot \frac{\partial E}{\partial v} \cdot a'(z) \cdot x^m $
+    $b \leftarrow b - \eta \cdot \frac{\partial E}{\partial v} \cdot a'(z) $
 
 ### _Gradients for perceptron:_
 
@@ -145,23 +145,23 @@ Gradients for Monomial neural nets are calculated in a similar manner to MLPs.
 - **Weight Updates (Layer $l$):**
   - Let $p^{(l-1, k)} = (a^{(l-1, k)})^m$.
   - **Gradient for C:**
-    $\frac{\partial J}{\partial C_l} = \frac{1}{N} \sum_{k=1}^{N} \left( [p^{(l-1, k)}]^T \cdot \delta^{(l, k)} \right)$
+    $ \frac{\partial J}{\partial C_l} = \frac{1}{N} \sum_{k=1}^{N} \left( [p^{(l-1, k)}]^T \cdot \delta^{(l, k)} \right) $
   - **Gradient for B:**
-    $\frac{\partial J}{\partial B_l} = \frac{1}{N} \sum_{k=1}^{N} \delta^{(l, k)}$
+    $ \frac{\partial J}{\partial B_l} = \frac{1}{N} \sum_{k=1}^{N} \delta^{(l, k)} $
 
 - **Error Propagation (to Layer $l-1$):**
-  $\delta^{(l-1, k)} = (\delta^{(l, k)} \cdot C_l^T) \odot (m \cdot a^{(l-1, k)})^{(m-1)} \odot a'^{(l-1, k)}$
+  $ \delta^{(l-1, k)} = (\delta^{(l, k)} \cdot C_l^T) \odot (m \cdot a^{(l-1, k)})^{(m-1)} \odot a'^{(l-1, k)} $
 
 #### **2. Batch Gradients for MNN2D (2D):**
 
 - **Weight Updates (Layer $l$):**
   - **Gradient for C:**
-    $\frac{\partial J}{\partial C_l} = \frac{1}{N} \sum_{k=1}^{N} \left( [p^{(l-1, k)}]^T \times \delta^{(l, k)} \right)$
+    $ \frac{\partial J}{\partial C_l} = \frac{1}{N} \sum_{k=1}^{N} \left( [p^{(l-1, k)}]^T \times \delta^{(l, k)} \right) $
   - **Gradient for B:**
-    $\frac{\partial J}{\partial B_l} = \frac{1}{N} \sum_{k=1}^{N} \left( \mathbf{1}^T \times \delta^{(l, k)} \right)$
+    $ \frac{\partial J}{\partial B_l} = \frac{1}{N} \sum_{k=1}^{N} \left( \mathbf{1}^T \times \delta^{(l, k)} \right) $
 
 - **Error Propagation (to Layer $l-1$):**
-  $\delta^{(l-1, k)} = (\delta^{(l, k)} \times C_l^T) \odot (m \cdot a^{(l-1, k)})^{(m-1)} \odot a'^{(l-1, k)}$
+  $ \delta^{(l-1, k)} = (\delta^{(l, k)} \times C_l^T) \odot (m \cdot a^{(l-1, k)})^{(m-1)} \odot a'^{(l-1, k)} $
 
 ---
 
