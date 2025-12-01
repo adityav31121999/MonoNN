@@ -59,7 +59,7 @@ void mnn2d::forprop(const std::vector<std::vector<float>>& input)
 {
     // first layer
     layerForward(input, dotProds[0], cweights[0], bweights[0], order);
-    activate[0] = reshape(softmax(flatten(dotProds[0])), dotProds[0].size(), dotProds[0][0].size());
+    activate[0] = reshape(sigmoid(flatten(dotProds[0])), dotProds[0].size(), dotProds[0][0].size());
     // from 2nd to last
     for(int i = 1; i < layers; i++) {
         layerForward(activate[i-1], dotProds[i], cweights[i], bweights[i], order);
@@ -79,7 +79,7 @@ void mnn2d::forprop(const std::vector<std::vector<std::vector<float>>>& input)
     // first layer
     layerForwardBatch(input, dotBatch[0], cweights[0], bweights[0], order);
     for(int i = 0; i < batchSize; i++) {
-        actBatch[0][i] = reshape(softmax(flatten(dotBatch[0][i])), dotBatch[0][i].size(), dotBatch[0][i][0].size());
+        actBatch[0][i] = reshape(sigmoid(flatten(dotBatch[0][i])), dotBatch[0][i].size(), dotBatch[0][i][0].size());
     }
 
     // from 2nd to last
