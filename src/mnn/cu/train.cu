@@ -159,7 +159,7 @@ void mnn2d::cuTrain(const std::vector<std::vector<float>>& input, const std::vec
         if (i == EPOCH) break;
         if (i >= this->epochs) break;
 
-        // 2. Backward propagation
+        // 2. Backward propagation and weight update
         this->target = target;
         cuBackprop(this->target);
     }

@@ -20,7 +20,8 @@ extern "C" __global__ void sigmoid(const float* x, float* out, int size)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < size) {
-        out[i] = 1.0f / (1.0f + expf(-x[i]));
+        float val = 1.0f / (1.0f + expf(-x[i]));
+        out[i] = valueCorrection(val);
     }
 }
 
@@ -29,7 +30,8 @@ extern "C" __global__ void sigmoidDer(const float* x, float* out, int size)
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < size) {
         float sigmoid_x = 1.0f / (1.0f + expf(-x[i]));
-        out[i] = sigmoid_x * (1.0f - sigmoid_x);
+        float val = sigmoid_x * (1.0f - sigmoid_x);
+        out[i] = valueCorrection(val);
     }
 }
 
@@ -101,7 +103,8 @@ extern "C" __global__ void softmax_normalize(const float* input,
 
     if (global_id < size) {
         float val = expf((input[global_id] - global_max) / temp);
-        output[global_id] = val / global_sum;
+        float corrected_val = valueCorrection(val);
+        output[global_id] = corrected_val / global_sum;
     }
 }
 
@@ -117,9 +120,10 @@ extern "C" __global__ void softmaxDer_normalize(const float* input,
 
     if (global_id < size) {
         float val = expf((input[global_id] - global_max) / temp);
-        float s_i = val / global_sum;
+        float corrected_val = valueCorrection(val);
+        float s_i = corrected_val / global_sum;
         // The derivative is s_i * (1 - s_i)
-        output[global_id] = s_i * (1.0f - s_i);
+        output[global_id] = valueCorrection(s_i * (1.0f - s_i));
     }
 }
 
@@ -160,7 +164,8 @@ extern "C" __global__ void softmax(const float* x, float* out, float temp, int s
     // --- Step 3: Normalize elements and write output ---
     if (global_id < size) {
         if (sum_val > 0.0f) {
-            out[global_id] = shifted_exp / sum_val;
+            float val = shifted_exp / sum_val;
+            out[global_id] = valueCorrection(val);
         } else {
             out[global_id] = 0.0f;
         }
@@ -196,9 +201,9 @@ extern "C" __global__ void softmaxDer(const float* x, float* out, float temp, in
     if (global_id < size) {
         float s_i = 0.0f;
         if (sum_val > 0.0f) {
-            s_i = shifted_exp / sum_val;
+            s_i = valueCorrection(shifted_exp / sum_val);
         }
-        out[global_id] = s_i * (1.0f - s_i);
+        out[global_id] = valueCorrection(s_i * (1.0f - s_i));
     }
 }
 

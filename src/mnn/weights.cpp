@@ -17,10 +17,7 @@ void updateWeights(std::vector<std::vector<float>>& weights, std::vector<std::ve
     for (size_t i = 0; i < weights.size(); ++i) {
         std::transform(weights[i].begin(), weights[i].end(), gradients[i].begin(), weights[i].begin(),
             [learningRate](float w, float g) {
-                float u = w - learningRate * g;
-                if(std::isnan(u)) u = 0.0f;
-                if(std::isinf(u)) u = 1.0f;
-                return u;
+                return clamp(w - learningRate * g);
             }
         );
     }
@@ -38,10 +35,7 @@ void updateWeightsL1(std::vector<std::vector<float>>& weights, std::vector<std::
         std::transform(weights[i].begin(), weights[i].end(), gradients[i].begin(), weights[i].begin(),
             [learningRate, lambdaL1](float w, float g) {
                 float l1_grad = (w > 0.0f) ? lambdaL1 : ((w < 0.0f) ? -lambdaL1 : 0.0f);
-                float u = w - learningRate * (g + l1_grad);
-                if(std::isnan(u)) u = 0.0f;
-                if(std::isinf(u)) u = 1.0f;
-                return u;
+                return clamp(w - learningRate * (g + l1_grad));
             }
         );
     }
@@ -58,11 +52,7 @@ void updateWeightsL2(std::vector<std::vector<float>>& weights, std::vector<std::
     for (size_t i = 0; i < weights.size(); ++i) {
         std::transform(weights[i].begin(), weights[i].end(), gradients[i].begin(), weights[i].begin(),
             [learningRate, lambdaL2](float w, float g) {
-                float l2_grad = 2.0f * lambdaL2 * w;
-                float u = w - learningRate * (g + l2_grad);
-                if(std::isnan(u)) u = 0.0f;
-                if(std::isinf(u)) u = 1.0f;
-                return u;
+                return clamp(w - learningRate * (g + 2.0f * lambdaL2 * w));
             });
     }
 }
@@ -80,11 +70,7 @@ void updateWeightsElastic(std::vector<std::vector<float>>& weights, std::vector<
         std::transform(weights[i].begin(), weights[i].end(), gradients[i].begin(), weights[i].begin(),
             [learningRate, lambdaL1, lambdaL2](float w, float g) {
                 float l1_grad = (w > 0.0f) ? lambdaL1 : ((w < 0.0f) ? -lambdaL1 : 0.0f);
-                float l2_grad = 2.0f * lambdaL2 * w;
-                float u = w - learningRate * (g + l1_grad + l2_grad);
-                if(std::isnan(u)) u = 0.0f;
-                if(std::isinf(u)) u = 1.0f;
-                return u;
+                return clamp(w - learningRate * (g + l1_grad + 2.0f * lambdaL2 * w));
             });
     }
 }
@@ -100,10 +86,7 @@ void updateWeightsWeightDecay(std::vector<std::vector<float>>& weights, std::vec
     for (size_t i = 0; i < weights.size(); ++i) {
         std::transform(weights[i].begin(), weights[i].end(), gradients[i].begin(), weights[i].begin(),
             [learningRate, decayRate](float w, float g) {
-                float u = w * (1.0f - decayRate) - learningRate * g;
-                if(std::isnan(u)) u = 0.0f;
-                if(std::isinf(u)) u = 1.0f;
-                return u;
+                return clamp(w * (1.0f - decayRate) - learningRate * g);
             });
     }
 }
@@ -127,10 +110,7 @@ void updateWeightsDropout(std::vector<std::vector<float>>& weights, std::vector<
                 if (dis(gen) < dropoutRate) {
                     return w; // Keep weight unchanged (gradient is effectively zero)
                 }
-                float u = w - learningRate * g;
-                if(std::isnan(u)) u = 0.0f;
-                if(std::isinf(u)) u = 1.0f;
-                return u;
+                return clamp(w - learningRate * g);
             });
     }
 }
@@ -192,7 +172,7 @@ void setWeightsByNormalDist(std::vector<std::vector<std::vector<float>>>& weight
     for (auto& layer : weights) {
         for (auto& row : layer) {
             for (auto& weight : row) {
-                weight = dis(gen);
+                weight = clamp(dis(gen));
             }
         }
     }
@@ -212,7 +192,7 @@ void setWeightsByUniformDist(std::vector<std::vector<std::vector<float>>>& weigh
     for (auto& layer : weights) {
         for (auto& row : layer) {
             for (auto& weight : row) {
-                weight = dis(gen);
+                weight = clamp(dis(gen));
             }
         }
     }

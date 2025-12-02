@@ -16,6 +16,7 @@ mnn::mnn(int insize, int outsize, int layers, float order, std::string binFileAd
     output(outsize, 0.0f), target(outsize, 0.0f), batchSize(1), binFileAddress(binFileAddress),
     epochs(100), iterations(0), learningRate(0.01f)
 {
+    this->mnnPrg = {};
     int dim = (insize + outsize) / 2;
     width.resize(layers, dim);
     width[layers - 1] = outsize;
@@ -131,6 +132,7 @@ mnn::mnn(int insize, int outsize, int dim, int layers, float order, std::string 
     output(outsize, 0.0f), target(outsize, 0.0f), batchSize(1), binFileAddress(binFileAddress),
     epochs(100), iterations(0), learningRate(0.01f)
 {
+    this->mnnPrg = {};
     width.resize(layers, dim);
     width[layers - 1] = outsize;
     // initialize weights
@@ -243,6 +245,7 @@ mnn::mnn(int insize, int outsize, std::vector<int> width, float order, std::stri
     input(insize, 0.0f), output(outsize, 0.0f), target(outsize, 0.0f), batchSize(1), binFileAddress(binFileAddress),
     epochs(100), iterations(0), learningRate(0.01f)
 {
+    this->mnnPrg = {};
     // initialize weights
     cweights.resize(layers);
     bweights.resize(layers);

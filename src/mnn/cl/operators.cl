@@ -4,7 +4,7 @@ __kernel void add(__global float* x, __global float* y, __global float* out, int
 {
     int i = get_global_id(0);
     if (i < size) {
-        out[i] = x[i] + y[i];
+        out[i] = valueCorrection(x[i] + y[i]);
     }
 }
 
@@ -12,7 +12,7 @@ __kernel void subtract(__global float* x, __global float* y, __global float* out
 {
     int i = get_global_id(0);
     if (i < size) {
-        out[i] = x[i] - y[i];
+        out[i] = valueCorrection(x[i] - y[i]);
     }
 }
 
@@ -20,7 +20,7 @@ __kernel void scaleByValue(__global float* x, __global float* out, float val, in
 {
     int i = get_global_id(0);
     if (i < size) {
-        out[i] = x[i] * val;
+        out[i] = valueCorrection(x[i] * val);
     }
 }
 
@@ -28,7 +28,7 @@ __kernel void power(__global float* x, __global float* out, float n, int size)
 {
     int i = get_global_id(0);
     if (i < size) {
-        out[i] = pow(x[i], n);
+        out[i] = valueCorrection(pow(x[i], n));
     }
 }
 
@@ -36,7 +36,7 @@ __kernel void dPower(__global float* x, __global float* out, float n, int size)
 {
     int i = get_global_id(0);
     if (i < size) {
-        out[i] = n * pow(x[i], n - 1.0f);
+        out[i] = valueCorrection(n * pow(x[i], n - 1.0f));
     }
 }
 
@@ -49,7 +49,7 @@ __kernel void meanPool(__global float* in, __global float* out, int inRows, int 
         for (int r = 0; r < inRows; ++r) {
             sum += in[r * inCols + c];
         }
-        out[c] = sum / (float)inRows;
+        out[c] = valueCorrection(sum / (float)inRows);
     }
 }
 
@@ -70,7 +70,7 @@ __kernel void maxPool(__global float* in, __global float* out, int inRows, int i
                 max_val = max(max_val, in[in_row * inCols + in_col]);
             }
         }
-        out[r * outCols + c] = max_val;
+        out[r * outCols + c] = valueCorrection(max_val);
     }
 }
 
@@ -95,7 +95,7 @@ __kernel void vecxvec2mat (const __global float* x1, const __global float* x2, _
     if (i < resultSize) {
         int row = i / x2size;
         int col = i % x2size;
-        result[i] = x1[row] * x2[col]; // Outer Product
+        result[i] = valueCorrection(x1[row] * x2[col]); // Outer Product
     }
 }
 
@@ -109,7 +109,7 @@ __kernel void vecxmat2vec (const __global float* vec, const __global float* mat,
             // mat[j][i] index is j * matCols + i
             sum += vec[j] * mat[j * matCols + i];
         }
-        result[i] = sum;
+        result[i] = valueCorrection(sum);
     }
 }
 
@@ -131,7 +131,7 @@ __kernel void matxmat2mat (const __global float* mat1, const __global float* mat
             // mat2[k][c] index: k * mat2cols + c
             sum += mat1[r * mat1Cols + k] * mat2[k * mat2cols + c];
         }
-        result[i] = sum;
+        result[i] = valueCorrection(sum);
     }
 }
 
@@ -145,7 +145,7 @@ __kernel void matxvec2vec (const __global float* mat, const __global float* vec,
             // mat[i][j] index: i * matCols + j
             sum += mat[i * matCols + j] * vec[j];
         }
-        result[i] = sum;
+        result[i] = valueCorrection(sum);
     }
 }
 
@@ -156,7 +156,7 @@ __kernel void hadamard (const __global float* mat1, const __global float* mat2, 
 
     if (i < totalSize) {
         // Element-wise multiplication (Hadamard product)
-        result[i] = mat1[i] * mat2[i];
+        result[i] = valueCorrection(mat1[i] * mat2[i]);
     }
 }
 
@@ -168,7 +168,7 @@ __kernel void hadamard2 (const __global float* mat1, const __global float* mat2,
 
     if (i < totalSize) {
         // Element-wise multiplication (Hadamard product)
-        result[i] = mat1[i] * mat2[i] * mat3[i];
+        result[i] = valueCorrection(mat1[i] * mat2[i] * mat3[i]);
     }
 }
 
@@ -221,7 +221,7 @@ __kernel void matrix_vector_average(
     int outputIndex = j * Cols + k;
 
     // Calculate the average and write it to the output buffer.
-    outputBuffer[outputIndex] = sum / (float)N;
+    outputBuffer[outputIndex] = valueCorrection(sum / (float)N);
 }
 
 /**
@@ -245,7 +245,7 @@ __kernel void matrix_vector_sum(
         for (int i = 0; i < Rows * Cols; ++i) {
             sum += inputBuffer[i];
         }
-        outputBuffer[0] = sum;
+        outputBuffer[0] = valueCorrection(sum);
     }
 }
 
@@ -258,7 +258,7 @@ __kernel void kernelUpdateWeights(__global float* weights,
 {
     int i = get_global_id(0);
     if (i < totalElements) {
-        weights[i] -= learning_rate * gweights[i];
+        weights[i] = valueCorrection(weights[i] - learning_rate * gweights[i]);
     }
 }
 
@@ -280,7 +280,7 @@ __kernel void kernelUpdateWeightsWithL1(__global float* weights,
         // Total gradient
         float total_gradient = gweights[i] + l1_gradient;
 
-        weights[i] -= learning_rate * total_gradient;
+        weights[i] = valueCorrection(weights[i] - learning_rate * total_gradient);
     }
 }
 
@@ -300,7 +300,7 @@ __kernel void kernelUpdateWeightsWithL2(__global float* weights,
         // Total gradient
         float total_gradient = gweights[i] + l2_gradient;
 
-        weights[i] -= learning_rate * total_gradient;
+        weights[i] = valueCorrection(weights[i] - learning_rate * total_gradient);
     }
 }
 
@@ -326,7 +326,7 @@ __kernel void kernelUpdateWeightsElasticNet(__global float* weights,
         // Total gradient
         float total_gradient = gweights[i] + l2_gradient + l1_gradient;
 
-        weights[i] -= learning_rate * total_gradient;
+        weights[i] = valueCorrection(weights[i] - learning_rate * total_gradient);
     }
 }
 
@@ -342,7 +342,7 @@ __kernel void kernelUpdateWeightsWithWeightDecay(__global float* weights,
         float current_weight = weights[i];
         float gradient = gweights[i];
 
-        weights[i] = current_weight * (1.0f - decay_rate) - learning_rate * gradient;
+        weights[i] = valueCorrection(current_weight * (1.0f - decay_rate) - learning_rate * gradient);
     }
 }
 
@@ -365,7 +365,7 @@ __kernel void kernelUpdateWeightsDropout(__global float* weights,
         float rand_val = (float)(seed) / (float)(0xFFFFFFFF); // Normalize to [0.0, 1.0]
 
         if (rand_val >= dropout_rate) {
-            weights[i] -= learning_rate * gweights[i];
+            weights[i] = valueCorrection(weights[i] - learning_rate * gweights[i]);
         }
         // If rand_val < dropout_rate, the weight is "dropped" and remains unchanged.
     }

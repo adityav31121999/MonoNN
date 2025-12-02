@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.30.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.18.0 FATAL_ERROR)
 project(monoNN)
 set(VERSION 0.0.2)
 message("> Project Name: ${PROJECT_NAME} | Version: ${VERSION}")
@@ -6,8 +6,8 @@ message("> Experimental Implementation of Monomial Neural Network")
 
 # backend for computations
 set(USE_CL OFF)
-set(USE_CU OFF)
-set(USE_CPU ON)
+set(USE_CU ON)
+set(USE_CPU OFF)
 
 # binaries for debug and release
 set(OSbit 32)

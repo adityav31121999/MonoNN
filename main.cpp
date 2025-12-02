@@ -27,7 +27,7 @@ int main() {
     int inSize = 784;
     int inh = 28, inw = 28;
     int outSize = 10;
-    float order = 1.0f;
+    float order = 1.5f;
     std::vector<int> hidden_layers1 = { 784, 392, 196, 98, 49, outSize };
     std::vector<int> hidden_layers2 = { 28, 56, 112, 224, 224, 224, 112, 56, 28, outSize };
 
@@ -35,11 +35,12 @@ int main() {
 
         std::cout << "----------------------MNN----------------------" << std::endl;
         mnn network1(inSize, outSize, hidden_layers1, order, binFileAddress1);
-        network1.loadNetwork();
+        network1.initiateWeights(3);
+        network1.saveNetwork();
         network1.path2progress = progressData1;
         network1.batchSize = 1;
         network1.mnnPrg.sessionSize = 50;
-        network1.learningRate = 0.01f;
+        network1.learningRate = 0.0075f;
         network1.train(digitTrain, network1.batchSize);
 /*
         std::cout << "---------------------MNN2D---------------------" << std::endl;

@@ -6,45 +6,6 @@
 #include <algorithm>
 #include <iostream>
 
-/**
- * @brief monomial operation for single layer in forprop
- * @param [in] input vector input
- * @param [out] output vector output
- * @param [in] cweights coefficient weights
- * @param [in] bweights bias weights
- */
-void layerForward(const std::vector<float>& input, std::vector<float>& output, const std::vector<std::vector<float>>& cweights,
-                const std::vector<std::vector<float>>& bweights)
-{
-    if(input.size() != cweights.size()) {
-        throw std::runtime_error("input size and cweights rows mismatch :)");
-    }
-    if(input.size() != bweights.size()) {
-        throw std::runtime_error("input size and bweights rows mismatch :)");
-    }
-    if(output.size() != cweights[0].size()) {
-        throw std::runtime_error("output size and cweights columns mismatch :)");
-    }
-    if(output.size() != bweights[0].size()) {
-        throw std::runtime_error("output size and bweights columns mismatch :)");
-    }
-    
-    for(int i = 0; i < cweights.size(); i++) {
-        for(int j = 0; j < cweights[0].size(); j++) {
-            // output[j] = sum(input[i]*cweights[i][j] + bweights[i][j]) for j = 0 to height - 1
-            output[j] += (input[i]*cweights[i][j]) + bweights[i][j];
-        }
-    }
-    for(int i = 0; i < output.size(); i++) {
-        if (std::isnan(output[i])) {
-            output[i] = 0.0f;
-        }
-        else if (std::isinf(output[i])) {
-            output[i] = 1.0f;
-        }
-    }
-}
-
 
 /**
  * @brief monomial operation for single layer in forprop
@@ -75,54 +36,7 @@ void layerForward(const std::vector<float>& input, std::vector<float>& output, c
             output[j] += (powerIn[i]*cweights[i][j]) + bweights[i][j];
         }
     }
-    for(int i = 0; i < output.size(); i++) {
-        if (std::isnan(output[i])) {
-            output[i] = 0.0f;
-        }
-        else if (std::isinf(output[i])) {
-            output[i] = 1.0f;
-        }
-    }
-}
-
-
-/**
- * @brief monomial operation for single layer in forprop
- * @param [in] input matrix input
- * @param [out] output matrix output
- * @param [in] cweights coefficient weights
- * @param [in] bweights bias weights
- */
-void layerForward(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output,
-                    const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights)
-{
-    if (input.empty() || cweights.empty() || bweights.empty()) {
-        throw std::invalid_argument("Input and weight matrices cannot be empty.");
-    }
-    if (input[0].size() != cweights.size()) {
-        throw std::runtime_error("Input columns and cweights rows mismatch.");
-    }
-    if (cweights.size() != bweights.size() || cweights[0].size() != bweights[0].size()) {
-        throw std::runtime_error("cweights and bweights dimensions must match.");
-    }
-    if (output.size() != input.size() || output[0].size() != cweights[0].size()) {
-        throw std::runtime_error("Output matrix has incorrect dimensions.");
-    }
-
-    // output = (input^n) * cweights + bweights
-    for (size_t i = 0; i < input.size(); ++i) {
-        for (size_t j = 0; j < cweights[0].size(); ++j) {
-            for (size_t k = 0; k < cweights.size(); ++k) {
-                output[i][j] += (input[i][k] * cweights[k][j]) + bweights[i][j];
-            }
-            if (std::isnan(output[i][j])) {
-                output[i][j] = 0.0f;
-            }
-            if (std::isinf(output[i][j])) {
-                output[i][j] = 1.0f;
-            }
-        }
-    }
+    std::transform(output.begin(), output.end(), output.begin(), [](float val) { return clamp(val); });
 }
 
 
@@ -161,62 +75,13 @@ void layerForward(const std::vector<std::vector<float>>& input, std::vector<std:
             for (size_t k = 0; k < cweights.size(); ++k) {
                 dotProd_ij += (powerIn[i][k] * cweights[k][j]) + bweights[k][j];
             }
-            output[i][j] = dotProd_ij; // Assign the final sum
-            if (std::isnan(output[i][j])) {
-                output[i][j] = 0.0f;
-            }
-            if (std::isinf(output[i][j])) {
-                output[i][j] = 1.0f;
-            }
+            output[i][j] = clamp(dotProd_ij); // Assign the final sum
+
         }
     }
 }
-
 
 //// Batch Forprop Variants ////
-
-/**
- * @brief batch layer forward for mnn
- * @param [in] input batch of input vectors
- * @param [out] output batch of output vectors
- * @param [in] cweights coefficient weights
- * @param [in] bweights bias weights
- */
-void layerForwardBatch(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output,
-                       const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights)
-{
-    if (input.empty()) return;
-    int batchSize = input.size();
-    int inSize = cweights.size();
-    int outSize = cweights[0].size();
-
-    // Precompute bias sum
-    std::vector<float> b_sum(outSize, 0.0f);
-    for(int i=0; i<inSize; ++i) {
-        for(int j=0; j<outSize; ++j) {
-            b_sum[j] += bweights[i][j];
-        }
-    }
-
-    for(int b=0; b<batchSize; ++b) {
-        // Add bias sum
-        for(int j=0; j<outSize; ++j) output[b][j] += b_sum[j];
-
-        for(int i=0; i<inSize; ++i) {
-            float in_val = input[b][i];
-            for(int j=0; j<outSize; ++j) {
-                output[b][j] += in_val * cweights[i][j];
-            }
-        }
-        
-        for(int j=0; j<outSize; ++j) {
-            if (std::isnan(output[b][j]))
-                output[b][j] = 0.0f;
-            else if (std::isinf(output[b][j]))
-                output[b][j] = 1.0f;
-        }
-    }
-}
 
 /**
  * @brief batch layer forward for mnn with power
@@ -229,7 +94,23 @@ void layerForwardBatch(const std::vector<std::vector<float>>& input, std::vector
 void layerForwardBatch(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output,
                        const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights, float n)
 {
-    if (input.empty()) return;
+    if (input.empty()) 
+        throw std::runtime_error("Input batch is empty.");
+    if (input[0].size() != output[0].size()) 
+        throw std::runtime_error("Input batch size and output batch size mismatch.");
+    if (input[0].size() != cweights.size()) {
+        throw std::runtime_error("input size and cweights rows mismatch :)");
+    }
+    if (input[0].size() != bweights.size()) {
+        throw std::runtime_error("input size and bweights rows mismatch :)");
+    }
+    if (output[0].size() != cweights[0].size()) {
+        throw std::runtime_error("output size and cweights columns mismatch :)");
+    }
+    if (output[0].size() != bweights[0].size()) {
+        throw std::runtime_error("output size and bweights columns mismatch :)");
+    }
+
     int batchSize = input.size();
     int inSize = cweights.size();
     int outSize = cweights[0].size();
@@ -255,54 +136,10 @@ void layerForwardBatch(const std::vector<std::vector<float>>& input, std::vector
             }
         }
 
-        for(int j=0; j<outSize; ++j) {
-            if (std::isnan(output[b][j]))
-                output[b][j] = 0.0f;
-            else if (std::isinf(output[b][j]))
-                output[b][j] = 1.0f;
-        }
+        std::transform(output[b].begin(), output[b].end(), output[b].begin(), [](float val) { return clamp(val); });
     }
 }
 
-/**
- * @brief batch layer forward for mnn2d
- * @param [in] input batch of input matrices
- * @param [out] output batch of output matrices
- * @param [in] cweights coefficient weights
- * @param [in] bweights bias weights
- */
-void layerForwardBatch(const std::vector<std::vector<std::vector<float>>>& input, std::vector<std::vector<std::vector<float>>>& output,
-                       const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights)
-{
-    if (input.empty()) return;
-    int batchSize = input.size();
-    int inHeight = input[0].size();
-    int inWidth = input[0][0].size(); // cweights.size()
-    int outWidth = cweights[0].size();
-
-    for(int b=0; b<batchSize; ++b) {
-        for(int r=0; r<inHeight; ++r) {
-            // Add bias term (bweights[r][c] * inWidth)
-            for(int c=0; c<outWidth; ++c) {
-                output[b][r][c] += bweights[r][c] * inWidth;
-            }
-
-            for(int k=0; k<inWidth; ++k) {
-                float in_val = input[b][r][k];
-                for(int c=0; c<outWidth; ++c) {
-                    output[b][r][c] += (in_val * cweights[k][c]);
-                }
-            }
-
-            for(int c=0; c<outWidth; ++c) {
-                if (std::isnan(output[b][r][c])) 
-                    output[b][r][c] = 0.0f;
-                else if (std::isinf(output[b][r][c]))
-                    output[b][r][c] = 1.0f;
-            }
-        }
-    }
-}
 
 /**
  * @brief batch layer forward for mnn2d with power
@@ -337,12 +174,7 @@ void layerForwardBatch(const std::vector<std::vector<std::vector<float>>>& input
                 }
             }
 
-            for(int c=0; c<outWidth; ++c) {
-                if (std::isnan(output[b][r][c])) 
-                    output[b][r][c] = 0.0f;
-                else if (std::isinf(output[b][r][c]))
-                    output[b][r][c] = 1.0f;
-            }
+            std::transform(output[b][r].begin(), output[b][r].end(), output[b][r].begin(), [](float val) { return clamp(val); });
         }
     }
 }

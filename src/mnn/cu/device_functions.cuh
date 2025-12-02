@@ -25,12 +25,23 @@ __device__ __forceinline__ float OP_DIV(float a, float b) { return a / b; }
 __device__ __forceinline__ float OP_POW(float a, float b) { return powf(a, b); }
 __device__ __forceinline__ float OP_EXP(float a) { return expf(a); }
 __device__ __forceinline__ float OP_SIGN(float a) 
-                                    {
-                                        if (a == 0.0f)
-                                            return 0.0f;
-                                        else
-                                            return signbit(a) ? -1.0f : 1.0f;
-                                    }
+{
+    if (a == 0.0f)
+        return 0.0f;
+    else
+        return signbit(a) ? -1.0f : 1.0f;
+}
+__device__ __forceinline__ float valueCorrection(float value) {
+    if (isnan(value)){
+        return 0.0f;
+    }
+    else if (isinf(value)){
+        return copysignf(1.0f, value);
+    }
+    else {
+        return value;
+    }
+}
 
 #endif // MNN_CU_DEVICE_FUNCTIONS_CUH
 #endif // USE_CU

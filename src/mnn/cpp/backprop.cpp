@@ -12,7 +12,6 @@
  * @param expected The expected output vector.
  */
 void mnn::backprop(const std::vector<float>& expected) {
-    int type = 3;
     this->target = expected;
     std::vector<float> output_error(outSize, 0.0f);
     for(int i = 0; i < outSize; i++) {
@@ -22,14 +21,14 @@ void mnn::backprop(const std::vector<float>& expected) {
     // Backpropagate the error
     for(int layer = layers - 1; layer >= 1; layer--) {
         std::vector<float> outgoing_gradient;
-        layerBackward(incoming_gradient, outgoing_gradient, activate[layer-1], 
-                        cweights[layer], cgradients[layer], bgradients[layer],
-                        order, ALPHA);
+        layerBackward(incoming_gradient, outgoing_gradient, activate[layer-1], cweights[layer], cgradients[layer],
+                        bgradients[layer], order, ALPHA);
         incoming_gradient = outgoing_gradient;
     }
-    layerBackward(incoming_gradient, input, cweights[0], cgradients[0], bgradients[0],
-                    order, ALPHA);
+    layerBackward(incoming_gradient, input, cweights[0], cgradients[0], bgradients[0], order, ALPHA);
+
     // update weights
+    int type = 3;
     for(int i = 0; i < layers; i++) {
         updateWeights(cweights[i], cgradients[i], learningRate, type);
         updateWeights(bweights[i], bgradients[i], learningRate, type);
@@ -43,7 +42,6 @@ void mnn::backprop(const std::vector<float>& expected) {
  */
 void mnn::backprop(const std::vector<std::vector<float>>& expected)
 {
-    int type = 3;
     std::vector<std::vector<float>> output_error(expected.size(), std::vector<float>(outSize, 0.0f));
     for(int i = 0; i < expected.size(); i++) {
         for(int j = 0; j < outSize; j++) {
@@ -57,10 +55,11 @@ void mnn::backprop(const std::vector<std::vector<float>>& expected)
                     cweights[layer], cgradients[layer], bgradients[layer], order, ALPHA);
         incoming_gradient = outgoing_gradient;
     }
-
     layerBackwardBatch(incoming_gradient, inputBatch, cweights[0], cgradients[0], bgradients[0],
                 order, ALPHA);
+
     // update weights
+    int type = 3;
     for(int i = 0; i < layers; i++) {
         updateWeights(cweights[i], cgradients[i], learningRate, type);
         updateWeights(bweights[i], bgradients[i], learningRate, type);
@@ -74,7 +73,6 @@ void mnn::backprop(const std::vector<std::vector<float>>& expected)
  * @param expected The expected output vector (after pooling).
  */
 void mnn2d::backprop(const std::vector<float>& expected) {
-    int type = 3;
     this->target = expected;
     std::vector<float> output_error(target.size(), 0.0f);
     for(int i = 0; i < outWidth; i++) {
@@ -99,7 +97,9 @@ void mnn2d::backprop(const std::vector<float>& expected) {
     }
     layerBackward(incoming_gradient, reshape(softmax(flatten(input)), input.size(), input[0].size()),
                     cweights[0], cgradients[0], bgradients[0], order, ALPHA);
+
     // update weights
+    int type = 3;
     for(int i = 0; i < layers; i++) {
         updateWeights(cweights[i], cgradients[i], learningRate, type);
         updateWeights(bweights[i], bgradients[i], learningRate, type);
@@ -112,7 +112,6 @@ void mnn2d::backprop(const std::vector<float>& expected) {
  * @param expected The expected output vector (after pooling).
  */
 void mnn2d::backprop(const std::vector<std::vector<float>>& expected) {
-    int type = 3;
     std::vector<std::vector<float>> output_error(expected.size(), std::vector<float>(expected[0].size(), 0.0f));
     for(int i = 0; i < expected.size(); i++) {
         for(int j = 0; j < expected[i].size(); j++)
@@ -138,7 +137,9 @@ void mnn2d::backprop(const std::vector<std::vector<float>>& expected) {
     }
     layerBackwardBatch(incoming_gradient, inputBatch, cweights[0], cgradients[0], bgradients[0], order, 
                         ALPHA);
+
     // update weights
+    int type = 3;
     for(int i = 0; i < layers; i++) {
         updateWeights(cweights[i], cgradients[i], learningRate, type);
         updateWeights(bweights[i], bgradients[i], learningRate, type);

@@ -11,6 +11,7 @@ float mse(const std::vector<float>& output, const std::vector<float>& target) {
     for (size_t i = 0; i < output.size(); ++i) {
         float error = output[i] - target[i];
         sum_sq_err += error * error;
+        sum_sq_err = clamp(sum_sq_err);
     }
     return sum_sq_err / output.size();
 }
@@ -22,6 +23,7 @@ std::vector<float> mseDer(const std::vector<float>& output, const std::vector<fl
     std::vector<float> derivative(output.size());
     for (size_t i = 0; i < output.size(); ++i) {
         derivative[i] = 2.0f * (output[i] - target[i]) / output.size();
+        derivative[i] = clamp(derivative[i]);
     }
     return derivative;
 }
@@ -36,6 +38,7 @@ float crossEntropy(const std::vector<float>& output, const std::vector<float>& t
         // Clamp output to prevent log(0) and log(1)
         float clamped_output = std::max<float>(epsilon, std::min<float>(1.0f - epsilon, output[i]));
         loss += target[i] * std::log(clamped_output);
+        loss = clamp(loss);
     }
     return -loss;
 }
@@ -47,6 +50,7 @@ std::vector<float> crossEntropyDer(const std::vector<float>& output, const std::
     std::vector<float> derivative(output.size());
     for (size_t i = 0; i < output.size(); ++i) {
         derivative[i] = -target[i] / (output[i] + 1e-9f);
+        derivative[i] = clamp(derivative[i]);
     }
     return derivative;
 }
@@ -59,6 +63,7 @@ float binaryCrossEntropy(const std::vector<float>& output, const std::vector<flo
     for (size_t i = 0; i < output.size(); ++i) {
         // Add a small epsilon to prevent log(0) or log(1) for 0 or 1
         loss += target[i] * std::log(output[i] + 1e-9f) + (1.0f - target[i]) * std::log(1.0f - output[i] + 1e-9f);
+        loss = clamp(loss);
     }
     return -loss / output.size();
 }
@@ -71,6 +76,7 @@ std::vector<float> binaryCrossEntropyDer(const std::vector<float>& output, const
     for (size_t i = 0; i < output.size(); ++i) {
         // Derivative with respect to the output
         derivative[i] = -(target[i] / (output[i] + 1e-9f) - (1.0f - target[i]) / (1.0f - output[i] + 1e-9f)) / output.size();
+        derivative[i] = clamp(derivative[i]);
     }
     return derivative;
 }
@@ -84,7 +90,23 @@ float categoricalCrossEntropy(const std::vector<std::vector<float>>& output, con
     for (size_t i = 0; i < output.size(); ++i) {
         for (size_t j = 0; j < output[i].size(); ++j) {
             loss += target[i][j] * std::log(output[i][j] + 1e-9f);
+            loss = clamp(loss);
         }
     }
     return -loss / output.size();
+}
+
+std::vector<std::vector<float>> categoricalCrossEntropyDer(const std::vector<std::vector<float>>& output, const std::vector<std::vector<float>>& target) {
+    if (output.size() != target.size() || output[0].size() != target[0].size()) {
+        throw std::runtime_error("Dimension mismatch: " + std::to_string(output.size()) + "x" + std::to_string(output[0].size()) 
+                                                        + " vs " + std::to_string(target.size()) + "x" + std::to_string(target[0].size()));
+    }
+    std::vector<std::vector<float>> derivative(output.size(), std::vector<float>(output[0].size()));
+    for (size_t i = 0; i < output.size(); ++i) {
+        for (size_t j = 0; j < output[i].size(); ++j) {
+            derivative[i][j] = -target[i][j] / (output[i][j] + 1e-9f) / output.size();
+            derivative[i][j] = clamp(derivative[i][j]);
+        }
+    }
+    return derivative;
 }

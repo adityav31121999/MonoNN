@@ -6,9 +6,9 @@
 #define LEARNING_MAX 0.01f          // maximum learning rate allowed
 #define LEARNING_MIN 0.00001f       // minimum learning rate allowed
 #define LAMBDA_L1 0.0001f           // L1 regularization parameter
-#define LAMBDA_L2 0.0025f           // L2 regularization parameter
-#define DROPOUT_RATE 0.6f           // dropout rate
-#define DECAY_RATE 0.001f           // weight decay rate
+#define LAMBDA_L2 0.0036f           // L2 regularization parameter
+#define DROPOUT_RATE 0.75f          // dropout rate
+#define DECAY_RATE 0.0025f          // weight decay rate
 #define WEIGHT_DECAY 0.001f         // weight decay parameter
 #define SOFTMAX_TEMP 1.05f          // softmax temperature
 #define EPOCH 100                   // epochs for single set training

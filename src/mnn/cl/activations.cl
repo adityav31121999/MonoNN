@@ -21,11 +21,23 @@ inline float OP_MUL(float a, float b) { return a * b; }
 inline float OP_DIV(float a, float b) { return a / b; }
 inline float OP_POW(float a, float b) { return pow(a, b); }
 inline float OP_EXP(float a) { return exp(a); }
-inline float OP_SIGN(float a) { if (a == 0.0f)
-                                    return 0.0f;
-                                else
-                                    return signbit(a) ? -1.0f : 1.0f;
-                              }
+inline float OP_SIGN(float a) { 
+    if (a == 0.0f)
+        return 0.0f;
+    else
+        return signbit(a) ? -1.0f : 1.0f;
+}
+inline float valueCorrection(float a) {
+    if(isnan(a)) {
+        return 0.0f;
+    }
+    else if (isinf(a)) {
+        return OP_SIGN(a);
+    }
+    else {
+        return a;
+    }
+}
 
 /// ----------------- Activations and their Derivatives ----------------- ///
 
@@ -33,7 +45,9 @@ __kernel void sigmoid(__global float* x, __global float* out, int size)
 {
     int i = get_global_id(0);
     if (i < size) {
-        out[i] = 1.0f / (1.0f + exp(-x[i]));
+        float val = 0.0f;
+        val = 1.0f / (1.0f + exp(-x[i]));
+        out[i] = valueCorrection(val);
     }
 }
 
@@ -42,7 +56,8 @@ __kernel void sigmoidDer(__global float* x, __global float* out, int size)
     int i = get_global_id(0);
     if (i < size) {
         float sigmoid_x = 1.0f / (1.0f + exp(-x[i]));
-        out[i] = sigmoid_x * (1.0f - sigmoid_x);
+        float val = sigmoid_x * (1.0f - sigmoid_x);
+        out[i] = valueCorrection(val);
     }
 }
 
@@ -125,7 +140,8 @@ __kernel void softmax_normalize(__global const float* input,
 
     if (global_id < size) {
         float val = exp((input[global_id] - global_max) / temp);
-        output[global_id] = val / global_sum;
+        float corrected_val = valueCorrection(val);
+        output[global_id] = corrected_val / global_sum;
     }
 }
 
@@ -145,9 +161,10 @@ __kernel void softmaxDer_normalize(__global const float* input,
 
     if (global_id < size) {
         float val = exp((input[global_id] - global_max) / temp);
-        float s_i = val / global_sum;
+        float corrected_val = valueCorrection(val);
+        float s_i = corrected_val / global_sum;
         // The derivative is s_i * (1 - s_i)
-        output[global_id] = s_i * (1.0f - s_i);
+        output[global_id] = valueCorrection(s_i * (1.0f - s_i));
     }
 }
 
@@ -207,12 +224,13 @@ __kernel void softmax(__global float* x, __global float* out, float temp, int si
     // --- Step 3: Normalize elements and write output ---
     if (global_id < size) {
         if (sum_val > 0.0f) {
-            out[global_id] = shifted_exp / sum_val;
+            float val = shifted_exp / sum_val;
+            out[global_id] = valueCorrection(val);
         }
         else {
             // Handle sum == 0 case (should ideally not happen with max-shift unless underflow is severe).
             // Setting to a small positive value (e.g., 1/size) or 0.0f is implementation specific.
-            // Setting to 0.0f is numerically safer if the result must be 0-1.
+            // Setting to 0.0f is numerically safer if the result must be 0-1. 
             out[global_id] = 0.0f; 
         }
     }
@@ -253,12 +271,12 @@ __kernel void softmaxDer(__global float* x, __global float* out, float temp, int
     if (global_id < size) {
         float s_i = 0.0f;
         if (sum_val > 0.0f) {
-            s_i = shifted_exp / sum_val; 
+            s_i = valueCorrection(shifted_exp / sum_val); 
         } 
         
         // The derivative for a single element s_i with respect to its own input x_i is s_i * (1 - s_i).
         // This derivative is WRONG if x is the result of a previous operation and we're propagating the gradient.
         // It's correct if the derivative is with respect to the pre-softmax input (for one-hot targets).
-        out[global_id] = s_i * (1.0f - s_i);
+        out[global_id] = valueCorrection(s_i * (1.0f - s_i));
     }
 }

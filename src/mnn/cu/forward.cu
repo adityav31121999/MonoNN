@@ -3,6 +3,7 @@
 #include <cfloat>
 #include <cmath>
 #include <cuda_runtime.h>
+#include "device_functions.cuh"
 #include <cuda.h>
 
 /// ----------------- Forward Propagation ----------------- ///
@@ -20,15 +21,7 @@ extern "C" __global__ void kernelLayerForward1(const float* input, float* output
             sum += (input[i] * cweights[weight_idx]) + bweights[weight_idx];
         }
 
-        float final_val = output[j] + sum;
-
-        if (isnan(final_val)) {
-            final_val = 0.0f;
-        } else if (isinf(final_val)) {
-            final_val = 1.0f;
-        }
-        
-        output[j] = final_val;
+        output[j] = valueCorrection(output[j] + sum);
     }
 }
 
@@ -46,15 +39,7 @@ extern "C" __global__ void kernelLayerForward2(const float* input, float* output
             sum += (powered_input_i * cweights[weight_idx]) + bweights[weight_idx];
         }
 
-        float final_val = output[j] + sum;
-
-        if (isnan(final_val)) {
-            final_val = 0.0f;
-        } else if (isinf(final_val)) {
-            final_val = 1.0f;
-        }
-        
-        output[j] = final_val;
+        output[j] = valueCorrection(output[j] + sum);
     }
 }
 
@@ -71,13 +56,7 @@ extern "C" __global__ void kernelLayerForward3(const float* input, float* output
             dotProd_ij += (input[i * inWidth + k] * cweights[k * outSize + j]) + bweights[k * outSize + j];
         }
 
-        if (isnan(dotProd_ij)) {
-            dotProd_ij = 0.0f;
-        } else if (isinf(dotProd_ij)) {
-            dotProd_ij = 1.0f;
-        }
-
-        output[i * outSize + j] = dotProd_ij;
+        output[i * outSize + j] = valueCorrection(dotProd_ij);
     }
 }
 
@@ -94,13 +73,7 @@ extern "C" __global__ void kernelLayerForward4(const float* input, float* output
             dotProd_ij += (powf(input[i * inWidth + k], n) * cweights[k * outSize + j]) + bweights[k * outSize + j];
         }
 
-        if (isnan(dotProd_ij)) {
-            dotProd_ij = 0.0f;
-        } else if (isinf(dotProd_ij)) {
-            dotProd_ij = 1.0f;
-        }
-
-        output[i * outSize + j] = dotProd_ij;
+        output[i * outSize + j] = valueCorrection(dotProd_ij);
     }
 }
 
@@ -123,16 +96,7 @@ extern "C" __global__ void kernelLayerForwardBatch1(const float* input, float* o
             sum += (input[input_offset + i] * cweights[weight_idx]) + bweights[weight_idx];
         }
 
-        float final_val = output[output_offset + j] + sum;
-
-        if (isnan(final_val)) {
-            final_val = 0.0f;
-        }
-        else if (isinf(final_val)) {
-            final_val = 1.0f;
-        }
-        
-        output[output_offset + j] = final_val;
+        output[output_offset + j] = valueCorrection(output[output_offset + j] + sum);
     }
 }
 
@@ -153,16 +117,7 @@ extern "C" __global__ void kernelLayerForwardBatch2(const float* input, float* o
             sum += (powered_input_i * cweights[weight_idx]) + bweights[weight_idx];
         }
 
-        float final_val = output[output_offset + j] + sum;
-
-        if (isnan(final_val)) {
-            final_val = 0.0f;
-        }
-        else if (isinf(final_val)) {
-            final_val = 1.0f;
-        }
-        
-        output[output_offset + j] = final_val;
+        output[output_offset + j] = valueCorrection(output[output_offset + j] + sum);
     }
 }
 
@@ -184,13 +139,7 @@ extern "C" __global__ void kernelLayerForwardBatch3(const float* input, float* o
             dotProd_ij += (input[input_idx] * cweights[weight_idx]) + bweights[weight_idx];
         }
 
-        if (isnan(dotProd_ij)) {
-            dotProd_ij = 0.0f;
-        } else if (isinf(dotProd_ij)) {
-            dotProd_ij = 1.0f;
-        }
-
-        output[output_batch_offset + i * outSize + j] = dotProd_ij;
+        output[output_batch_offset + i * outSize + j] = valueCorrection(dotProd_ij);
     }
 }
 
@@ -214,13 +163,7 @@ extern "C" __global__ void kernelLayerForwardBatch4(const float* input, float* o
             dotProd_ij += (powf(input[input_idx], n) * cweights[weight_idx]) + bweights[weight_idx];
         }
 
-        if (isnan(dotProd_ij)) {
-            dotProd_ij = 0.0f;
-        } else if (isinf(dotProd_ij)) {
-            dotProd_ij = 1.0f;
-        }
-
-        output[output_batch_offset + i * outSize + j] = dotProd_ij;
+        output[output_batch_offset + i * outSize + j] = valueCorrection(dotProd_ij);
     }
 }
 

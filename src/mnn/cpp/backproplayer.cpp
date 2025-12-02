@@ -13,12 +13,12 @@
 /**
  * @brief single layer backprop for mnn for first layer
  * @param[in] incoming incoming gradient (dL/dz_l) vector
- * @param[in] prevAct activation of previous layer vector
+ * @param[in] prevAct activation of previous layer
  * @param[in] C current layers coefficients weights matrix
  * @param[out] gradc gradients for C matrix
  * @param[out] gradb gradeitns for B matrix
  * @param[in] m order of monomial
- * @param[in] alpha major gradient for C
+ * @param[in] alpha gradient splitting factor
  */
 void layerBackward(const std::vector<float>& incoming,
                     const std::vector<float>& prevAct, 
@@ -29,7 +29,7 @@ void layerBackward(const std::vector<float>& incoming,
 {
     // std::vector<float> v1(gradb.size(), 1.0f);           // dz_l/dB_l
     std::vector<float> prev_p = power(prevAct, m);          // dz_l/dC_l
-    // derivativ of prevAct (no sigmoid applied)
+    // derivativ of prevAct (sigmoid activated)
     std::vector<float> dprevAct(prevAct.size(), 1.0f);
     std::transform(prevAct.begin(), prevAct.end(), dprevAct.begin(), 
                     [](float x) { 
@@ -50,12 +50,12 @@ void layerBackward(const std::vector<float>& incoming,
 /**
  * @brief single layer backprop for mnn2d for first layer
  * @param[in] incoming incoming gradient (dL/dz_l) matrix
- * @param[in] prevAct activation of previous layer matrix
+ * @param[in] prevAct activation of previous layer
  * @param[in] C current layers coefficients weights matrix
  * @param[out] gradc gradients for C matrix
  * @param[out] gradb gradeitns for B matrix
  * @param[in] m order of monomial
- * @param[in] alpha major gradient for C
+ * @param[in] alpha gradient splitting factor
  */
 void layerBackward(const std::vector<std::vector<float>>& incoming,
                     const std::vector<std::vector<float>>& prevAct,
@@ -85,12 +85,12 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
  * @brief single layer backprop for mnn
  * @param[in] incoming incoming gradient (dL/dz_l) vector
  * @param[out] outgoing outgoing gradient (dL/dz_(l-1)) vector
- * @param[in] prevAct activation of previous layer vector
+ * @param[in] prevAct activation of previous layer
  * @param[in] C current layers coefficients weights matrix
  * @param[out] gradc gradients for C matrix
  * @param[out] gradb gradeitns for B matrix
  * @param[in] m order of monomial
- * @param[in] alpha major gradient for C
+ * @param[in] alpha gradient splitting factor
  */
 void layerBackward(const std::vector<float>& incoming,          // width[l]
                     std::vector<float>& outgoing,               // width[l-1]
@@ -106,11 +106,7 @@ void layerBackward(const std::vector<float>& incoming,          // width[l]
     std::transform(prevAct.begin(), prevAct.end(), dprev_p.begin(), 
                     [&m](float x) { 
                         float result = m * std::pow(x, m - 1.0f);
-                        // Check for NaN or infinity
-                        if (std::isnan(result) || std::isinf(result)) {
-                            return 0.0f;
-                        }
-                        return result;
+                        return clamp(result);
                     });
     // derivativ of prevAct
     std::vector<float> dprevAct(prevAct.size(), 0.0f);
@@ -144,12 +140,12 @@ void layerBackward(const std::vector<float>& incoming,          // width[l]
  * @param[in] incoming incoming gradient (dL/dz_l) matrix
  * @param[out] outgoing outgoing gradient (dL/dz_(l-1)) matrix
  * @param[in] dotProds previous layers dot product
- * @param[in] prevAct activation of previous layer dot product
+ * @param[in] prevAct activation of previous layer
  * @param[in] C current layers coefficients weights matrix
  * @param[out] gradc gradients for C matrix
  * @param[out] gradb gradeitns for B matrix
  * @param[in] m order of monomial
- * @param[in] alpha major gradient for C
+ * @param[in] alpha gradient splitting factor
  */
 void layerBackward(const std::vector<std::vector<float>>& incoming,
                     std::vector<std::vector<float>>& outgoing,
@@ -170,11 +166,7 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
         std::transform(prev_p[i].begin(), prev_p[i].end(), dprev_p[i].begin(),
                     [&m](float x) {
                         float result = m * std::pow(x, m - 1.0f);
-                        // Check for NaN or infinity
-                        if (std::isnan(result) || std::isinf(result)) {
-                            return 0.0f;
-                        }
-                        return result;
+                        return clamp(result);
                     });
     }
     // derivativ of prevAct (activation is softmax)
@@ -208,12 +200,12 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
 /**
  * @brief batch layer backprop for mnn for first layer
  * @param[in] incoming batch of incoming gradients (dL/dz_l)
- * @param[in] prevAct batch of previous layer activations
+ * @param[in] prevAct batch activation of previous layer
  * @param[in] C current layers coefficients weights matrix
  * @param[out] gradc accumulated gradients for C matrix
  * @param[out] gradb accumulated gradients for B matrix
  * @param[in] m order of monomial
- * @param[in] alpha major gradient for C
+ * @param[in] alpha gradient splitting factor
  */
 void layerBackwardBatch(const std::vector<std::vector<float>>& incoming,
                     const std::vector<std::vector<float>>& prevAct, 
@@ -252,12 +244,12 @@ void layerBackwardBatch(const std::vector<std::vector<float>>& incoming,
 /**
  * @brief batch layer backprop for mnn2d for first layer
  * @param[in] incoming batch of incoming gradients (dL/dz_l)
- * @param[in] prevAct batch of previous layer activations
+ * @param[in] prevAct batch activation of previous layer
  * @param[in] C current layers coefficients weights matrix
  * @param[out] gradc accumulated gradients for C matrix
  * @param[out] gradb accumulated gradients for B matrix
  * @param[in] m order of monomial
- * @param[in] alpha major gradient for C
+ * @param[in] alpha gradient splitting factor
  */
 void layerBackwardBatch(const std::vector<std::vector<std::vector<float>>>& incoming,
                     const std::vector<std::vector<std::vector<float>>>& prevAct,
@@ -305,12 +297,12 @@ void layerBackwardBatch(const std::vector<std::vector<std::vector<float>>>& inco
  * @brief batch layer backprop for mnn hidden layers
  * @param[in] incoming batch of incoming gradients
  * @param[out] outgoing batch of outgoing gradients
- * @param[in] prevAct batch of previous layer activations
+ * @param[in] prevAct batch activation of previous layer
  * @param[in] C current layers coefficients weights matrix
  * @param[out] gradc accumulated gradients for C matrix
  * @param[out] gradb accumulated gradients for B matrix
  * @param[in] m order of monomial
- * @param[in] alpha major gradient for C
+ * @param[in] alpha gradient splitting factor
  */
 void layerBackwardBatch(const std::vector<std::vector<float>>& incoming,
                     std::vector<std::vector<float>>& outgoing,
@@ -346,8 +338,7 @@ void layerBackwardBatch(const std::vector<std::vector<float>>& incoming,
         std::transform(prevAct[b].begin(), prevAct[b].end(), dprev_p.begin(), 
                         [&m](float x) { 
                             float result = m * std::pow(x, m - 1.0f);
-                            if (std::isnan(result) || std::isinf(result)) return 0.0f;
-                            return result;
+                            return clamp(result);
                         });
         // dprevAct
         std::vector<float> dprevAct(prevAct[b].size(), 0.0f);
@@ -375,12 +366,12 @@ void layerBackwardBatch(const std::vector<std::vector<float>>& incoming,
  * @param[in] incoming batch of incoming gradients
  * @param[out] outgoing batch of outgoing gradients
  * @param[in] dotProds batch of previous layers dot product
- * @param[in] prevAct batch of activation of previous layer
+ * @param[in] prevAct batch activation of previous layer
  * @param[in] C current layers coefficients weights matrix
  * @param[out] gradc accumulated gradients for C matrix
  * @param[out] gradb accumulated gradients for B matrix
  * @param[in] m order of monomial
- * @param[in] alpha major gradient for C
+ * @param[in] alpha gradient splitting factor
  */
 void layerBackwardBatch(const std::vector<std::vector<std::vector<float>>>& incoming,
                     std::vector<std::vector<std::vector<float>>>& outgoing,
@@ -421,8 +412,7 @@ void layerBackwardBatch(const std::vector<std::vector<std::vector<float>>>& inco
             std::transform(prev_p[i].begin(), prev_p[i].end(), dprev_p[i].begin(),
                         [&m](float x) {
                             float result = m * std::pow(x, m - 1.0f);
-                            if (std::isnan(result) || std::isinf(result)) return 0.0f;
-                            return result;
+                            return clamp(result);
                         });
         }
         std::vector<std::vector<float>> dprevAct = reshape(softmaxDer(flatten(dotProds[b])), dotProds[b].size(), dotProds[b][0].size());

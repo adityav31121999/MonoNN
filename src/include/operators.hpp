@@ -20,6 +20,12 @@ void deserializeWeights(std::vector<std::vector<std::vector<float>>>& cweights,
                         const std::vector<int>& width, const std::vector<int>& height,
                         const std::string& fileAddress);
 
+inline float clamp(float val) {
+    if (std::isnan(val)) return 0.0f;
+    if (std::isinf(val)) return 0.0f;
+    return val;
+}
+
 // activations and their derivatives
 
 float sigmoid(float x);
@@ -88,22 +94,14 @@ void updateWeights(std::vector<std::vector<float>>& weights, std::vector<std::ve
 // single layer forprop
 
 void layerForward(const std::vector<float>& input, std::vector<float>& output, const std::vector<std::vector<float>>& cweights,
-                    const std::vector<std::vector<float>>& bweights);
-void layerForward(const std::vector<float>& input, std::vector<float>& output, const std::vector<std::vector<float>>& cweights,
                     const std::vector<std::vector<float>>& bweights, float n);
-void layerForward(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output, 
-                    const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights);
 void layerForward(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output, 
                     const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights, float n);
 
 // batch layer forprop
 
 void layerForwardBatch(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output,
-                       const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights);
-void layerForwardBatch(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output,
                        const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights, float n);
-void layerForwardBatch(const std::vector<std::vector<std::vector<float>>>& input, std::vector<std::vector<std::vector<float>>>& output,
-                       const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights);
 void layerForwardBatch(const std::vector<std::vector<std::vector<float>>>& input, std::vector<std::vector<std::vector<float>>>& output,
                        const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights, float n);
 

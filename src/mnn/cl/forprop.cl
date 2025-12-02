@@ -16,16 +16,7 @@ __kernel void kernelLayerForward1(__global const float* input, __global float* o
         }
 
         // Accumulate into the existing output value, as per the C++ code's `output[j] += ...`
-        float final_val = output[j] + sum;
-
-        // Check for NaN and infinity, as done in the C++ code
-        if (isnan(final_val)) {
-            final_val = 0.0f;
-        } else if (isinf(final_val)) {
-            final_val = 1.0f;
-        }
-        
-        output[j] = final_val;
+        output[j] = valueCorrection(output[j] + sum);
     }
 }
 
@@ -46,16 +37,7 @@ __kernel void kernelLayerForward2(__global const float* input, __global float* o
         }
 
         // Accumulate into the existing output value
-        float final_val = output[j] + sum;
-
-        // Check for NaN and infinity
-        if (isnan(final_val)) {
-            final_val = 0.0f;
-        } else if (isinf(final_val)) {
-            final_val = 1.0f;
-        }
-        
-        output[j] = final_val;
+        output[j] = valueCorrection(output[j] + sum);
     }
 }
 
@@ -73,14 +55,7 @@ __kernel void kernelLayerForward3(__global const float* input, __global float* o
             dotProd_ij += (input[i * inWidth + k] * cweights[k * outSize + j]) + bweights[k * outSize + j];
         }
 
-        // Check for NaN and infinity
-        if (isnan(dotProd_ij)) {
-            dotProd_ij = 0.0f;
-        } else if (isinf(dotProd_ij)) {
-            dotProd_ij = 1.0f;
-        }
-
-        output[i * outSize + j] = dotProd_ij;
+        output[i * outSize + j] = valueCorrection(dotProd_ij);
     }
 }
 
@@ -98,14 +73,7 @@ __kernel void kernelLayerForward4(__global const float* input, __global float* o
             dotProd_ij += (pow(input[i * inWidth + k], n) * cweights[k * outSize + j]) + bweights[k * outSize + j];
         }
 
-        // Check for NaN and infinity
-        if (isnan(dotProd_ij)) {
-            dotProd_ij = 0.0f;
-        } else if (isinf(dotProd_ij)) {
-            dotProd_ij = 1.0f;
-        }
-
-        output[i * outSize + j] = dotProd_ij;
+        output[i * outSize + j] = valueCorrection(dotProd_ij);
     }
 }
 
@@ -131,17 +99,7 @@ __kernel void kernelLayerForwardBatch1(__global const float* input, __global flo
         }
 
         // Accumulate into the existing output value, as per the C++ code's `output[j] += ...`
-        float final_val = output[output_offset + j] + sum;
-
-        // Check for NaN and infinity, as done in the C++ code
-        if (isnan(final_val)) {
-            final_val = 0.0f;
-        }
-        else if (isinf(final_val)) {
-            final_val = 1.0f;
-        }
-        
-        output[output_offset + j] = final_val;
+        output[output_offset + j] = valueCorrection(output[output_offset + j] + sum);
     }
 }
 
@@ -165,17 +123,7 @@ __kernel void kernelLayerForwardBatch2(__global const float* input, __global flo
         }
 
         // Accumulate into the existing output value
-        float final_val = output[output_offset + j] + sum;
-
-        // Check for NaN and infinity
-        if (isnan(final_val)) {
-            final_val = 0.0f;
-        }
-        else if (isinf(final_val)) {
-            final_val = 1.0f;
-        }
-        
-        output[output_offset + j] = final_val;
+        output[output_offset + j] = valueCorrection(output[output_offset + j] + sum);
     }
 }
 
@@ -201,15 +149,8 @@ __kernel void kernelLayerForwardBatch3(__global const float* input, __global flo
             dotProd_ij += (input[input_idx] * cweights[weight_idx]) + bweights[weight_idx];
         }
 
-        // Check for NaN and infinity
-        if (isnan(dotProd_ij)) {
-            dotProd_ij = 0.0f;
-        } else if (isinf(dotProd_ij)) {
-            dotProd_ij = 1.0f;
-        }
-
         // Index for output: output[batch_idx][i][j]
-        output[output_batch_offset + i * outSize + j] = dotProd_ij;
+        output[output_batch_offset + i * outSize + j] = valueCorrection(dotProd_ij);
     }
 }
 
@@ -232,13 +173,6 @@ __kernel void kernelLayerForwardBatch4(__global const float* input, __global flo
             dotProd_ij += (pow(input[input_idx], n) * cweights[weight_idx]) + bweights[weight_idx];
         }
 
-        // Check for NaN and infinity
-        if (isnan(dotProd_ij)) {
-            dotProd_ij = 0.0f;
-        } else if (isinf(dotProd_ij)) {
-            dotProd_ij = 1.0f;
-        }
-
-        output[output_batch_offset + i * outSize + j] = dotProd_ij;
+        output[output_batch_offset + i * outSize + j] = valueCorrection(dotProd_ij);
     }
 }

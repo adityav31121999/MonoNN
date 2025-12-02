@@ -12,7 +12,7 @@ extern "C" __global__ void add(const float* x, const float* y, float* out, int s
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < size) {
-        out[i] = x[i] + y[i];
+        out[i] = valueCorrection(x[i] + y[i]);
     }
 }
 
@@ -20,7 +20,7 @@ extern "C" __global__ void subtract(const float* x, const float* y, float* out, 
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < size) {
-        out[i] = x[i] - y[i];
+        out[i] = valueCorrection(x[i] - y[i]);
     }
 }
 
@@ -28,7 +28,7 @@ extern "C" __global__ void scaleByValue(const float* x, float* out, float val, i
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < size) {
-        out[i] = x[i] * val;
+        out[i] = valueCorrection(x[i] * val);
     }
 }
 
@@ -36,7 +36,7 @@ extern "C" __global__ void power(const float* x, float* out, float n, int size)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < size) {
-        out[i] = powf(x[i], n);
+        out[i] = valueCorrection(powf(x[i], n));
     }
 }
 
@@ -44,7 +44,7 @@ extern "C" __global__ void dPower(const float* x, float* out, float n, int size)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < size) {
-        out[i] = n * powf(x[i], n - 1.0f);
+        out[i] = valueCorrection(n * powf(x[i], n - 1.0f));
     }
 }
 
@@ -56,7 +56,7 @@ extern "C" __global__ void meanPool(const float* in, float* out, int inRows, int
         for (int r = 0; r < inRows; ++r) {
             sum += in[r * inCols + c];
         }
-        out[c] = sum / (float)inRows;
+        out[c] = valueCorrection(sum / (float)inRows);
     }
 }
 
@@ -77,7 +77,7 @@ extern "C" __global__ void maxPool(const float* in, float* out, int inRows, int 
                 max_val = fmaxf(max_val, in[in_row * inCols + in_col]);
             }
         }
-        out[r * outCols + c] = max_val;
+        out[r * outCols + c] = valueCorrection(max_val);
     }
 }
 
@@ -86,7 +86,7 @@ extern "C" __global__ void transpose(const float* in, float* out, int rows, int 
     int i = blockIdx.y * blockDim.y + threadIdx.y;
     int j = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < rows && j < cols) {
-        out[j * rows + i] = in[i * cols + j];
+        out[j * rows + i] = valueCorrection(in[i * cols + j]);
     }
 }
 
@@ -94,7 +94,7 @@ extern "C" __global__ void vecxvec2vec(const float* x1, const float* x2, float* 
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < size) {
-        result[i] = x1[i] * x2[i];
+        result[i] = valueCorrection(x1[i] * x2[i]);
     }
 }
 
@@ -105,7 +105,7 @@ extern "C" __global__ void vecxvec2mat(const float* x1, const float* x2, float* 
     if (i < resultSize) {
         int row = i / x2size;
         int col = i % x2size;
-        result[i] = x1[row] * x2[col]; // Outer Product
+        result[i] = valueCorrection(x1[row] * x2[col]); // Outer Product
     }
 }
 
@@ -117,7 +117,7 @@ extern "C" __global__ void vecxmat2vec(const float* vec, const float* mat, float
         for (int j = 0; j < matRows; j++) {
             sum += vec[j] * mat[j * matCols + i];
         }
-        result[i] = sum;
+        result[i] = valueCorrection(sum);
     }
 }
 
@@ -134,7 +134,7 @@ extern "C" __global__ void matxmat2mat(const float* mat1, const float* mat2,
         for (int k = 0; k < K; k++) {
             sum += mat1[r * K + k] * mat2[k * mat2cols + c];
         }
-        result[r * mat2cols + c] = sum;
+        result[r * mat2cols + c] = valueCorrection(sum);
     }
 }
 
@@ -146,7 +146,7 @@ extern "C" __global__ void matxvec2vec(const float* mat, const float* vec, float
         for (int j = 0; j < matCols; j++) {
             sum += mat[i * matCols + j] * vec[j];
         }
-        result[i] = sum;
+        result[i] = valueCorrection(sum);
     }
 }
 
@@ -156,7 +156,7 @@ extern "C" __global__ void hadamard(const float* mat1, const float* mat2, float*
     int totalSize = mat1Rows * mat1Cols;
 
     if (i < totalSize) {
-        result[i] = mat1[i] * mat2[i];
+        result[i] = valueCorrection(mat1[i] * mat2[i]);
     }
 }
 
@@ -167,7 +167,7 @@ extern "C" __global__ void hadamard2(const float* mat1, const float* mat2, const
     int totalSize = mat1Rows * mat1Cols;
 
     if (i < totalSize) {
-        result[i] = mat1[i] * mat2[i] * mat3[i];
+        result[i] = valueCorrection(mat1[i] * mat2[i] * mat3[i]);
     }
 }
 
@@ -194,7 +194,7 @@ extern "C" __global__ void matrix_vector_average(
     }
 
     int outputIndex = j * Cols + k;
-    outputBuffer[outputIndex] = sum / (float)N;
+    outputBuffer[outputIndex] = valueCorrection(sum / (float)N);
 }
 
 extern "C" __global__ void matrix_vector_sum(
@@ -209,7 +209,7 @@ extern "C" __global__ void matrix_vector_sum(
         for (int i = 0; i < Rows * Cols; ++i) {
             sum += inputBuffer[i];
         }
-        outputBuffer[0] = sum;
+        outputBuffer[0] = valueCorrection(sum);
     }
 }
 
@@ -222,7 +222,7 @@ extern "C" __global__ void kernelUpdateWeights(float* weights,
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < totalElements) {
-        weights[i] -= learning_rate * gweights[i];
+        weights[i] = valueCorrection(weights[i] - learning_rate * gweights[i]);
     }
 }
 
@@ -238,7 +238,7 @@ extern "C" __global__ void kernelUpdateWeightsWithL1(float* weights,
         float sign = OP_SIGN(current_weight);
         float l1_gradient = sign * lambda_l1;
         float total_gradient = gweights[i] + l1_gradient;
-        weights[i] -= learning_rate * total_gradient;
+        weights[i] = valueCorrection(weights[i] - learning_rate * total_gradient);
     }
 }
 
@@ -253,7 +253,7 @@ extern "C" __global__ void kernelUpdateWeightsWithL2(float* weights,
         float current_weight = weights[i];
         float l2_gradient = lambda_l2 * current_weight;
         float total_gradient = gweights[i] + l2_gradient;
-        weights[i] -= learning_rate * total_gradient;
+        weights[i] = valueCorrection(weights[i] - learning_rate * total_gradient);
     }
 }
 
@@ -271,7 +271,7 @@ extern "C" __global__ void kernelUpdateWeightsElasticNet(float* weights,
         float sign = OP_SIGN(current_weight);
         float l1_gradient = sign * lambda_l1;
         float total_gradient = gweights[i] + l2_gradient + l1_gradient;
-        weights[i] -= learning_rate * total_gradient;
+        weights[i] = valueCorrection(weights[i] - learning_rate * total_gradient);
     }
 }
 
@@ -285,7 +285,7 @@ extern "C" __global__ void kernelUpdateWeightsWithWeightDecay(float* weights,
     if (i < totalElements) {
         float current_weight = weights[i];
         float gradient = gweights[i];
-        weights[i] = current_weight * (1.0f - decay_rate) - learning_rate * gradient;
+        weights[i] = valueCorrection(current_weight * (1.0f - decay_rate) - learning_rate * gradient);
     }
 }
 
@@ -305,7 +305,7 @@ extern "C" __global__ void kernelUpdateWeightsDropout(float* weights,
         float rand_val = (float)(seed) / (float)(0xFFFFFFFF);
 
         if (rand_val >= dropout_rate) {
-            weights[i] -= learning_rate * gweights[i];
+            weights[i] = valueCorrection(weights[i] - learning_rate * gweights[i]);
         }
     }
 }
