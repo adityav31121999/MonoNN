@@ -5,8 +5,8 @@ message("> Project Name: ${PROJECT_NAME} | Version: ${VERSION}")
 message("> Experimental Implementation of Monomial Neural Network")
 
 # backend for computations
-set(USE_CL OFF)
-set(USE_CU ON)
+set(USE_CL ON)
+set(USE_CU OFF)
 set(USE_CPU OFF)
 
 # binaries for debug and release

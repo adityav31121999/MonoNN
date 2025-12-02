@@ -32,16 +32,15 @@ int main() {
     std::vector<int> hidden_layers2 = { 28, 56, 112, 224, 224, 224, 112, 56, 28, outSize };
 
     try {
-
         std::cout << "----------------------MNN----------------------" << std::endl;
         mnn network1(inSize, outSize, hidden_layers1, order, binFileAddress1);
-        network1.initiateWeights(3);
-        network1.saveNetwork();
+        network1.loadNetwork();
         network1.path2progress = progressData1;
         network1.batchSize = 1;
         network1.mnnPrg.sessionSize = 50;
         network1.learningRate = 0.0075f;
         network1.train(digitTrain, network1.batchSize);
+
 /*
         std::cout << "---------------------MNN2D---------------------" << std::endl;
         mnn2d network2(inh, inw, outSize, hidden_layers2, order, binFileAddress3);

@@ -96,7 +96,7 @@ void layerForwardBatch(const std::vector<std::vector<float>>& input, std::vector
 {
     if (input.empty()) 
         throw std::runtime_error("Input batch is empty.");
-    if (input[0].size() != output[0].size()) 
+    if (input.size() != output.size()) 
         throw std::runtime_error("Input batch size and output batch size mismatch.");
     if (input[0].size() != cweights.size()) {
         throw std::runtime_error("input size and cweights rows mismatch :)");
