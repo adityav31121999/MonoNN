@@ -16,7 +16,7 @@ __kernel void kernelLayerForward1(__global const float* input, __global float* o
         }
 
         // Accumulate into the existing output value, as per the C++ code's `output[j] += ...`
-        output[j] = valueCorrection(output[j] + sum);
+        output[j] = output[j] + sum;
     }
 }
 
@@ -37,7 +37,7 @@ __kernel void kernelLayerForward2(__global const float* input, __global float* o
         }
 
         // Accumulate into the existing output value
-        output[j] = valueCorrection(output[j] + sum);
+        output[j] = output[j] + sum;
     }
 }
 
@@ -55,7 +55,7 @@ __kernel void kernelLayerForward3(__global const float* input, __global float* o
             dotProd_ij += (input[i * inWidth + k] * cweights[k * outSize + j]) + bweights[k * outSize + j];
         }
 
-        output[i * outSize + j] = valueCorrection(dotProd_ij);
+        output[i * outSize + j] = dotProd_ij;
     }
 }
 
@@ -73,7 +73,7 @@ __kernel void kernelLayerForward4(__global const float* input, __global float* o
             dotProd_ij += (pow(input[i * inWidth + k], n) * cweights[k * outSize + j]) + bweights[k * outSize + j];
         }
 
-        output[i * outSize + j] = valueCorrection(dotProd_ij);
+        output[i * outSize + j] = dotProd_ij;
     }
 }
 
@@ -99,7 +99,7 @@ __kernel void kernelLayerForwardBatch1(__global const float* input, __global flo
         }
 
         // Accumulate into the existing output value, as per the C++ code's `output[j] += ...`
-        output[output_offset + j] = valueCorrection(output[output_offset + j] + sum);
+        output[output_offset + j] = output[output_offset + j] + sum;
     }
 }
 
@@ -123,7 +123,7 @@ __kernel void kernelLayerForwardBatch2(__global const float* input, __global flo
         }
 
         // Accumulate into the existing output value
-        output[output_offset + j] = valueCorrection(output[output_offset + j] + sum);
+        output[output_offset + j] = output[output_offset + j] + sum;
     }
 }
 
@@ -150,7 +150,7 @@ __kernel void kernelLayerForwardBatch3(__global const float* input, __global flo
         }
 
         // Index for output: output[batch_idx][i][j]
-        output[output_batch_offset + i * outSize + j] = valueCorrection(dotProd_ij);
+        output[output_batch_offset + i * outSize + j] = dotProd_ij;
     }
 }
 
@@ -173,6 +173,6 @@ __kernel void kernelLayerForwardBatch4(__global const float* input, __global flo
             dotProd_ij += (pow(input[input_idx], n) * cweights[weight_idx]) + bweights[weight_idx];
         }
 
-        output[output_batch_offset + i * outSize + j] = valueCorrection(dotProd_ij);
+        output[output_batch_offset + i * outSize + j] = dotProd_ij;
     }
 }

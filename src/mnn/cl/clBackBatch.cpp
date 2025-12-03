@@ -21,29 +21,25 @@ void mnn::clBackprop(const std::vector<std::vector<float>>& expected) {
         cl::NDRange local_2d(WORKSIZE_2DX, WORKSIZE_2DY);
         size_t size2d[2] = {WORKSIZE_2DX, WORKSIZE_2DY};
 
-        size_t inputSize = input.size();
+        size_t inputSize = inputBatch[0].size();
         size_t outputSize = output.size();
 
         std::vector<cl::Buffer> d_in(batchSize), d_exp(batchSize), d_out(batchSize), d_err(batchSize);
-        std::vector<std::vector<cl::Buffer>> d_incoming(this->layers);
+        std::vector<std::vector<cl::Buffer>> d_incoming(this->layers), d_dotProds(this->layers), d_activate(this->layers);
         std::vector<cl::Buffer> d_cweights(this->layers);
         std::vector<cl::Buffer> d_bweights(this->layers);
         std::vector<cl::Buffer> d_gradC(this->layers);
         std::vector<cl::Buffer> d_gradB(this->layers);
-        std::vector<std::vector<cl::Buffer>> d_dotProds(this->layers);
-        std::vector<std::vector<cl::Buffer>> d_activate(this->layers);
-        std::vector<std::vector<cl::Buffer>> d_dpow(this->layers-1);
-        std::vector<std::vector<cl::Buffer>> d_dact(this->layers-1);
-        std::vector<std::vector<cl::Buffer>> d_preoutgoing(this->layers-1);
-        std::vector<std::vector<cl::Buffer>> d_outgoing(this->layers-1);
+        cl::Buffer d_ones;
+        cl::Buffer d_preoutgoing_l, d_outgoing_l, d_dpow_l, d_dact_l;
 
         cl::Kernel kernelSigmoidDer, kernelSub, kernelDPow, kernelvxv2m, kernelvxv2v, kernelUpdateWeights, 
                 kernelHadamard, kernelTranspose, kernelAvg, kernelScale;
         kernelSigmoidDer = kernels.at("sigmoidDer");
         kernelSub = kernels.at("subtract");
         kernelDPow = kernels.at("dPower");
-        kernelvxv2m = kernels.at("vecxvec2mat");
-        kernelvxv2v = kernels.at("vecxvec2vec");
+        kernelvxv2m = kernels.at("vecxvec2mat"); // outer product
+        kernelvxv2v = kernels.at("vecxmat2vec"); // vec x mat
         kernelTranspose = kernels.at("transpose");
         kernelHadamard = kernels.at("hadamard2");
         kernelDPow = kernels.at("dPower");
@@ -52,7 +48,7 @@ void mnn::clBackprop(const std::vector<std::vector<float>>& expected) {
         kernelUpdateWeights = kernels.at("kernelUpdateWeightsElasticNet");
 
         // buffer data and space allotment
-        for (int i = 0; i < batchSize; i++) {
+        for (int i = 0; i < batchSize; ++i) {
             d_in[i] = cl::Buffer(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * inputSize, inputBatch[i].data(), &err); CL_CHECK(err);
             d_exp[i] = cl::Buffer(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * expected[i].size(), (void*)expected[i].data(), &err); CL_CHECK(err);
             d_out[i] = cl::Buffer(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * outputBatch[i].size(), (void*)outputBatch[i].data(), &err); CL_CHECK(err);
@@ -76,15 +72,18 @@ void mnn::clBackprop(const std::vector<std::vector<float>>& expected) {
                 d_incoming[i][j] = cl::Buffer(clContext, CL_MEM_READ_WRITE, sizeof(float) * actBatch[i][j].size()); CL_CHECK(err);
             }
         }
-        for(int i = 0; i < this->layers-1; i++) {
-            size_t actSize = actBatch[i].size() * actBatch[i][0].size();
-            d_preoutgoing[i] = std::vector<cl::Buffer>(batchSize, cl::Buffer(clContext, CL_MEM_READ_WRITE, sizeof(float) * actSize)); CL_CHECK(err);
-            d_outgoing[i] = std::vector<cl::Buffer>(batchSize, cl::Buffer(clContext, CL_MEM_READ_WRITE, sizeof(float) * actSize)); CL_CHECK(err);
-            d_dpow[i] = std::vector<cl::Buffer>(batchSize, cl::Buffer(clContext, CL_MEM_READ_WRITE, sizeof(float) * actSize)); CL_CHECK(err);
-            d_dact[i] = std::vector<cl::Buffer>(batchSize, cl::Buffer(clContext, CL_MEM_READ_WRITE, sizeof(float) * actSize)); CL_CHECK(err);
-        }
 
-        for(int i = 0; i < batchSize; i++) {
+        size_t max_layer_width = 0;
+        for(int w : width) max_layer_width = std::max(max_layer_width, (size_t)w);
+        max_layer_width = std::max(max_layer_width, inputSize);
+        d_preoutgoing_l = cl::Buffer(clContext, CL_MEM_READ_WRITE, sizeof(float) * max_layer_width);
+        d_outgoing_l = cl::Buffer(clContext, CL_MEM_READ_WRITE, sizeof(float) * max_layer_width);
+        d_dpow_l = cl::Buffer(clContext, CL_MEM_READ_WRITE, sizeof(float) * max_layer_width);
+        d_dact_l = cl::Buffer(clContext, CL_MEM_READ_WRITE, sizeof(float) * max_layer_width);
+        std::vector<float> v1(max_layer_width, 1.0f);
+        d_ones = cl::Buffer(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * v1.size(), v1.data(), &err); CL_CHECK(err);
+
+        for(int i = 0; i < batchSize; ++i) {
             // Calculate initial error (output - expected)
             kernelSub.setArg(0, d_out[i]);
             kernelSub.setArg(1, d_exp[i]);
@@ -95,9 +94,15 @@ void mnn::clBackprop(const std::vector<std::vector<float>>& expected) {
             CL_CHECK(clCommandQueue.enqueueCopyBuffer(d_err[i], d_incoming[layers - 1][i], 0, 0, sizeof(float) * outputSize));
         }
 
-        for(int layer = layers - 1; layers <= 1; --layer) {
-            cl::NDRange globalWeightGrad = calculate_global_1d(WORKSIZE_1D, cweights[layer].size() * cweights[layer][0].size());
-            cl::NDRange globalOutGrad = calculate_global_1d(WORKSIZE_1D, actBatch[layer - 1][0].size());
+        for(int layer = layers - 1; layer >= 1; --layer) {
+            int cweight_rows = cweights[layer].size();
+            int cweight_cols = cweights[layer][0].size();
+            int prev_size = cweight_rows;
+            size_t cweight_flat_size = cweight_rows * cweight_cols;
+
+            cl::NDRange globalWeightGrad = calculate_global_1d(WORKSIZE_1D, cweight_flat_size);
+            cl::NDRange globalOutGrad = calculate_global_1d(WORKSIZE_1D, prev_size);
+
             int row = cgradients[layer].size();
             int col = cgradients[layer][0].size();
             int totalElements = row * col;
@@ -106,70 +111,70 @@ void mnn::clBackprop(const std::vector<std::vector<float>>& expected) {
             d_totalBgrad = cl::Buffer(clContext, CL_MEM_READ_WRITE, totalElements * batchSize * sizeof(float));
 
             for(int i = 0; i < batchSize; ++i) {
-                // step wise backward propgation
-                // dL/dC_l using kernelvxv2m
+                // dL/dC_l (Outer Product)
                 kernelvxv2m.setArg(0, d_incoming[layer][i]);
                 kernelvxv2m.setArg(1, d_activate[layer - 1][i]);
-                kernelvxv2m.setArg(2, d_gradC[layer]);
-                kernelvxv2m.setArg(3, (int)cweights[layer].size());
-                kernelvxv2m.setArg(4, (int)cweights[layer][0].size());
+                kernelvxv2m.setArg(2, d_gradC[layer]); kernelvxv2m.setArg(3, cweight_rows); kernelvxv2m.setArg(4, cweight_cols);
                 CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelvxv2m, cl::NullRange, globalWeightGrad, local_1d));
-                CL_CHECK(clCommandQueue.enqueueCopyBuffer(d_gradC[i], d_totalCgrad, 0, i * totalElements * sizeof(float), sizeof(float) * totalElements));
+                CL_CHECK(clCommandQueue.enqueueCopyBuffer(d_gradC[layer], d_totalCgrad, 0, i * totalElements * sizeof(float), sizeof(float) * totalElements));
 
-                // dL/dB_l using kernelvxv2m
-                cl::Buffer ones;
-                std::vector<float> v1(actBatch[layer - 1][i].size(), 1.0f);
-                ones = cl::Buffer(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * v1.size(), v1.data(), &err); CL_CHECK(err);
+                // dL/dB_l (Outer Product)
                 kernelvxv2m.setArg(0, d_incoming[layer][i]);
-                kernelvxv2m.setArg(1, ones);
+                kernelvxv2m.setArg(1, d_ones);
                 kernelvxv2m.setArg(2, d_gradB[layer]);
-                kernelvxv2m.setArg(3, (int)bweights[layer].size());
-                kernelvxv2m.setArg(4, (int)bweights[layer][0].size());
+                kernelvxv2m.setArg(3, cweight_rows); kernelvxv2m.setArg(4, cweight_cols);
                 CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelvxv2m, cl::NullRange, globalWeightGrad, local_1d));
-                CL_CHECK(clCommandQueue.enqueueCopyBuffer(d_gradB[i], d_totalBgrad, 0, i * totalElements * sizeof(float), sizeof(float) * totalElements));
+                CL_CHECK(clCommandQueue.enqueueCopyBuffer(d_gradB[layer], d_totalBgrad, 0, i * totalElements * sizeof(float), sizeof(float) * totalElements));
 
-                // transpose
-                cl::Buffer d_C_T(clContext, CL_MEM_READ_WRITE, cweights[layer].size() * cweights[layer][0].size() * sizeof(float));
+                // --- Outgoing Gradient Calculation ---
+                cl::Buffer d_C_T(clContext, CL_MEM_READ_WRITE, cweight_flat_size * sizeof(float));
                 kernelTranspose.setArg(0, d_cweights[layer]);
                 kernelTranspose.setArg(1, d_C_T);
-                kernelTranspose.setArg(2, (int)cweights[layer].size());
-                kernelTranspose.setArg(3, (int)cweights[layer][0].size());
-                cl::NDRange globalTranspose = calculate_global_2d(size2d, (int)cweights[layer].size(), (int)cweights[layer][0].size());
+                kernelTranspose.setArg(2, cweight_rows);
+                kernelTranspose.setArg(3, cweight_cols);
+                cl::NDRange globalTranspose = calculate_global_2d(size2d, cweight_rows, cweight_cols);
                 CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelTranspose, cl::NullRange, globalTranspose, local_2d));
+
                 // incoming gradient x C^T
-                kernelvxv2v.setArg(0, d_incoming[layer]);
-                kernelvxv2v.setArg(1, d_cweights[layer]);
-                kernelvxv2v.setArg(2, d_preoutgoing[layer - 1][i]);
-                kernelvxv2v.setArg(3, (int)actBatch[layer - 1][i].size());
+                kernelvxv2v.setArg(0, d_incoming[layer][i]);
+                kernelvxv2v.setArg(1, d_C_T);
+                kernelvxv2v.setArg(2, d_preoutgoing_l);
+                kernelvxv2v.setArg(3, cweight_cols); // matRows
+                kernelvxv2v.setArg(4, cweight_rows); // matCols
                 CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelvxv2v, cl::NullRange, globalOutGrad, local_1d));
+
                 // derivative of power
-                kernelDPow.setArg(0, d_activate[layer - 1]);
-                kernelDPow.setArg(1, d_dpow[layer - 1]);
+                kernelDPow.setArg(0, d_activate[layer - 1][i]);
+                kernelDPow.setArg(1, d_dpow_l);
                 kernelDPow.setArg(2, order);
-                kernelDPow.setArg(3, (int)actBatch[layer - 1][i].size());
-                CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelvxv2v, cl::NullRange, globalOutGrad, local_1d));
+                kernelDPow.setArg(3, prev_size);
+                CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelDPow, cl::NullRange, globalOutGrad, local_1d));
+
                 // derivative of activation
-                kernelSigmoidDer.setArg(0, d_dotProds[layer - 1]);
-                kernelSigmoidDer.setArg(1, d_dact[layer - 1]);
-                kernelSigmoidDer.setArg(2, (int)dotBatch[layer - 1][i].size());
+                kernelSigmoidDer.setArg(0, d_dotProds[layer - 1][i]);
+                kernelSigmoidDer.setArg(1, d_dact_l);
+                kernelSigmoidDer.setArg(2, prev_size);
                 CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSigmoidDer, cl::NullRange, globalOutGrad, local_1d));
+
                 // outgoing gradient = (dl/dz_l x C^T) . dprev_p . dprevAct
-                kernelHadamard.setArg(0, d_preoutgoing[layer - 1][i]);
-                kernelHadamard.setArg(1, d_dpow[layer - 1][i]);
-                kernelHadamard.setArg(2, d_dact[layer - 1][i]);
-                kernelHadamard.setArg(3, d_outgoing[layer - 1][i]);
-                kernelHadamard.setArg(4, (int)actBatch[layer - 1][i].size());
-                kernelHadamard.setArg(5, (int)1);
+                kernelHadamard.setArg(0, d_preoutgoing_l);
+                kernelHadamard.setArg(1, d_dpow_l);
+                kernelHadamard.setArg(2, d_dact_l);
+                kernelHadamard.setArg(3, d_incoming[layer - 1][i]);
+                kernelHadamard.setArg(4, 1);
+                kernelHadamard.setArg(5, prev_size);
                 CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelHadamard, cl::NullRange, globalOutGrad, local_1d));
             }
 
             // average the gradients
+            cl::NDRange globalAvg = calculate_global_2d(size2d, row, col);
             kernelAvg.setArg(0, d_totalCgrad);
             kernelAvg.setArg(1, d_gradC[layer]);
             kernelAvg.setArg(2, batchSize);
-            kernelAvg.setArg(3, cgradients[layer].size());
-            kernelAvg.setArg(4, cgradients[layer][0].size());
-            CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelAvg, cl::NullRange, globalWeightGrad, local_1d));
+            kernelAvg.setArg(3, row);
+            kernelAvg.setArg(4, col);
+            CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelAvg, cl::NullRange, globalAvg, local_2d));
+
             // scale gradc by ALPHA
             kernelScale.setArg(0, d_gradC[layer]);
             kernelScale.setArg(1, d_gradC[layer]);
@@ -180,10 +185,11 @@ void mnn::clBackprop(const std::vector<std::vector<float>>& expected) {
             kernelAvg.setArg(0, d_totalBgrad);
             kernelAvg.setArg(1, d_gradB[layer]);
             kernelAvg.setArg(2, batchSize);
-            kernelAvg.setArg(3, bgradients[layer].size());
-            kernelAvg.setArg(4, bgradients[layer][0].size());
-            CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelAvg, cl::NullRange, globalWeightGrad, local_1d));
-            // scale gradc by 1
+            kernelAvg.setArg(3, row);
+            kernelAvg.setArg(4, col);
+            CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelAvg, cl::NullRange, globalAvg, local_2d));
+
+            // scale gradb by 1-ALPHA
             kernelScale.setArg(0, d_gradB[layer]);
             kernelScale.setArg(1, d_gradB[layer]);
             kernelScale.setArg(2, 1.0f - ALPHA);
@@ -192,8 +198,11 @@ void mnn::clBackprop(const std::vector<std::vector<float>>& expected) {
         }
 
         // for first layer
-        cl::NDRange globalWeightGradFirst = calculate_global_1d(WORKSIZE_1D, cweights[0].size() * cweights[0][0].size());
-        cl::NDRange globalOutGrad = calculate_global_1d(WORKSIZE_1D, actBatch[0][0].size());
+        int cweight_rows_first = inputSize;
+        int cweight_cols_first = width[0];
+        size_t cweight_flat_size_first = cweight_rows_first * cweight_cols_first;
+        cl::NDRange globalWeightGradFirst = calculate_global_1d(WORKSIZE_1D, cweight_flat_size_first); // Outer product size
+
         int row = cgradients[0].size();
         int col = cgradients[0][0].size();
         int totalElements = row * col;
@@ -201,51 +210,53 @@ void mnn::clBackprop(const std::vector<std::vector<float>>& expected) {
         d_totalCgrad = cl::Buffer(clContext, CL_MEM_READ_WRITE, totalElements * batchSize * sizeof(float));
         d_totalBgrad = cl::Buffer(clContext, CL_MEM_READ_WRITE, totalElements * batchSize * sizeof(float));
 
-        for(int i = 0; i < batchSize; i++) {
-            // Backpropagation for the first layer (input layer)
-            // dL/dC_1
+        for(int i = 0; i < batchSize; ++i) {
+            // dL/dC_0
             kernelvxv2m.setArg(0, d_incoming[0][i]);
             kernelvxv2m.setArg(1, d_in[i]);
             kernelvxv2m.setArg(2, d_gradC[0]);
-            kernelvxv2m.setArg(3, (int)inputBatch[i].size());
-            kernelvxv2m.setArg(4, (int)cweights[0].size());
+            kernelvxv2m.setArg(3, cweight_rows_first); kernelvxv2m.setArg(4, cweight_cols_first); // Correct dimensions for outer product
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelvxv2m, cl::NullRange, globalWeightGradFirst, local_1d));
-            CL_CHECK(clCommandQueue.enqueueCopyBuffer(d_gradC[0], d_totalCgrad, 0, i * totalElements * sizeof(float), sizeof(float) * totalElements));
-            // scale gradc by ALPHA
-            kernelScale.setArg(0, d_gradC[0]);
-            kernelScale.setArg(1, d_gradC[0]);
-            kernelScale.setArg(2, ALPHA);
-            kernelScale.setArg(3, totalElements);
-            CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelScale, cl::NullRange, globalWeightGradFirst, local_1d));
+            CL_CHECK(clCommandQueue.enqueueCopyBuffer(d_gradC[0], d_totalCgrad, 0, i * cweight_flat_size_first * sizeof(float), sizeof(float) * cweight_flat_size_first));
 
-            // dL/dB_1
+            // dL/dB_0
             kernelvxv2m.setArg(0, d_incoming[0][i]);
-            kernelvxv2m.setArg(1, d_bweights[0]);
+            kernelvxv2m.setArg(1, d_ones);
             kernelvxv2m.setArg(2, d_gradB[0]);
-            kernelvxv2m.setArg(3, (int)inputBatch[i].size());
-            kernelvxv2m.setArg(4, (int)bweights[0].size());
+            kernelvxv2m.setArg(3, cweight_rows_first); kernelvxv2m.setArg(4, cweight_cols_first); // Correct dimensions for outer product
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelvxv2m, cl::NullRange, globalWeightGradFirst, local_1d));
-            CL_CHECK(clCommandQueue.enqueueCopyBuffer(d_gradB[0], d_totalCgrad, 0, i * totalElements * sizeof(float), sizeof(float) * totalElements));
-            // scale gradb by 1
-            kernelScale.setArg(0, d_gradB[0]);
-            kernelScale.setArg(1, d_gradB[0]);
-            kernelScale.setArg(2, 1.0f - ALPHA);
-            kernelScale.setArg(3, totalElements);
+            CL_CHECK(clCommandQueue.enqueueCopyBuffer(d_gradB[0], d_totalBgrad, 0, i * cweight_flat_size_first * sizeof(float), sizeof(float) * cweight_flat_size_first));
         }
 
         // average the gradients
+        cl::NDRange globalAvgFirst = calculate_global_2d(size2d, row, col);
         kernelAvg.setArg(0, d_totalCgrad);
         kernelAvg.setArg(1, d_gradC[0]);
         kernelAvg.setArg(2, batchSize);
-        kernelAvg.setArg(3, cgradients[0].size());
-        kernelAvg.setArg(4, cgradients[0][0].size());
-        CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelAvg, cl::NullRange, globalWeightGradFirst, local_1d));
+        kernelAvg.setArg(3, row);
+        kernelAvg.setArg(4, col);
+        CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelAvg, cl::NullRange, globalAvgFirst, local_2d));
+
+        // scale gradc by ALPHA
+        kernelScale.setArg(0, d_gradC[0]);
+        kernelScale.setArg(1, d_gradC[0]);
+        kernelScale.setArg(2, ALPHA);
+        kernelScale.setArg(3, (int)cweight_flat_size_first);
+        CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelScale, cl::NullRange, globalWeightGradFirst, local_1d));
+
         kernelAvg.setArg(0, d_totalBgrad);
         kernelAvg.setArg(1, d_gradB[0]);
         kernelAvg.setArg(2, batchSize);
-        kernelAvg.setArg(3, bgradients[0].size());
-        kernelAvg.setArg(4, bgradients[0][0].size());
-        CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelAvg, cl::NullRange, globalWeightGradFirst, local_1d));
+        kernelAvg.setArg(3, row);
+        kernelAvg.setArg(4, col);
+        CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelAvg, cl::NullRange, globalAvgFirst, local_2d));
+
+        // scale gradb by 1-ALPHA
+        kernelScale.setArg(0, d_gradB[0]);
+        kernelScale.setArg(1, d_gradB[0]);
+        kernelScale.setArg(2, 1.0f - ALPHA);
+        kernelScale.setArg(3, (int)cweight_flat_size_first);
+        CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelScale, cl::NullRange, globalWeightGradFirst, local_1d));
 
         // Read the updated weights back to host
         for (int i = 0; i < this->layers; ++i) {
@@ -270,6 +281,9 @@ void mnn::clBackprop(const std::vector<std::vector<float>>& expected) {
             kernelUpdateWeights.setArg(0, d_bweights[i]);
             kernelUpdateWeights.setArg(1, d_gradB[i]);
             kernelUpdateWeights.setArg(2, (int)bweight_size);
+            kernelUpdateWeights.setArg(3, learningRate);
+            kernelUpdateWeights.setArg(4, LAMBDA_L1);
+            kernelUpdateWeights.setArg(5, LAMBDA_L2);
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelUpdateWeights, cl::NullRange, globalWeightGrad, local_1d));
 
             // copy and reshape

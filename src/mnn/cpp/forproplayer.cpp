@@ -31,10 +31,12 @@ void layerForward(const std::vector<float>& input, std::vector<float>& output, c
         throw std::runtime_error("output size and bweights columns mismatch: " + std::to_string(output.size()) + " != " + std::to_string(bweights[0].size()));
     }
     std::vector<float> powerIn = power(input, n);
-    for(int i = 0; i < cweights.size(); i++) {
-        for(int j = 0; j < cweights[0].size(); j++) {
-            output[j] += (powerIn[i]*cweights[i][j]) + bweights[i][j];
+    for(int j = 0; j < cweights[0].size(); j++) {
+        float sum = 0.0f;
+        for(int i = 0; i < cweights.size(); i++) {
+            sum += (powerIn[i] * cweights[i][j]) + bweights[i][j];
         }
+        output[j] = sum;
     }
     // std::transform(output.begin(), output.end(), output.begin(), [](float val) { return clamp(val); }); // Removed clamp
 }

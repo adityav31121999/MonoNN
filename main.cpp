@@ -32,6 +32,7 @@ int main() {
     std::vector<int> hidden_layers2 = { 28, 56, 112, 224, 224, 224, 112, 56, 28, outSize };
 
     try {
+/*
         std::cout << "----------------------MNN----------------------" << std::endl;
         mnn network1(inSize, outSize, hidden_layers1, order, binFileAddress1);
         network1.loadNetwork();
@@ -40,8 +41,8 @@ int main() {
         network1.mnnPrg.sessionSize = 50;
         network1.learningRate = 0.0075f;
         network1.train(digitTrain, network1.batchSize);
+*/
 
-/*
         std::cout << "---------------------MNN2D---------------------" << std::endl;
         mnn2d network2(inh, inw, outSize, hidden_layers2, order, binFileAddress3);
         network2.loadNetwork();
@@ -50,7 +51,6 @@ int main() {
         network2.mnn2dPrg.sessionSize = 50;
         network2.learningRate = 0.01f;
         network2.train(digitTrain, network2.batchSize);
-*/
     }
     catch (const std::exception& e) {
         std::cerr << "An exception occurred in main: " << e.what() << std::endl;

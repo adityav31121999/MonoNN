@@ -25,7 +25,7 @@
     - The reason behind this is simple: an MLP will have a bias vector element-wise added to the output obtained by the product of previous activation and current weight.
     - A single bias value can tune the signal obtained by the product of a row and column vector. For monomial nature, this can be tricky, since it can explode or restrain the value.
     - Hence, each weight value has its own bias.
-    - An ALPHA value ($\ALPHA \ge 0.8$) is utilized to make coefficients absorb the major change, compared to biases that absorb the minor part.
+    - Gradient factor ($\alpha \ge 0.8$) is utilized to make coefficients absorb the major change, compared to biases that absorb the minor part.
 
 ## Gradients
 
@@ -46,7 +46,7 @@ Gradients for Monomial neural nets are calculated in a similar manner to MLPs.
     - $\frac{\partial z}{\partial c} = x^m$.
     - $\frac{\partial z}{\partial b} = 1$.
   - Substituting these in, we get the gradients:
-    - **Gradient for c**: 
+    - **Gradient for c**:
       $\frac{\partial E}{\partial c} = \frac{\partial E}{\partial v} \cdot a'(c \cdot x^m + b) \cdot x^m$
     - **Gradient for b**: 
       $\frac{\partial E}{\partial b} = \frac{\partial E}{\partial v} \cdot a'(c \cdot x^m + b)$

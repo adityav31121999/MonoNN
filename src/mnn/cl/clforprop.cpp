@@ -20,13 +20,14 @@ void mnn::clForprop(const std::vector<float>& input)
         size_t inputSize = input.size();
 
         // buffers
+        cl::Buffer d_input, d_current_act;
         std::vector<cl::Buffer> d_clayers(this->layers);
         std::vector<cl::Buffer> d_blayers(this->layers);
         std::vector<cl::Buffer> d_dotProds(this->layers);
         std::vector<cl::Buffer> d_activate(this->layers);
 
         // Create and write to input buffer
-        cl::Buffer d_input(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * inputSize, (void*)input.data(), &err);
+        d_input = cl::Buffer(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * inputSize, (void*)input.data(), &err);
         CL_CHECK(err);
 
         // Create all other buffers and copy weight data
@@ -46,11 +47,12 @@ void mnn::clForprop(const std::vector<float>& input)
         kernelForward = kernels.at("kernelLayerForward2");
 
         // first layer forward
-        kernelForward.setArg(0, d_input);
+        d_current_act = d_input;
+        kernelForward.setArg(0, d_current_act);
         kernelForward.setArg(1, d_dotProds[0]);
         kernelForward.setArg(2, d_clayers[0]);
         kernelForward.setArg(3, d_blayers[0]);
-        kernelForward.setArg(4, (int)input.size());
+        kernelForward.setArg(4, (int)inputSize);
         kernelForward.setArg(5, (int)dotProds[0].size());
         kernelForward.setArg(6, order);
         cl::NDRange globalForward = calculate_global_1d(WORKSIZE_1D, dotProds[0].size());
@@ -69,11 +71,12 @@ void mnn::clForprop(const std::vector<float>& input)
         // for second to last layer
         for(int i = 1; i < this->layers; i++) {
             // ith layer forward
-            kernelForward.setArg(0, d_activate[i-1]);
+            d_current_act = d_activate[i-1];
+            kernelForward.setArg(0, d_current_act);
             kernelForward.setArg(1, d_dotProds[i]);
             kernelForward.setArg(2, d_clayers[i]);
             kernelForward.setArg(3, d_blayers[i]);
-            kernelForward.setArg(4, (int)activate[i-1].size());
+            kernelForward.setArg(4, (int)width[i-1]);
             kernelForward.setArg(5, (int)dotProds[i].size());
             kernelForward.setArg(6, order);
             globalForward = calculate_global_1d(WORKSIZE_1D, dotProds[i].size());
@@ -178,10 +181,9 @@ void mnn2d::clForprop(const std::vector<std::vector<float>>& input)
             // launch softmax_reduce kernel
             kernelSoftMaxReduce.setArg(0, d_dotProds[0]);
             kernelSoftMaxReduce.setArg(1, d_partial_results);
-            kernelSoftMaxReduce.setArg(2, cl::Local(sizeof(float) * WORKSIZE_1D));
-            kernelSoftMaxReduce.setArg(3, cl::Local(sizeof(float) * WORKSIZE_1D));
-            kernelSoftMaxReduce.setArg(4, (int)dotprod_size_layer0);
-            kernelSoftMaxReduce.setArg(5, SOFTMAX_TEMP);
+            kernelSoftMaxReduce.setArg(2, cl::Local(sizeof(float) * WORKSIZE_1D * 2)); // Allocate space for both max and sum
+            kernelSoftMaxReduce.setArg(3, (int)dotprod_size_layer0);
+            kernelSoftMaxReduce.setArg(4, SOFTMAX_TEMP);
             cl::NDRange globalReduce = calculate_global_1d(WORKSIZE_1D, dotprod_size_layer0);
             cl::NDRange localReduce(WORKSIZE_1D);
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSoftMaxReduce, cl::NullRange, globalReduce, localReduce));
@@ -252,10 +254,9 @@ void mnn2d::clForprop(const std::vector<std::vector<float>>& input)
                 // launch softmax_reduce kernel
                 kernelSoftMaxReduce.setArg(0, d_dotProds[i]);
                 kernelSoftMaxReduce.setArg(1, d_partial_results);
-                kernelSoftMaxReduce.setArg(2, cl::Local(sizeof(float) * WORKSIZE_1D));
-                kernelSoftMaxReduce.setArg(3, cl::Local(sizeof(float) * WORKSIZE_1D));
-                kernelSoftMaxReduce.setArg(4, (int)dotprod_size_layer_i);
-                kernelSoftMaxReduce.setArg(5, SOFTMAX_TEMP);
+                kernelSoftMaxReduce.setArg(2, cl::Local(sizeof(float) * WORKSIZE_1D * 2)); // Allocate space for both max and sum
+                kernelSoftMaxReduce.setArg(3, (int)dotprod_size_layer_i);
+                kernelSoftMaxReduce.setArg(4, SOFTMAX_TEMP);
                 cl::NDRange globalReduce = calculate_global_1d(WORKSIZE_1D, dotprod_size_layer_i);
                 cl::NDRange localReduce(WORKSIZE_1D);
                 CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSoftMaxReduce, cl::NullRange, globalReduce, localReduce));

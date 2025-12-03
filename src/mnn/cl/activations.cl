@@ -45,9 +45,8 @@ __kernel void sigmoid(__global float* x, __global float* out, int size)
 {
     int i = get_global_id(0);
     if (i < size) {
-        float val = 0.0f;
-        val = 1.0f / (1.0f + exp(-x[i]));
-        out[i] = valueCorrection(val);
+        float val = 1.0f / (1.0f + exp(-x[i]));
+        out[i] = val;
     }
 }
 
@@ -57,7 +56,7 @@ __kernel void sigmoidDer(__global float* x, __global float* out, int size)
     if (i < size) {
         float sigmoid_x = 1.0f / (1.0f + exp(-x[i]));
         float val = sigmoid_x * (1.0f - sigmoid_x);
-        out[i] = valueCorrection(val);
+        out[i] = val;
     }
 }
 
@@ -69,38 +68,41 @@ __kernel void sigmoidDer(__global float* x, __global float* out, int size)
  */
 __kernel void softmax_reduce(__global const float* input,
                              __global float* partial_results, // Intermediate buffer
-                             __local float* local_max,         // Local scratchpad for max
-                             __local float* local_sum,         // Local scratchpad for sum
+                             __local float* shared_mem,        // dynamic memory
                              int size,
                              float temp)
 {
+    __local float* local_max_ptr = shared_mem;
+    __local float* local_sum = &shared_mem[get_local_size(0)];
+
     int global_id = get_global_id(0);
     int local_id = get_local_id(0);
     int group_id = get_group_id(0);
     int local_size = get_local_size(0);
+    int global_size = get_global_size(0);
 
     // --- Part 1: Find the max value in the work-group ---
     float my_max = -FLT_MAX;
-    for (int i = global_id; i < size; i += get_global_size(0)) {
+    for (int i = global_id; i < size; i += global_size) {
         my_max = max(my_max, input[i]);
     }
-    local_max[local_id] = my_max;
+    local_max_ptr[local_id] = my_max;
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
     // Parallel reduction to find the single max for the entire work-group
     for (int offset = local_size / 2; offset > 0; offset /= 2) {
         if (local_id < offset) {
-            local_max[local_id] = max(local_max[local_id], local_max[local_id + offset]);
+            local_max_ptr[local_id] = max(local_max_ptr[local_id], local_max_ptr[local_id + offset]);
         }
         barrier(CLK_LOCAL_MEM_FENCE);
     }
     // The group's max value is now in local_max[0]
 
     // --- Part 2: Find the sum of exponentials in the work-group ---
-    float group_max = local_max[0];
+    float group_max = local_max_ptr[0];
     float my_sum = 0.0f;
-    for (int i = global_id; i < size; i += get_global_size(0)) {
+    for (int i = global_id; i < size; i += global_size) {
         my_sum += exp((input[i] - group_max) / temp);
     }
     local_sum[local_id] = my_sum;
@@ -140,8 +142,8 @@ __kernel void softmax_normalize(__global const float* input,
 
     if (global_id < size) {
         float val = exp((input[global_id] - global_max) / temp);
-        float corrected_val = valueCorrection(val);
-        output[global_id] = corrected_val / global_sum;
+        // float corrected_val = valueCorrection(val);
+        output[global_id] = val / global_sum;
     }
 }
 
@@ -161,10 +163,9 @@ __kernel void softmaxDer_normalize(__global const float* input,
 
     if (global_id < size) {
         float val = exp((input[global_id] - global_max) / temp);
-        float corrected_val = valueCorrection(val);
-        float s_i = corrected_val / global_sum;
+        float s_i = val / global_sum;
         // The derivative is s_i * (1 - s_i)
-        output[global_id] = valueCorrection(s_i * (1.0f - s_i));
+        output[global_id] = s_i * (1.0f - s_i);
     }
 }
 
@@ -225,7 +226,7 @@ __kernel void softmax(__global float* x, __global float* out, float temp, int si
     if (global_id < size) {
         if (sum_val > 0.0f) {
             float val = shifted_exp / sum_val;
-            out[global_id] = valueCorrection(val);
+            out[global_id] = val;
         }
         else {
             // Handle sum == 0 case (should ideally not happen with max-shift unless underflow is severe).
@@ -271,12 +272,12 @@ __kernel void softmaxDer(__global float* x, __global float* out, float temp, int
     if (global_id < size) {
         float s_i = 0.0f;
         if (sum_val > 0.0f) {
-            s_i = valueCorrection(shifted_exp / sum_val); 
+            s_i = shifted_exp / sum_val;
         } 
         
         // The derivative for a single element s_i with respect to its own input x_i is s_i * (1 - s_i).
         // This derivative is WRONG if x is the result of a previous operation and we're propagating the gradient.
         // It's correct if the derivative is with respect to the pre-softmax input (for one-hot targets).
-        out[global_id] = valueCorrection(s_i * (1.0f - s_i));
+        out[global_id] = s_i * (1.0f - s_i);
     }
 }
