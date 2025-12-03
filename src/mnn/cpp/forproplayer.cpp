@@ -36,7 +36,7 @@ void layerForward(const std::vector<float>& input, std::vector<float>& output, c
             output[j] += (powerIn[i]*cweights[i][j]) + bweights[i][j];
         }
     }
-    std::transform(output.begin(), output.end(), output.begin(), [](float val) { return clamp(val); });
+    // std::transform(output.begin(), output.end(), output.begin(), [](float val) { return clamp(val); }); // Removed clamp
 }
 
 
@@ -75,8 +75,7 @@ void layerForward(const std::vector<std::vector<float>>& input, std::vector<std:
             for (size_t k = 0; k < cweights.size(); ++k) {
                 dotProd_ij += (powerIn[i][k] * cweights[k][j]) + bweights[k][j];
             }
-            output[i][j] = clamp(dotProd_ij); // Assign the final sum
-
+            output[i][j] = dotProd_ij; // Assign the final sum, removed clamp
         }
     }
 }
@@ -136,7 +135,7 @@ void layerForwardBatch(const std::vector<std::vector<float>>& input, std::vector
             }
         }
 
-        std::transform(output[b].begin(), output[b].end(), output[b].begin(), [](float val) { return clamp(val); });
+        // std::transform(output[b].begin(), output[b].end(), output[b].begin(), [](float val) { return clamp(val); }); // Removed clamp
     }
 }
 
@@ -174,7 +173,7 @@ void layerForwardBatch(const std::vector<std::vector<std::vector<float>>>& input
                 }
             }
 
-            std::transform(output[b][r].begin(), output[b][r].end(), output[b][r].begin(), [](float val) { return clamp(val); });
+            // std::transform(output[b][r].begin(), output[b][r].end(), output[b][r].begin(), [](float val) { return clamp(val); }); // Removed clamp
         }
     }
 }

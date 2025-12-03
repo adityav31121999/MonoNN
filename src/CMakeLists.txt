@@ -18,7 +18,8 @@ set(MNN_SOURCES
 if(USE_CPU)
     list(APPEND MNN_SOURCES
         mnn/cpp/forproplayer.cpp
-        mnn/cpp/backproplayer.cpp
+        mnn/cpp/back1.cpp
+        mnn/cpp/backbatch.cpp
         mnn/cpp/forprop.cpp
         mnn/cpp/backprop.cpp
         mnn/cpp/train.cpp

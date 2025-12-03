@@ -76,27 +76,26 @@ void mnn2d::backprop(const std::vector<float>& expected) {
     this->target = expected;
     std::vector<float> output_error(target.size(), 0.0f);
     for(int i = 0; i < outWidth; i++) {
-        // since output is mean pooled, distribute error equally
         output_error[i] = output[i] - expected[i];
     }
+    // output was mean pooled from activate[layers-1]
     std::vector<std::vector<float>> incoming_gradient(activate[layers-1].size(), 
                                             std::vector<float>(activate[layers-1][0].size(), 0.0f));
-
-    // Distribute output error to incoming gradient for mean pool
     for(int i = 0; i < activate[layers-1].size(); i++) {
         for(int j = 0; j < outWidth; j++) {
-            incoming_gradient[i][j] = output_error[j];
+            // multiply the error equally among the pooled neurons
+            incoming_gradient[i][j] = output_error[j] * activate[layers-1].size();
         }
     }
     std::vector<std::vector<float>> outgoing_gradient;
+
     // Backpropagate the error
     for(int layer = layers - 1; layer >= 1; layer--) {
         layerBackward(incoming_gradient, outgoing_gradient, dotProds[layer-1], activate[layer-1],
                         cweights[layer], cgradients[layer], bgradients[layer], order, ALPHA);
         incoming_gradient = outgoing_gradient;
     }
-    layerBackward(incoming_gradient, reshape(softmax(flatten(input)), input.size(), input[0].size()),
-                    cweights[0], cgradients[0], bgradients[0], order, ALPHA);
+    layerBackward(incoming_gradient, input, cweights[0], cgradients[0], bgradients[0], order, ALPHA);
 
     // update weights
     int type = 3;
@@ -124,10 +123,11 @@ void mnn2d::backprop(const std::vector<std::vector<float>>& expected) {
         incoming_gradient[i].resize(actBatch[layers-1][i].size(), std::vector<float>(actBatch[layers-1][i][0].size()));
         for(size_t j = 0; j < actBatch[layers-1][i].size(); j++) {
             for(size_t k = 0; k < outWidth; k++) {
-                incoming_gradient[i][j][k] = output_error[i][k];
+                incoming_gradient[i][j][k] = output_error[i][k] * actBatch[layers-1][i].size();
             }
         }
     }
+
     // Backpropagate the error
     for(int layer = layers - 1; layer >= 1; layer--) {
         std::vector<std::vector<std::vector<float>>> outgoing_gradient;
@@ -135,8 +135,7 @@ void mnn2d::backprop(const std::vector<std::vector<float>>& expected) {
                         cweights[layer], cgradients[layer], bgradients[layer], order, ALPHA);
         incoming_gradient = outgoing_gradient;
     }
-    layerBackwardBatch(incoming_gradient, inputBatch, cweights[0], cgradients[0], bgradients[0], order, 
-                        ALPHA);
+    layerBackwardBatch(incoming_gradient, inputBatch, cweights[0], cgradients[0], bgradients[0], order, ALPHA);
 
     // update weights
     int type = 3;

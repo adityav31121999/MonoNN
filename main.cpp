@@ -27,7 +27,7 @@ int main() {
     int inSize = 784;
     int inh = 28, inw = 28;
     int outSize = 10;
-    float order = 1.5f;
+    float order = 1.1f;
     std::vector<int> hidden_layers1 = { 784, 392, 196, 98, 49, outSize };
     std::vector<int> hidden_layers2 = { 28, 56, 112, 224, 224, 224, 112, 56, 28, outSize };
 

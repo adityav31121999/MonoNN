@@ -20,7 +20,7 @@ std::vector<float> operator+(const std::vector<float>& a, const std::vector<floa
 
     std::vector<float> result(a.size());
     for (size_t i = 0; i < a.size(); i++) {
-        result[i] = clamp(a[i] + b[i]);
+        result[i] = a[i] + b[i];
     }
     return result;
 }
@@ -40,7 +40,7 @@ std::vector<std::vector<float>> operator+(const std::vector<std::vector<float>>&
     std::vector<std::vector<float>> result(a.size(), std::vector<float>(a[0].size()));
     for (size_t i = 0; i < a.size(); i++) {
         for (size_t j = 0; j < a[0].size(); j++) {
-            result[i][j] = clamp(a[i][j] + b[i][j]);
+            result[i][j] = a[i][j] + b[i][j];
         }
     }
     return result;
@@ -63,7 +63,6 @@ std::vector<float> operator*(const std::vector<float>& a, const std::vector<std:
         for(size_t i = 0; i < a.size(); i++) {
             result[j] += a[i] * b[i][j];
         }
-        result[j] = clamp(result[j]);
     }
 
     return result;
@@ -87,7 +86,6 @@ std::vector<std::vector<float>> operator*(const std::vector<std::vector<float>>&
             for(size_t k = 0; k < a[0].size(); k++) {
                 result[i][j] += a[i][k] * b[k][j];
             }
-            result[i][j] = clamp(result[i][j]);
         }
     }
     return result;
@@ -107,7 +105,7 @@ std::vector<float> multiply(const std::vector<float>& a, const std::vector<float
     }
     std::vector<float> result(a.size());
     for (size_t i = 0; i < a.size(); ++i) {
-        result[i] = clamp(a[i] * b[i]);
+        result[i] = a[i] * b[i];
     }
     return result;
 }
@@ -133,7 +131,6 @@ std::vector<float> multiply(const std::vector<float>& a, const std::vector<std::
         for(size_t i = 0; i < b.size(); i++) {
             result[j] += a[i] * b[i][j];
         }
-        result[j] = clamp(result[j]);
     }
     return result;
 }
@@ -153,7 +150,7 @@ std::vector<std::vector<float>> multiply(const std::vector<std::vector<float>>& 
         std::vector<std::vector<float>> result(a.size(), std::vector<float>(a[0].size()));
         for (size_t i = 0; i < a.size(); ++i) {
             for (size_t j = 0; j < a[0].size(); ++j) {
-                result[i][j] = clamp(a[i][j] * b[i][j]);
+                result[i][j] = a[i][j] * b[i][j];
             }
         }
         return result;
@@ -166,7 +163,6 @@ std::vector<std::vector<float>> multiply(const std::vector<std::vector<float>>& 
                 for(size_t k = 0; k < a[0].size(); k++) {
                     result[i][j] += a[i][k] * b[k][j];
                 }
-                result[i][j] = clamp(result[i][j]);
             }
         }
         return result;
@@ -188,7 +184,7 @@ std::vector<float> power(const std::vector<float>& input, const float& powerOfVa
     // each element of input is raised to powerOfValues
     std::transform(input.begin(), input.end(), result.begin(),
                     [powerOfValues](float val) {
-                        return clamp(std::pow(val, powerOfValues));
+                        return std::pow(val, powerOfValues);
                     });
     return result;
 }
@@ -208,7 +204,7 @@ std::vector<std::vector<float>> power(const std::vector<std::vector<float>>& inp
                        std::vector<float> new_row(row.size());
                        std::transform(row.begin(), row.end(), new_row.begin(),
                                         [powerOfValues](float val) {
-                                            return clamp(std::pow(val, powerOfValues));
+                                            return std::pow(val, powerOfValues);
                                         });
                        return new_row;
                    });
@@ -228,7 +224,7 @@ std::vector<float> meanPool(const std::vector<std::vector<float>>& input) {
         }
     }
     for (auto& val : result) {
-        val = clamp(val / input.size());
+        val = val / input.size();
     }
     return result;
 }
@@ -245,7 +241,6 @@ std::vector<float> maxPool(const std::vector<std::vector<float>>& input) {
             if (row[i] > result[i]) {
                 result[i] = row[i];
             }
-            result[i] = clamp(result[i]);
         }
     }
     return result;
@@ -265,7 +260,7 @@ std::vector<float> weightedMeanPool(const std::vector<float>& weights, const std
     std::vector<float> result(input.size(), 0.0f);
     result = multiply(weights, input);
     for(int i = 0; i < result.size(); i++) {
-        result[i] = clamp(result[i] / weights.size());
+        result[i] /= weights.size();
     }
     return result;
 }
@@ -339,13 +334,12 @@ std::vector<std::vector<float>> average(const std::vector<std::vector<std::vecto
         for(int j = 0; j < input[i].size(); j++) {
             for(int k = 0; k < input[i][j].size(); k++) {
                 result[j][k] += input[i][j][k];
-                result[j][k] = clamp(result[j][k]);
             }
         }
     }
     for(int j = 0; j < result.size(); j++) {
         for(int k = 0; k < result[j].size(); k++) {
-            result[j][k] = clamp(result[j][k] / n);
+            result[j][k] /= n;
         }
     }
     return result;
@@ -370,18 +364,16 @@ void clipGradients(std::vector<std::vector<float>>& gradients, float max_norm) {
     for (const auto& row : gradients) {
         for (float val : row) {
             total_norm += val * val;
-            total_norm = clamp(total_norm);
         }
     }
     total_norm = std::sqrt(total_norm);
-    total_norm = clamp(total_norm);
     if (total_norm == 0.0f) total_norm = 1.0f;
     // Clip if necessary
     if (total_norm > max_norm) {
         float scale = max_norm / total_norm;
         for (auto& row : gradients) {
             for (float& val : row) {
-                val = clamp(val * scale);
+                val *= scale;
             }
         }
     }
