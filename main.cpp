@@ -1,5 +1,4 @@
 #include <iostream>
-#include <random>
 #include "mononn.h"
 
 int main() {
@@ -27,7 +26,7 @@ int main() {
     int inSize = 784;
     int inh = 28, inw = 28;
     int outSize = 10;
-    float order = 1.1f;
+    float order = 1.4f;
     std::vector<int> hidden_layers1 = { 784, 392, 196, 98, 49, outSize };
     std::vector<int> hidden_layers2 = { 28, 56, 112, 224, 224, 224, 112, 56, 28, outSize };
 
@@ -47,9 +46,9 @@ int main() {
         mnn2d network2(inh, inw, outSize, hidden_layers2, order, binFileAddress3);
         network2.loadNetwork();
         network2.path2progress = progressData3;
-        network2.batchSize = 1;
+        network2.batchSize = 10;
         network2.mnn2dPrg.sessionSize = 50;
-        network2.learningRate = 0.01f;
+        network2.learningRate = 0.009f;
         network2.train(digitTrain, network2.batchSize);
     }
     catch (const std::exception& e) {

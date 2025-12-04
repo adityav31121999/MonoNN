@@ -81,7 +81,7 @@ mnn::mnn(int insize, int outsize, int layers, float order, std::string binFileAd
         if (devices.empty()) {
             throw std::runtime_error("No OpenCL devices found in the default context.");
         }
-        clCommandQueue = cl::CommandQueue(clContext, devices[0], 0, &err); CL_CHECK(err);
+        clCommandQueue = cl::CommandQueue(clContext, devices[0], cl::QueueProperties::None, &err); CL_CHECK(err);
         createKernelsFromFile(clContext, kernelFiles, kernels);
         std::cout << "OpenCL kernels created successfully." << std::endl;
     }
@@ -191,7 +191,7 @@ mnn::mnn(int insize, int outsize, int dim, int layers, float order, std::string 
 
         auto devices = clContext.getInfo<CL_CONTEXT_DEVICES>();
         if (devices.empty()) {
-            throw std::runtime_error("No OpenCL devices found in the default context.");
+           throw std::runtime_error("No OpenCL devices found in the default context.");
         }
         clCommandQueue = cl::CommandQueue(clContext, devices[0], 0, &err); CL_CHECK(err);
 
@@ -298,7 +298,7 @@ mnn::mnn(int insize, int outsize, std::vector<int> width, float order, std::stri
         if (devices.empty()) {
             throw std::runtime_error("No OpenCL devices found in the default context.");
         }
-        clCommandQueue = cl::CommandQueue(clContext, devices[0], 0, &err); CL_CHECK(err);
+        clCommandQueue = cl::CommandQueue(clContext, devices[0], cl::QueueProperties::None, &err); CL_CHECK(err);
 
         createKernelsFromFile(clContext, kernelFiles, kernels);
         std::cout << "OpenCL kernels created successfully." << std::endl;

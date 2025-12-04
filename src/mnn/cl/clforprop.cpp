@@ -181,7 +181,7 @@ void mnn2d::clForprop(const std::vector<std::vector<float>>& input)
             // launch softmax_reduce kernel
             kernelSoftMaxReduce.setArg(0, d_dotProds[0]);
             kernelSoftMaxReduce.setArg(1, d_partial_results);
-            kernelSoftMaxReduce.setArg(2, cl::Local(sizeof(float) * WORKSIZE_1D * 2)); // Allocate space for both max and sum
+            kernelSoftMaxReduce.setArg(2, cl::Local(sizeof(float) * WORKSIZE_1D * 2));
             kernelSoftMaxReduce.setArg(3, (int)dotprod_size_layer0);
             kernelSoftMaxReduce.setArg(4, SOFTMAX_TEMP);
             cl::NDRange globalReduce = calculate_global_1d(WORKSIZE_1D, dotprod_size_layer0);
@@ -254,7 +254,7 @@ void mnn2d::clForprop(const std::vector<std::vector<float>>& input)
                 // launch softmax_reduce kernel
                 kernelSoftMaxReduce.setArg(0, d_dotProds[i]);
                 kernelSoftMaxReduce.setArg(1, d_partial_results);
-                kernelSoftMaxReduce.setArg(2, cl::Local(sizeof(float) * WORKSIZE_1D * 2)); // Allocate space for both max and sum
+                kernelSoftMaxReduce.setArg(2, cl::Local(sizeof(float) * WORKSIZE_1D * 2));
                 kernelSoftMaxReduce.setArg(3, (int)dotprod_size_layer_i);
                 kernelSoftMaxReduce.setArg(4, SOFTMAX_TEMP);
                 cl::NDRange globalReduce = calculate_global_1d(WORKSIZE_1D, dotprod_size_layer_i);

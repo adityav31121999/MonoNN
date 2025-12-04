@@ -12,9 +12,9 @@
 /**
  * @brief train network on given dataset
  * @param dataSetPath path to dataset folder
- * @param batchSize numebr of inputs in single batch (1 or more)
+ * @param isBatchTrain whether to use batch training or not
  */
-void mnn::train(const std::string &dataSetPath, int batchSize)
+void mnn::train(const std::string &dataSetPath, bool isBatchTrain)
 {
     // Access all image files from the dataset path
     std::vector<std::filesystem::path> filePaths;
@@ -75,7 +75,7 @@ void mnn::train(const std::string &dataSetPath, int batchSize)
     std::cout << "Files in Single Session: " << sessionFiles << std::endl;
 
     // Train based on batch size
-    if (batchSize == 1) {
+    if (isBatchTrain == false) {
         for(const auto& filePath : filePaths) {
             // Skip files that have already been processed in previous sessions
             if (fileCount < this->mnnPrg.filesProcessed) {
@@ -139,7 +139,7 @@ void mnn::train(const std::string &dataSetPath, int batchSize)
             }
         }
     }
-    else if (batchSize > 1) {
+    else {
         this->inputBatch.resize(batchSize);
         this->outputBatch.resize(batchSize);
         this->targetBatch.resize(batchSize);
@@ -226,9 +226,7 @@ void mnn::train(const std::string &dataSetPath, int batchSize)
             }
         }
     }
-    else {
-        throw std::runtime_error("Invalid batch size: " + std::to_string(batchSize));
-    }
+
     auto endTime = std::chrono::high_resolution_clock::now();
     this->mnnPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
     this->mnnPrg.timeTakenForTraining = previousTrainingTime + this->mnnPrg.timeForCurrentSession;
@@ -240,9 +238,9 @@ void mnn::train(const std::string &dataSetPath, int batchSize)
 /**
  * @brief train network on given dataset
  * @param dataSetPath path to dataset folder.
- * @param batchSize number of inputs in a single batch (1 or more).
+ * @param isBatchTrain whether to use batch training or not
  */
-void mnn2d::train(const std::string &dataSetPath, int batchSize)
+void mnn2d::train(const std::string &dataSetPath, bool isBatchTrain)
 {
     // 1. Access all image files from the dataset path
     std::vector<std::filesystem::path> filePaths;
@@ -298,7 +296,7 @@ void mnn2d::train(const std::string &dataSetPath, int batchSize)
     int filesInCurrentSession = 0;
 
     // 3. Train based on batch size
-    if (batchSize == 1) {
+    if (isBatchTrain == false) {
         int fileCount = 0;
         std::cout << "Training with batch size: 1" << std::endl;
         for(const auto& filePath : filePaths) {
@@ -364,7 +362,7 @@ void mnn2d::train(const std::string &dataSetPath, int batchSize)
             }
         }
     }
-    else if (batchSize > 1) {
+    else {
         std::cout << "Training With BatchSize of " << batchSize << std::endl;
         this->inputBatch.resize(batchSize);
         this->outputBatch.resize(batchSize);
@@ -457,9 +455,7 @@ void mnn2d::train(const std::string &dataSetPath, int batchSize)
             }
         }
     }
-    else {
-        throw std::runtime_error("Invalid batch size: " + std::to_string(batchSize));
-    }
+
     auto endTime = std::chrono::high_resolution_clock::now();
     this->mnn2dPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
     this->mnn2dPrg.timeTakenForTraining = previousTrainingTime + this->mnn2dPrg.timeForCurrentSession;

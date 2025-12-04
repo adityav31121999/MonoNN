@@ -330,11 +330,10 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
         CL_CHECK(clCommandQueue.enqueueReadBuffer(d_err, CL_TRUE, 0, sizeof(float) * output.size(), out_err_host.data()));
         for(size_t i = 0; i < activate[layers-1].size(); ++i) {
             for(size_t j = 0; j < activate[layers-1][0].size(); ++j) {
-                equalGrads[i][j] = out_err_host[j];
+                equalGrads[i][j] = output[j] - expected[j];
             }
         }
-        std::vector<float> last_layer_err = flatten(equalGrads);
-        CL_CHECK(clCommandQueue.enqueueWriteBuffer(d_incoming[layers-1], CL_TRUE, 0, last_layer_err.size() * sizeof(float), last_layer_err.data()));
+        CL_CHECK(clCommandQueue.enqueueWriteBuffer(d_incoming[layers-1], CL_TRUE, 0, flatten(equalGrads).size() * sizeof(float), flatten(equalGrads).data()));
 
         // Backpropagation from last to second layer
         for (int layer = layers - 1; layer >= 1; --layer) {
@@ -551,7 +550,7 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
             // Update C weights using kernelUpdateWeights
             kernelUpdateWeights.setArg(0, d_cweights[i]);
             kernelUpdateWeights.setArg(1, d_gradC[i]);
-            kernelUpdateWeights.setArg(2, (int)cweights[i].size() * (int)prev_layer_size);
+            kernelUpdateWeights.setArg(2, (int)cweight_size);
             kernelUpdateWeights.setArg(3, learningRate);
             kernelUpdateWeights.setArg(4, LAMBDA_L1);
             kernelUpdateWeights.setArg(5, LAMBDA_L2);
@@ -559,7 +558,9 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
             // Update B weights using kernelUpdateWeights
             kernelUpdateWeights.setArg(0, d_bweights[i]);
             kernelUpdateWeights.setArg(1, d_gradB[i]);
-            kernelUpdateWeights.setArg(2, (int)bweights[i].size() * (int)prev_layer_size);
+            kernelUpdateWeights.setArg(2, (int)bweight_size);
+            // The learningRate, LAMBDA_L1, and LAMBDA_L2 are already set from the C weights update
+            // and don't need to be set again if they are the same.
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelUpdateWeights, cl::NullRange, globalWeightGrad, local_1d));
 
             // copy and reshape

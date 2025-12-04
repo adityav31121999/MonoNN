@@ -268,7 +268,7 @@ inline const char* oclErrorString(cl_int error) {
 #include <stdexcept>      // For std::runtime_error
 
 // --- CUDA Error Checking Macro ---
-#define CUDA_CHECK(call)                                                    \
+#define CUDA_CHECK(call)                                                        \
     do {                                                                        \
         cudaError_t err_code_ = call;                                           \
         if (err_code_ != cudaSuccess) {                                         \

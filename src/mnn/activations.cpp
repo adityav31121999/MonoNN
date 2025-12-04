@@ -239,3 +239,261 @@ std::vector<float> softmaxDer(const std::vector<float>& x, float temp) {
     }
     return result;
 }
+
+//----------------Least of them all (LOTA) and it's derivative----------------//
+
+/**
+ * @brief Applies the LOTA activation function to a vector.
+ *        LOTA(x_i) = (x_i + abs(min(x))) / sum(x_j + abs(min(x)))
+ * @param y Input vector (const reference).
+ * @return A new vector containing the LOTA results.
+ */
+std::vector<float> LOTA(const std::vector<float>& y) {
+    if (y.empty()) {
+        return {}; // Return empty for empty input
+    }
+    if (y.size() == 1) {
+        return {1.0f}; // Single element always results in probability 1
+    }
+
+    // Find the minimum value in the input vector
+    float min_val = *std::min_element(y.begin(), y.end());
+    float abs_min_val = std::abs(min_val);
+
+    // Create a temporary vector for transformed values (x_i + abs(min_val))
+    std::vector<float> transformed_x = y; // Copy constructor
+    float sum = 0.0f;
+    for(float& val : transformed_x) {
+        val += abs_min_val;
+        sum += val;
+    }
+
+    // Normalize the transformed vector
+    if (sum > 0.0f) { // Avoid division by zero
+        for(float& val : transformed_x) {
+            val /= sum;
+        }
+    } else if (!transformed_x.empty()) {
+        // Handle sum == 0 case (e.g., all elements were -abs_min_val) -> uniform distribution
+        float uniform_prob = 1.0f / static_cast<float>(transformed_x.size());
+        std::fill(transformed_x.begin(), transformed_x.end(), uniform_prob);
+    }
+    // If sum is non-positive and vector is empty, it returns empty anyway
+
+    return transformed_x; // Return the normalized vector
+}
+
+
+/**
+ * @brief Calculates the derivative of the LOTA activation function for a vector.
+ *        LOTA'(x_i) = (sum - transformed_x_i) / sum^2
+ *        where transformed_x_i = x_i + abs(min(x)) and sum = sum(transformed_x_j)
+ * @param y Input vector (const reference).
+ * @return A new vector containing the LOTA derivative results.
+ */
+std::vector<float> LOTAder(const std::vector<float>& y) {
+     if (y.empty()) {
+        return {};
+    }
+     if (y.size() == 1) {
+         // Derivative for a single element LOTA(x)=1 is 0
+         return {0.0f};
+     }
+
+    // Find the minimum value
+    float min_val = *std::min_element(y.begin(), y.end());
+    float abs_min_val = std::abs(min_val);
+
+    // Calculate transformed values and their sum
+    std::vector<float> transformed_x = y; // Copy
+    float sum = 0.0f;
+    for(float& val : transformed_x) {
+        val += abs_min_val;
+        sum += val;
+    }
+
+    // Calculate the derivative
+    std::vector<float> derivative_x(y.size());
+    float sum_sq = sum * sum; // Calculate sum squared once
+
+    if (sum > 0.0f) { // Avoid division by zero
+        for (size_t i = 0; i < y.size(); ++i) {
+            // Derivative: (sum - transformed_element) / sum^2
+            derivative_x[i] = (sum - transformed_x[i]) / sum_sq;
+        }
+    } else {
+        // Handle sum == 0 case (derivative is likely 0 or undefined)
+        std::fill(derivative_x.begin(), derivative_x.end(), 0.0f);
+    }
+
+    return derivative_x;
+}
+
+
+/**
+ * @brief Applies the LOTA activation function to a 2D vector (matrix),
+ *        considering only relevant elements defined by 't' and 'attentionType'.
+ * @param y Input 2D vector (const reference).
+ * @param t Dimension limit (passed by value).
+ * @param attentionType If true, process only the lower triangle (incl. diagonal); otherwise, process up to t x t square (passed by value).
+ * @return A new 2D vector with LOTA applied to relevant elements, others potentially zeroed.
+ */
+std::vector<std::vector<float>> LOTA(const std::vector<std::vector<float>>& y, int t, bool attentionType) { // Pass t and attentionType by value
+    if (y.empty() || y[0].empty() || t <= 0) return {{}}; // Handle edge cases
+
+    std::vector<std::vector<float>> x = y; // Operate on a copy
+
+    // Handle 1x1 case explicitly if t=1
+    if (t == 1 && !x.empty() && !x[0].empty()) {
+        x[0][0] = 1.0f;
+        // Zero out other elements if needed based on desired output shape
+        // for (size_t j = 1; j < x[0].size(); ++j) x[0][j] = 0.0f;
+        // for (size_t i = 1; i < x.size(); ++i) std::fill(x[i].begin(), x[i].end(), 0.0f);
+        return x;
+    }
+
+    // Find the minimum value in the relevant region
+    float min_val = (std::numeric_limits<float>::max)(); // Parenthesize to avoid macro
+    bool found_value = false;
+    size_t max_rows = (std::min)((size_t)t, x.size()); // Parenthesize to avoid macro
+    for (size_t i = 0; i < max_rows; ++i) {
+        size_t limit_j = attentionType ? (i + 1) : (size_t)t;
+        limit_j = (std::min)(limit_j, x[i].size()); // Boundary check cols, parenthesize
+        for (size_t j = 0; j < limit_j; ++j) {
+            min_val = (std::min)(min_val, x[i][j]); // Parenthesize to avoid macro
+            found_value = true;
+        }
+    }
+    if (!found_value) 
+        min_val = 0.0f; // Handle case where relevant region is effectively empty
+
+    float abs_min_val = std::abs(min_val);
+
+    // Transform relevant elements: element + abs(min_val) and calculate sum
+    float sum = 0.0f;
+    int relevant_count = 0;
+    for (size_t i = 0; i < max_rows; ++i) {
+        size_t limit_j = attentionType ? (i + 1) : (size_t)t;
+        limit_j = (std::min)(limit_j, x[i].size()); // Boundary check cols, parenthesize
+        for (size_t j = 0; j < limit_j; ++j) {
+            x[i][j] += abs_min_val;
+            sum += x[i][j];
+            relevant_count++;
+        }
+        // Zero out non-relevant elements in the row if attentionType is true
+        if (attentionType) {
+            for (size_t j = limit_j; j < x[i].size(); ++j) {
+                x[i][j] = 0.0f;
+            }
+        }
+    }
+    // Normalize relevant elements by the global sum
+    if (sum > 0.0f) {
+        for (size_t i = 0; i < max_rows; ++i) {
+            size_t limit_j = attentionType ? (i + 1) : (size_t)t;
+            limit_j = (std::min)(limit_j, x[i].size()); // Boundary check cols, parenthesize
+            for (size_t j = 0; j < limit_j; ++j) {
+                x[i][j] /= sum;
+            }
+        }
+    } 
+    else if (relevant_count > 0) {
+        // Handle sum=0 case -> uniform distribution over relevant elements
+        float uniform_val = 1.0f / static_cast<float>(relevant_count);
+        for (size_t i = 0; i < max_rows; ++i) {
+            size_t limit_j = attentionType ? (i + 1) : (size_t)t;
+            limit_j = (std::min)(limit_j, x[i].size()); // Boundary check cols, parenthesize
+            for (size_t j = 0; j < limit_j; ++j) {
+                x[i][j] = uniform_val;
+            }
+        }
+    }
+    // Non-relevant elements remain 0 (if zeroed out) or their original value
+    return x; // Return the modified 2D vector
+}
+
+
+/**
+ * @brief Derivative of the LOTA activation function for a 2D vector (matrix),
+ *        considering only relevant elements defined by 't' and 'attentionType'.
+ * @param y Input 2D vector (const reference).
+ * @param t Dimension limit (passed by value).
+ * @param attentionType If true, process only the lower triangle; otherwise, up to t x t square (passed by value).
+ * @return A new 2D vector with LOTA derivative applied to relevant elements.
+ */
+std::vector<std::vector<float>> LOTAder(const std::vector<std::vector<float>>& y, int t, bool attentionType) { // Pass t and attentionType by value
+    if (y.empty() || y[0].empty() || t <= 0) return {{}};
+
+    std::vector<std::vector<float>> result = y; // Create a copy to store derivatives
+
+    // Handle 1x1 case explicitly if t=1
+    if (t == 1 && !result.empty() && !result[0].empty()) {
+        result[0][0] = 0.0f; // Derivative of LOTA(x)=1 is 0
+        return result;
+    }
+
+    // Find the minimum value in the relevant region
+    float min_val = (std::numeric_limits<float>::max)(); // Parenthesize to avoid macro
+    bool found_value = false;
+    size_t max_rows = (std::min)((size_t)t, y.size()); // Use y for reading min, parenthesize
+    for (size_t i = 0; i < max_rows; ++i) {
+        size_t limit_j = attentionType ? (i + 1) : (size_t)t;
+        limit_j = (std::min)(limit_j, y[i].size()); // Boundary check cols, parenthesize
+        for (size_t j = 0; j < limit_j; ++j) {
+            min_val = (std::min)(min_val, y[i][j]); // Parenthesize to avoid macro
+            found_value = true;
+        }
+    }
+    if (!found_value) min_val = 0.0f;
+
+    float abs_min_val = std::abs(min_val);
+    // Calculate the sum of (element + abs(min_val)) in the relevant region
+    // Also store transformed values temporarily
+    float sum = 0.0f;
+    std::vector<std::vector<float>> transformed_x = y; // Temp storage
+    for (size_t i = 0; i < max_rows; ++i) {
+        size_t limit_j = attentionType ? (i + 1) : (size_t)t;
+        limit_j = (std::min)(limit_j, y[i].size()); // Boundary check cols, parenthesize
+        for (size_t j = 0; j < limit_j; ++j) {
+            transformed_x[i][j] = y[i][j] + abs_min_val; // Use original y here
+            sum += transformed_x[i][j];
+        }
+    }
+
+    // Calculate the derivative for each element in the relevant region
+    float sum_sq = sum * sum;
+    if (sum > 0.0f) { // Avoid division by zero
+        for (size_t i = 0; i < max_rows; ++i) {
+            size_t limit_j = attentionType ? (i + 1) : (size_t)t;
+            limit_j = (std::min)(limit_j, y[i].size()); // Boundary check cols, parenthesize
+            for (size_t j = 0; j < limit_j; ++j) {
+                // Derivative: (sum - transformed_element) / sum^2
+                result[i][j] = (sum - transformed_x[i][j]) / sum_sq;
+            }
+            // Zero out non-relevant elements in the row if attentionType is true
+            if (attentionType) {
+                for (size_t j = limit_j; j < result[i].size(); ++j) { // Use result here
+                    result[i][j] = 0.0f; // Parenthesize to avoid macro
+                }
+            }
+        }
+    } 
+    else {
+        // Handle sum=0 case (derivative is likely 0 or undefined)
+        for (size_t i = 0; i < max_rows; ++i) {
+            size_t limit_j = attentionType ? (i + 1) : (size_t)t;
+            limit_j = (std::min)(limit_j, y[i].size()); // Boundary check cols, parenthesize
+            for (size_t j = 0; j < limit_j; ++j) {
+                result[i][j] = 0.0f; // Set derivative to 0
+            }
+            // Zero out non-relevant elements if attentionType is true
+            if (attentionType) {
+                for (size_t j = limit_j; j < result[i].size(); ++j) {
+                    result[i][j] = 0.0f;
+                }
+            }
+        }
+    }
+
+    return result; // Return the derivative matrix
+}

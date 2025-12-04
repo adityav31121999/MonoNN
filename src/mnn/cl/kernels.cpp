@@ -16,7 +16,6 @@
 
 // Get the absolute source directory path from the CMake-defined macro
 const std::filesystem::path src_dir = MONO_NN_SRC_DIR;
-
 const std::vector<std::string> kernelFiles = [] {
     return std::vector<std::string>{
         (src_dir / "src/mnn/cl/activations.cl").string(),

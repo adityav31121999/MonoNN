@@ -380,13 +380,14 @@ void mnn2d::clBackprop(const std::vector<std::vector<float>>& expected) {
 
         // error calculation and distribution
         for (int i = 0; i < batchSize; i++) {
+            // calculate error for i
             kernelSub.setArg(0, d_out[i]);
             kernelSub.setArg(1, d_exp[i]);
             kernelSub.setArg(2, d_err[i]);
             kernelSub.setArg(3, (int)outputBatch[i].size());
             cl::NDRange globalSub = calculate_global_1d(WORKSIZE_1D, outputBatch[i].size());
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSub, cl::NullRange, globalSub, local_1d));
-            
+
             // error back through mean pooling layer
             size_t last_layer_rows = actBatch[layers-1][i].size();
             size_t last_layer_cols = actBatch[layers-1][i][0].size();
@@ -398,16 +399,15 @@ void mnn2d::clBackprop(const std::vector<std::vector<float>>& expected) {
                     equalGrads[r][c] = out_err_host[c];
                 }
             }
-            std::vector<float> last_layer_err = flatten(equalGrads);
-            CL_CHECK(clCommandQueue.enqueueWriteBuffer(d_incoming[layers-1][i], CL_TRUE, 0, last_layer_err.size() * sizeof(float), last_layer_err.data()));
+            CL_CHECK(clCommandQueue.enqueueWriteBuffer(d_incoming[layers-1][i], CL_TRUE, 0, flatten(equalGrads).size() * sizeof(float), flatten(equalGrads).data()));
         }
 
         // bacpropagation from last to second layer
         for(int layer = layers - 1; layer >= 1; layer--) {
             cl::NDRange globalWeightGrad = calculate_global_1d(WORKSIZE_1D, cweights[layer].size() * cweights[layer][0].size());
             cl::NDRange globalOutGrad = calculate_global_1d(WORKSIZE_1D, actBatch[layer - 1][0].size());
-            int row = cgradients[layer].size();
-            int col = cgradients[layer][0].size();
+            int row = cweights[layer].size();
+            int col = cweights[layer][0].size();
             int totalElements = row * col;
             cl::Buffer d_totalCgrad, d_totalBgrad;
             d_totalCgrad = cl::Buffer(clContext, CL_MEM_READ_WRITE, totalElements * batchSize * sizeof(float));
@@ -473,10 +473,9 @@ void mnn2d::clBackprop(const std::vector<std::vector<float>>& expected) {
                     // Launch softmax_reduce kernel
                     kernelSoftMaxReduce.setArg(0, d_dotProds[layer-1][i]);
                     kernelSoftMaxReduce.setArg(1, d_partial_results);
-                    kernelSoftMaxReduce.setArg(2, cl::Local(sizeof(float) * WORKSIZE_1D));
-                    kernelSoftMaxReduce.setArg(3, cl::Local(sizeof(float) * WORKSIZE_1D));
-                    kernelSoftMaxReduce.setArg(4, (int)prev_dot_size);
-                    kernelSoftMaxReduce.setArg(5, SOFTMAX_TEMP);
+                    kernelSoftMaxReduce.setArg(2, cl::Local(sizeof(float) * WORKSIZE_1D * 2)); // Combined local memory
+                    kernelSoftMaxReduce.setArg(3, (int)prev_dot_size);
+                    kernelSoftMaxReduce.setArg(4, SOFTMAX_TEMP);
                     cl::NDRange globalReduce = calculate_global_1d(WORKSIZE_1D, prev_dot_size);
                     cl::NDRange localReduce(WORKSIZE_1D);
                     CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSoftMaxReduce, cl::NullRange, globalReduce, localReduce));

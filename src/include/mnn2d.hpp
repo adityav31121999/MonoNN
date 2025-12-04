@@ -109,7 +109,7 @@ public:
 
     #endif
 
-    void train(const std::string& dataSetPath, int batchSize);
+    void train(const std::string& dataSetPath, bool isBatchTrain);
     void test(const std::string& dataSetPath, float& loss);
 
 // destructor
