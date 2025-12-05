@@ -11,7 +11,7 @@
 /**
  * @brief batch layer backprop for mnn for first layer
  * @param[in] incoming batch of incoming gradients (dL/dz_l)
- * @param[in] prevAct batch activation of previous layer
+ * @param[in] input input to mnn is used here
  * @param[in] C current layers coefficients weights matrix
  * @param[out] gradc accumulated gradients for C matrix
  * @param[out] gradb accumulated gradients for B matrix
@@ -19,21 +19,18 @@
  * @param[in] alpha gradient splitting factor
  */
 void layerBackwardBatch(const std::vector<std::vector<float>>& incoming,
-                    const std::vector<std::vector<float>>& prevAct, 
-                    std::vector<std::vector<float>>& C,
-                    std::vector<std::vector<float>>& gradc,
-                    std::vector<std::vector<float>>& gradb,
-                    float m, float alpha)
+                        const std::vector<std::vector<float>>& input, 
+                        std::vector<std::vector<float>>& C,
+                        std::vector<std::vector<float>>& gradc,
+                        std::vector<std::vector<float>>& gradb,
+                        float m,
+                        float alpha)
 {
-    // Initialize gradients to 0
-    for(auto& row : gradc) std::fill(row.begin(), row.end(), 0.0f);
-    for(auto& row : gradb) std::fill(row.begin(), row.end(), 0.0f);
-
     int batchSize = incoming.size();
-    
+
+    // accumulate gradients
     for(int b = 0; b < batchSize; ++b) {
-        std::vector<float> prev_p = power(prevAct[b], m);
-        
+        std::vector<float> prev_p = power(input[b], m);
         for(int i = 0; i < prev_p.size(); i++) {
             for(int j = 0; j < incoming[b].size(); j++) {
                 gradc[i][j] += alpha * prev_p[i] * incoming[b][j];
@@ -70,12 +67,9 @@ void layerBackwardBatch(const std::vector<std::vector<float>>& incoming,
                     std::vector<std::vector<float>>& C,
                     std::vector<std::vector<float>>& gradc,
                     std::vector<std::vector<float>>& gradb,
-                    float m, float alpha)
+                    float m,
+                    float alpha)
 {
-    // Initialize gradients to 0
-    for(auto& row : gradc) std::fill(row.begin(), row.end(), 0.0f);
-    for(auto& row : gradb) std::fill(row.begin(), row.end(), 0.0f);
-
     int batchSize = incoming.size();
     outgoing.resize(batchSize);
 
@@ -126,7 +120,7 @@ void layerBackwardBatch(const std::vector<std::vector<float>>& incoming,
 /**
  * @brief batch layer backprop for mnn2d for first layer
  * @param[in] incoming batch of incoming gradients (dL/dz_l)
- * @param[in] prevAct batch activation of previous layer
+ * @param[in] input input to mnn2d is used here
  * @param[in] C current layers coefficients weights matrix
  * @param[out] gradc accumulated gradients for C matrix
  * @param[out] gradb accumulated gradients for B matrix
@@ -134,11 +128,12 @@ void layerBackwardBatch(const std::vector<std::vector<float>>& incoming,
  * @param[in] alpha gradient splitting factor
  */
 void layerBackwardBatch(const std::vector<std::vector<std::vector<float>>>& incoming,
-                    const std::vector<std::vector<std::vector<float>>>& prevAct,
+                    const std::vector<std::vector<std::vector<float>>>& input,
                     std::vector<std::vector<float>>& C,
                     std::vector<std::vector<float>>& gradc,
                     std::vector<std::vector<float>>& gradb,
-                    float m, float alpha)
+                    float m,
+                    float alpha)
 {
     // Initialize gradients to 0
     for(auto& row : gradc) std::fill(row.begin(), row.end(), 0.0f);
@@ -148,9 +143,9 @@ void layerBackwardBatch(const std::vector<std::vector<std::vector<float>>>& inco
 
     for(int b = 0; b < batchSize; ++b) {
         // dz_l/dB_l = v1^T
-        std::vector<std::vector<float>> v1T(prevAct[b][0].size(), std::vector<float>(prevAct[b].size(), 1.0f));
+        std::vector<std::vector<float>> v1T(input[b][0].size(), std::vector<float>(input[b].size(), 1.0f));
         // dz_l/dC_l
-        std::vector<std::vector<float>> prev_p = power(prevAct[b], m);
+        std::vector<std::vector<float>> prev_p = power(input[b], m);
 
         std::vector<std::vector<float>> cur_gradc = multiply(transpose(prev_p), incoming[b]);
         std::vector<std::vector<float>> cur_gradb = multiply(v1T, incoming[b]);
@@ -193,7 +188,8 @@ void layerBackwardBatch(const std::vector<std::vector<std::vector<float>>>& inco
                     std::vector<std::vector<float>>& C,
                     std::vector<std::vector<float>>& gradc,
                     std::vector<std::vector<float>>& gradb,
-                    float m, float alpha)
+                    float m,
+                    float alpha)
 {
     // Initialize gradients to 0
     for(auto& row : gradc) std::fill(row.begin(), row.end(), 0.0f);

@@ -76,6 +76,8 @@ void mnn::train(const std::string &dataSetPath, bool isBatchTrain)
 
     // Train based on batch size
     if (isBatchTrain == false) {
+        batchSize = 1;
+        std::cout << "learning rate: " << learningRate << std::endl;
         for(const auto& filePath : filePaths) {
             // Skip files that have already been processed in previous sessions
             if (fileCount < this->mnnPrg.filesProcessed) {
@@ -140,6 +142,13 @@ void mnn::train(const std::string &dataSetPath, bool isBatchTrain)
         }
     }
     else {
+        batchSize = BATCH_SIZE;
+        // scaling learning rate based on batch size
+        float originalLR = this->learningRate;
+        this->learningRate = originalLR / static_cast<float>(batchSize);
+        std::cout << "Original learning rate: " << originalLR << std::endl;
+        std::cout << "Batch Size: " << batchSize << std::endl;
+        std::cout << "Adjusted learning rate for batch size: " << this->learningRate << std::endl;
         this->inputBatch.resize(batchSize);
         this->outputBatch.resize(batchSize);
         this->targetBatch.resize(batchSize);
@@ -180,14 +189,15 @@ void mnn::train(const std::string &dataSetPath, bool isBatchTrain)
                 }
                 expBatch.push_back(exp);
             }
-            inputBatch = inBatch, targetBatch = expBatch;
+            inputBatch = inBatch;
+            targetBatch = expBatch;
             // backend selection
             #ifdef USE_CPU
-                trainBatch(inBatch, expBatch);
+                trainBatch(inputBatch, targetBatch);
             #elif USE_CU
-                cuTrainBatch(inBatch, expBatch);
+                cuTrainBatch(inputBatch, targetBatch);
             #elif USE_CL
-                clTrainBatch(inBatch, expBatch);
+                clTrainBatch(inputBatch, targetBatch);
             #endif
 
             // for progress tracking
@@ -225,6 +235,8 @@ void mnn::train(const std::string &dataSetPath, bool isBatchTrain)
                 }
             }
         }
+        // restore original learning rate
+        this->learningRate = originalLR;
     }
 
     auto endTime = std::chrono::high_resolution_clock::now();
@@ -297,6 +309,7 @@ void mnn2d::train(const std::string &dataSetPath, bool isBatchTrain)
 
     // 3. Train based on batch size
     if (isBatchTrain == false) {
+        batchSize = 1;
         int fileCount = 0;
         std::cout << "Training with batch size: 1" << std::endl;
         for(const auto& filePath : filePaths) {
@@ -363,6 +376,7 @@ void mnn2d::train(const std::string &dataSetPath, bool isBatchTrain)
         }
     }
     else {
+        batchSize = BATCH_SIZE;
         std::cout << "Training With BatchSize of " << batchSize << std::endl;
         this->inputBatch.resize(batchSize);
         this->outputBatch.resize(batchSize);
@@ -409,14 +423,15 @@ void mnn2d::train(const std::string &dataSetPath, bool isBatchTrain)
                 }
                 expBatch.push_back(exp);
             }
+
             inputBatch = inBatch;
             targetBatch = expBatch;
             #ifdef USE_CPU
-                trainBatch(inBatch, expBatch);
+                trainBatch(inputBatch, targetBatch);
             #elif USE_CU
-                cuTrainBatch(inBatch, expBatch);
+                cuTrainBatch(inputBatch, targetBatch);
             #elif USE_CL
-                clTrainBatch(inBatch, expBatch);
+                clTrainBatch(inputBatch, targetBatch);
             #endif
 
             // for progress tracking

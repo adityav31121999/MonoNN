@@ -91,28 +91,28 @@ void updateWeightsWeightDecay(std::vector<std::vector<float>>& weights, std::vec
 void updateWeightsDropout(std::vector<std::vector<float>>& weights, std::vector<std::vector<float>>& gradients, float learning, float dropoutRate);
 void updateWeights(std::vector<std::vector<float>>& weights, std::vector<std::vector<float>>& gradients, float& learningRate, int type);
 
-// single layer forprop
+// single layer forprop for mnn
 
 void layerForward(const std::vector<float>& input, std::vector<float>& output, const std::vector<std::vector<float>>& cweights,
                     const std::vector<std::vector<float>>& bweights, float n);
 void layerForward(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output, 
                     const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights, float n);
 
-// batch layer forprop
+// batch layer forprop for mnn
 
 void layerForwardBatch(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output,
                        const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights, float n);
 void layerForwardBatch(const std::vector<std::vector<std::vector<float>>>& input, std::vector<std::vector<std::vector<float>>>& output,
                        const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights, float n);
 
-// single layer backprop (with direct weights update)
+// single layer backprop (with direct weights update) for mnn and mnn2d
 
-void layerBackward(const std::vector<float>& incoming, const std::vector<float>& prevAct, std::vector<std::vector<float>>& C,
+void layerBackward(const std::vector<float>& incoming, const std::vector<float>& input, std::vector<std::vector<float>>& C,
                     std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb, float m, float alpha);
 void layerBackward(const std::vector<float>& incoming, std::vector<float>& outgoing, const std::vector<float>& prevAct,
                     std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& gradc,
                     std::vector<std::vector<float>>& gradb, float m, float alpha);
-void layerBackward(const std::vector<std::vector<float>>& incoming, const std::vector<std::vector<float>>& prevAct,
+void layerBackward(const std::vector<std::vector<float>>& incoming, const std::vector<std::vector<float>>& input,
                     std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& gradc,
                     std::vector<std::vector<float>>& gradb, float m, float alpha);
 void layerBackward(const std::vector<std::vector<float>>& incoming, std::vector<std::vector<float>>& outgoing,
@@ -120,9 +120,9 @@ void layerBackward(const std::vector<std::vector<float>>& incoming, std::vector<
                     std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& gradc,
                     std::vector<std::vector<float>>& gradb, float m, float alpha);
 
-// batch layer backprop
+// batch layer backprop (with averaging and direct weights update) for mnn and mnn2d
 
-void layerBackwardBatch(const std::vector<std::vector<float>>& incoming, const std::vector<std::vector<float>>& prevAct, 
+void layerBackwardBatch(const std::vector<std::vector<float>>& incoming, const std::vector<std::vector<float>>& input, 
                     std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb,
                     float m, float alpha);
 void layerBackwardBatch(const std::vector<std::vector<std::vector<float>>>& incoming, const std::vector<std::vector<std::vector<float>>>& prevAct,
@@ -268,7 +268,7 @@ inline const char* oclErrorString(cl_int error) {
 #include <stdexcept>      // For std::runtime_error
 
 // --- CUDA Error Checking Macro ---
-#define CUDA_CHECK(call)                                                        \
+#define CU_CHECK(call)                                                        \
     do {                                                                        \
         cudaError_t err_code_ = call;                                           \
         if (err_code_ != cudaSuccess) {                                         \

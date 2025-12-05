@@ -392,14 +392,10 @@ void mnn2d::clBackprop(const std::vector<std::vector<float>>& expected) {
             size_t last_layer_rows = actBatch[layers-1][i].size();
             size_t last_layer_cols = actBatch[layers-1][i][0].size();
             std::vector<std::vector<float>> equalGrads(last_layer_rows, std::vector<float>(last_layer_cols));
-            std::vector<float> out_err_host(outputBatch[i].size());
-            CL_CHECK(clCommandQueue.enqueueReadBuffer(d_err[i], CL_TRUE, 0, sizeof(float) * outputBatch[i].size(), out_err_host.data()));
             for(size_t r = 0; r < last_layer_rows; ++r) {
-                for(size_t c = 0; c < last_layer_cols; ++c) {
-                    equalGrads[r][c] = out_err_host[c];
-                }
+                CL_CHECK(clCommandQueue.enqueueCopyBuffer(d_incoming[layers-1][i], d_err[i], r * last_layer_cols * sizeof(float), 0,
+                                                          sizeof(float) * last_layer_cols));
             }
-            CL_CHECK(clCommandQueue.enqueueWriteBuffer(d_incoming[layers-1][i], CL_TRUE, 0, flatten(equalGrads).size() * sizeof(float), flatten(equalGrads).data()));
         }
 
         // bacpropagation from last to second layer

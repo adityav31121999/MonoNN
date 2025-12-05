@@ -11,7 +11,7 @@
 /**
  * @brief single layer backprop for mnn for first layer
  * @param[in] incoming incoming gradient (dL/dz_l) vector
- * @param[in] prevAct activation of previous layer
+ * @param[in] input input to mnn is used here
  * @param[in] C current layers coefficients weights matrix
  * @param[out] gradc gradients for C matrix
  * @param[out] gradb gradeitns for B matrix
@@ -19,17 +19,18 @@
  * @param[in] alpha gradient splitting factor
  */
 void layerBackward(const std::vector<float>& incoming,
-                    const std::vector<float>& prevAct, 
+                    const std::vector<float>& input, 
                     std::vector<std::vector<float>>& C,
                     std::vector<std::vector<float>>& gradc,
                     std::vector<std::vector<float>>& gradb,
-                    float m, float alpha)
+                    float m,
+                    float alpha)
 {
     // std::vector<float> v1(gradb.size(), 1.0f);           // dz_l/dB_l
-    std::vector<float> prev_p = power(prevAct, m);          // dz_l/dC_l
-    // derivativ of prevAct (sigmoid activated)
-    std::vector<float> dprevAct(prevAct.size(), 1.0f);
-    std::transform(prevAct.begin(), prevAct.end(), dprevAct.begin(), 
+    std::vector<float> prev_p = power(input, m);          // dz_l/dC_l
+    // derivativ of input (sigmoid activated)
+    std::vector<float> dprevAct(input.size(), 1.0f);
+    std::transform(input.begin(), input.end(), dprevAct.begin(), 
                     [](float x) { 
                         return x*(1.0f - x); 
                     }
@@ -62,7 +63,8 @@ void layerBackward(const std::vector<float>& incoming,          // width[l]
                     std::vector<std::vector<float>>& C,         // width[l-1] x width[l]
                     std::vector<std::vector<float>>& gradc,     // width[l-1] x width[l] 
                     std::vector<std::vector<float>>& gradb,     // width[l-1] x width[l]
-                    float m, float alpha)
+                    float m,
+                    float alpha)
 {
     std::vector<float> prev_p = power(prevAct, m);      // dz_l/dC_l
     // derivative of (prevAct^m) w.r.t prevAct
@@ -103,7 +105,7 @@ void layerBackward(const std::vector<float>& incoming,          // width[l]
 /**
  * @brief single layer backprop for mnn2d for first layer
  * @param[in] incoming incoming gradient (dL/dz_l) matrix
- * @param[in] prevAct activation of previous layer
+ * @param[in] input input to mnn2d is used here
  * @param[in] C current layers coefficients weights matrix
  * @param[out] gradc gradients for C matrix
  * @param[out] gradb gradeitns for B matrix
@@ -111,16 +113,17 @@ void layerBackward(const std::vector<float>& incoming,          // width[l]
  * @param[in] alpha gradient splitting factor
  */
 void layerBackward(const std::vector<std::vector<float>>& incoming,
-                    const std::vector<std::vector<float>>& prevAct,
+                    const std::vector<std::vector<float>>& input,
                     std::vector<std::vector<float>>& C,
                     std::vector<std::vector<float>>& gradc,
                     std::vector<std::vector<float>>& gradb,
-                    float m, float alpha)
+                    float m,
+                    float alpha)
 {
     // dz_l/dB_l = v1^T
-    std::vector<std::vector<float>> v1T(prevAct[0].size(), std::vector<float>(prevAct.size(), 1.0f));
+    std::vector<std::vector<float>> v1T(input[0].size(), std::vector<float>(input.size(), 1.0f));
     // dz_l/dC_l
-    std::vector<std::vector<float>> prev_p = power(prevAct, m);
+    std::vector<std::vector<float>> prev_p = power(input, m);
 
     gradc = multiply(transpose(prev_p), incoming);  // gradc = alpha * prev_p^T x dl/dz_l
     gradb = multiply(v1T, incoming);      // gradb = (1 - alpha) * v1^T x dl/dz_l
@@ -152,7 +155,8 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
                     std::vector<std::vector<float>>& C,
                     std::vector<std::vector<float>>& gradc,
                     std::vector<std::vector<float>>& gradb,
-                    float m, float alpha)
+                    float m,
+                    float alpha)
 {
     // dz_l/dB_l = V1^T
     std::vector<std::vector<float>> v1T(prevAct[0].size(), std::vector<float>(prevAct.size(), 1.0f));

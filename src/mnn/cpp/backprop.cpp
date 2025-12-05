@@ -42,30 +42,33 @@ void mnn::backprop(const std::vector<float>& expected) {
  * @param expected The expected output vector.
  */
 void mnn::backprop(const std::vector<std::vector<float>>& expected)
-{
+{    
     std::vector<std::vector<float>> output_error(expected.size(), std::vector<float>(outSize, 0.0f));
     for(int i = 0; i < expected.size(); i++) {
         for(int j = 0; j < outSize; j++) {
             output_error[i][j] = outputBatch[i][j] - expected[i][j];
         }
     }
+    
     std::vector<std::vector<float>> incoming_gradient = output_error;
+    
     for(int layer = layers - 1; layer >= 1; layer--) {
         std::vector<std::vector<float>> outgoing_gradient;
-        layerBackwardBatch(incoming_gradient, outgoing_gradient, actBatch[layer-1], 
-                    cweights[layer], cgradients[layer], bgradients[layer], order, ALPHA);
-        incoming_gradient.clear();
-        incoming_gradient = outgoing_gradient;
+        layerBackwardBatch(incoming_gradient, outgoing_gradient, actBatch[layer-1],
+                          cweights[layer], cgradients[layer], bgradients[layer], order, ALPHA);
+        incoming_gradient = std::move(outgoing_gradient);
     }
+    
     layerBackwardBatch(incoming_gradient, inputBatch, cweights[0], cgradients[0], bgradients[0],
-                order, ALPHA);
-
+                              order, ALPHA);
+    
     // update weights
     int type = 3;
     for(int i = 0; i < layers; i++) {
         updateWeights(cweights[i], cgradients[i], learningRate, type);
         updateWeights(bweights[i], bgradients[i], learningRate, type);
     }
+    zeroGradients();
 }
 
 // Backprop for mnn2d

@@ -323,17 +323,11 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
         cl::NDRange globalSub = calculate_global_1d(WORKSIZE_1D, output.size());
         CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSub, cl::NullRange, globalSub, local_1d));
         CL_CHECK(clCommandQueue.enqueueCopyBuffer(d_err, d_incoming[layers - 1], 0, 0, sizeof(float) * output.size()));
-
-        // error back through mean pooling layer
-        std::vector<std::vector<float>> equalGrads(activate[layers-1].size(), std::vector<float>(activate[layers-1][0].size()));
-        std::vector<float> out_err_host(output.size());
-        CL_CHECK(clCommandQueue.enqueueReadBuffer(d_err, CL_TRUE, 0, sizeof(float) * output.size(), out_err_host.data()));
+        // distribute incoming error to each output channel
         for(size_t i = 0; i < activate[layers-1].size(); ++i) {
-            for(size_t j = 0; j < activate[layers-1][0].size(); ++j) {
-                equalGrads[i][j] = output[j] - expected[j];
-            }
+            CL_CHECK(clCommandQueue.enqueueCopyBuffer(d_incoming[i], d_err, 0, i * output.size() * sizeof(float),
+                                                      sizeof(float) * output.size()));
         }
-        CL_CHECK(clCommandQueue.enqueueWriteBuffer(d_incoming[layers-1], CL_TRUE, 0, flatten(equalGrads).size() * sizeof(float), flatten(equalGrads).data()));
 
         // Backpropagation from last to second layer
         for (int layer = layers - 1; layer >= 1; --layer) {

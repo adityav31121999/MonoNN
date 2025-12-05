@@ -116,24 +116,13 @@ void layerForwardBatch(const std::vector<std::vector<float>>& input, std::vector
     int inSize = cweights.size();
     int outSize = cweights[0].size();
 
-    // Precompute bias sum
-    std::vector<float> b_sum(outSize, 0.0f);
-    for(int i=0; i<inSize; ++i) {
-        for(int j=0; j<outSize; ++j) {
-            b_sum[j] += bweights[i][j];
-        }
-    }
-
     for(int b=0; b<batchSize; ++b) {
         std::vector<float> powerIn = power(input[b], n);
-        
-        // Add bias sum
-        for(int j=0; j<outSize; ++j) output[b][j] += b_sum[j];
 
         for(int i=0; i<inSize; ++i) {
             float in_val = powerIn[i];
             for(int j=0; j<outSize; ++j) {
-                output[b][j] += in_val * cweights[i][j];
+                output[b][j] += in_val * cweights[i][j] + bweights[i][j];
             }
         }
 
@@ -163,15 +152,10 @@ void layerForwardBatch(const std::vector<std::vector<std::vector<float>>>& input
         std::vector<std::vector<float>> powerIn = power(input[b], n);
 
         for(int r=0; r<inHeight; ++r) {
-            // Add bias term
-            for(int c=0; c<outWidth; ++c) {
-                output[b][r][c] += bweights[r][c] * inWidth;
-            }
-
             for(int k=0; k<inWidth; ++k) {
                 float in_val = powerIn[r][k];
                 for(int c=0; c<outWidth; ++c) {
-                    output[b][r][c] += (in_val * cweights[k][c]);
+                    output[b][r][c] += (in_val * cweights[k][c]) + bweights[k][c];
                 }
             }
 
