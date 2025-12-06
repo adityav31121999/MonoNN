@@ -36,6 +36,7 @@ void mnn::backprop(const std::vector<float>& expected) {
     }
 }
 
+
 /**
  * @brief Backpropagation for the mnn class (1D data) for batch backpropagation
  *  by discrete gradient calculation and averaging final gradients.

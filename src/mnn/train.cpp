@@ -34,7 +34,16 @@ void mnn::train(const std::string &dataSetPath, bool isBatchTrain)
         return;
     }
 
-    auto startTime = std::chrono::high_resolution_clock::now();
+    std::cout << "ALL HYPERPARAMETERS SET FOR TRAINING:" << std::endl;
+    std::cout << "Order of Monomials: " << order << std::endl;
+    std::cout << "Gradient Splitting Factor (ALPHA): " << ALPHA << std::endl;
+    std::cout << "L1 Regularization Parameter (LAMBDA_L1): " << LAMBDA_L1 << std::endl;
+    std::cout << "L2 Regularization Parameter (LAMBDA_L2): " << LAMBDA_L2 << std::endl;
+    std::cout << "Dropout Rate (DROPOUT_RATE): " << DROPOUT_RATE << std::endl;
+    std::cout << "Decay Rate (DECAY_RATE): " << DECAY_RATE << std::endl;
+    std::cout << "Weight Decay Parameter (WEIGHT_DECAY): " << WEIGHT_DECAY << std::endl;
+    std::cout << "Softmax Temperature (SOFTMAX_TEMP): " << SOFTMAX_TEMP << std::endl;
+
     // Sort the dataset to ensure consistent order for resumable training
     std::sort(filePaths.begin(), filePaths.end());
 
@@ -70,13 +79,17 @@ void mnn::train(const std::string &dataSetPath, bool isBatchTrain)
     this->mnnPrg.totalTrainFiles = totalFiles;
     this->mnnPrg.batchSize = batchSize;
     int sessionFiles = this->mnnPrg.sessionSize * this->mnnPrg.batchSize;
-    std::cout << "Training with batch size: " << batchSize << std::endl;
-    std::cout << "Session Size (in batches): " << this->mnnPrg.sessionSize << std::endl;
+    std::cout << "Training with batch size: " << BATCH_SIZE << std::endl;
+    std::cout << "Session Size (in batches/session): " << this->mnnPrg.sessionSize << std::endl;
     std::cout << "Files in Single Session: " << sessionFiles << std::endl;
+
+    // start time count
+    auto startTime = std::chrono::high_resolution_clock::now();
 
     // Train based on batch size
     if (isBatchTrain == false) {
         batchSize = 1;
+        learningRate = 0.001f;
         std::cout << "learning rate: " << learningRate << std::endl;
         for(const auto& filePath : filePaths) {
             // Skip files that have already been processed in previous sessions
@@ -143,12 +156,8 @@ void mnn::train(const std::string &dataSetPath, bool isBatchTrain)
     }
     else {
         batchSize = BATCH_SIZE;
-        // scaling learning rate based on batch size
-        float originalLR = this->learningRate;
-        this->learningRate = originalLR / static_cast<float>(batchSize);
-        std::cout << "Original learning rate: " << originalLR << std::endl;
-        std::cout << "Batch Size: " << batchSize << std::endl;
-        std::cout << "Adjusted learning rate for batch size: " << this->learningRate << std::endl;
+        this->learningRate = 0.01f;
+        std::cout << "learning rate for batch size: " << this->learningRate << std::endl;
         this->inputBatch.resize(batchSize);
         this->outputBatch.resize(batchSize);
         this->targetBatch.resize(batchSize);
@@ -189,15 +198,13 @@ void mnn::train(const std::string &dataSetPath, bool isBatchTrain)
                 }
                 expBatch.push_back(exp);
             }
-            inputBatch = inBatch;
-            targetBatch = expBatch;
             // backend selection
             #ifdef USE_CPU
-                trainBatch(inputBatch, targetBatch);
+                trainBatch(inBatch, expBatch);
             #elif USE_CU
-                cuTrainBatch(inputBatch, targetBatch);
+                cuTrainBatch(inBatch, expBatch);
             #elif USE_CL
-                clTrainBatch(inputBatch, targetBatch);
+                clTrainBatch(inBatch, expBatch);
             #endif
 
             // for progress tracking
@@ -210,7 +217,7 @@ void mnn::train(const std::string &dataSetPath, bool isBatchTrain)
                 auto endTime = std::chrono::high_resolution_clock::now();
                 this->mnnPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
                 this->mnnPrg.timeTakenForTraining = previousTrainingTime + this->mnnPrg.timeForCurrentSession;
-                this->learningRate = this->mnnPrg.currentLearningRate;
+                this->mnnPrg.currentLearningRate = learningRate;
                 this->mnnPrg.totalSessionsOfTraining++;
                 sessionEnd = 1;
             }
@@ -220,7 +227,6 @@ void mnn::train(const std::string &dataSetPath, bool isBatchTrain)
             if (sessionEnd == 1 || fileCount == totalFiles) {
                 std::cout << "Processed " << fileCount << "/" << totalFiles << " files..." << std::endl;
                 std::cout << "====== Diagnostics For Current Session ======" << std::endl;
-                computeStats(cweights, bweights, cgradients, bgradients, activate);
                 if (logProgressToCSV(this->mnnPrg, this->path2progress) == 1)
                     std::cout << "Progress logged successfully." << std::endl;
                 else 
@@ -235,8 +241,6 @@ void mnn::train(const std::string &dataSetPath, bool isBatchTrain)
                 }
             }
         }
-        // restore original learning rate
-        this->learningRate = originalLR;
     }
 
     auto endTime = std::chrono::high_resolution_clock::now();
@@ -247,6 +251,7 @@ void mnn::train(const std::string &dataSetPath, bool isBatchTrain)
     std::cout << "--- Training Finished (mnn) ---" << std::endl;
 }
 
+
 /**
  * @brief train network on given dataset
  * @param dataSetPath path to dataset folder.
@@ -254,7 +259,7 @@ void mnn::train(const std::string &dataSetPath, bool isBatchTrain)
  */
 void mnn2d::train(const std::string &dataSetPath, bool isBatchTrain)
 {
-    // 1. Access all image files from the dataset path
+    // Access all image files from the dataset path
     std::vector<std::filesystem::path> filePaths;
     try {
         for (const auto& entry : std::filesystem::directory_iterator(dataSetPath)) {
@@ -262,7 +267,8 @@ void mnn2d::train(const std::string &dataSetPath, bool isBatchTrain)
                 filePaths.push_back(entry.path());
             }
         }
-    } catch (const std::filesystem::filesystem_error& e) {
+    }
+    catch (const std::filesystem::filesystem_error& e) {
         throw std::runtime_error("Failed to read dataset directory: " + std::string(e.what()));
     }
 
@@ -271,14 +277,25 @@ void mnn2d::train(const std::string &dataSetPath, bool isBatchTrain)
         return;
     }
 
-    auto startTime = std::chrono::high_resolution_clock::now();
-    // 2. Sort the dataset to ensure consistent order for resumable training
+    std::cout << "ALL HYPERPARAMETERS SET FOR TRAINING:" << std::endl;
+    std::cout << "Order of Monomials: " << order << std::endl;
+    std::cout << "Gradient Splitting Factor (ALPHA): " << ALPHA << std::endl;
+    std::cout << "L1 Regularization Parameter (LAMBDA_L1): " << LAMBDA_L1 << std::endl;
+    std::cout << "L2 Regularization Parameter (LAMBDA_L2): " << LAMBDA_L2 << std::endl;
+    std::cout << "Dropout Rate (DROPOUT_RATE): " << DROPOUT_RATE << std::endl;
+    std::cout << "Decay Rate (DECAY_RATE): " << DECAY_RATE << std::endl;
+    std::cout << "Weight Decay Parameter (WEIGHT_DECAY): " << WEIGHT_DECAY << std::endl;
+    std::cout << "Softmax Temperature (SOFTMAX_TEMP): " << SOFTMAX_TEMP << std::endl;
+
+    // Sort the dataset to ensure consistent order for resumable training
     std::sort(filePaths.begin(), filePaths.end());
 
     int totalFiles = filePaths.size();
-    std::cout << "\n--- Starting Training (mnn2d) ---" << std::endl;
+    std::cout << "\n--- Starting Training (mnn) ---" << std::endl;
+    std::cout << "Resuming from file index: " << this->mnn2dPrg.filesProcessed << std::endl;
 
     // access training progress information from file address and use it to re-start training
+    // from new session
     double previousTrainingTime = 0.0;
     if (!loadLastProgress(this->mnn2dPrg, this->path2progress)) {
         // Preserve session and batch size set before calling train
@@ -299,18 +316,24 @@ void mnn2d::train(const std::string &dataSetPath, bool isBatchTrain)
     }
     std::cout << "Found " << totalFiles << " files for training. Resuming from file index " << this->mnn2dPrg.filesProcessed << "." << std::endl;
 
+    int fileCount = 0;
+    int filesInCurrentSession = 0;
     // Update progress struct with file and batch info
     this->mnn2dPrg.totalTrainFiles = totalFiles;
     this->mnn2dPrg.batchSize = batchSize;
     int sessionFiles = this->mnn2dPrg.sessionSize * this->mnn2dPrg.batchSize;
-    int fileCount = 0;
-    bool sessionEnd = false;
-    int filesInCurrentSession = 0;
+    std::cout << "Training with batch size: " << BATCH_SIZE << std::endl;
+    std::cout << "Session Size (in batches/session): " << this->mnn2dPrg.sessionSize << std::endl;
+    std::cout << "Files in Single Session: " << sessionFiles << std::endl;
+
+    // start time count
+    auto startTime = std::chrono::high_resolution_clock::now();
 
     // 3. Train based on batch size
     if (isBatchTrain == false) {
         batchSize = 1;
         int fileCount = 0;
+        learningRate = 0.001f;
         std::cout << "Training with batch size: 1" << std::endl;
         for(const auto& filePath : filePaths) {
             // Skip files that have already been processed in previous sessions
@@ -377,6 +400,7 @@ void mnn2d::train(const std::string &dataSetPath, bool isBatchTrain)
     }
     else {
         batchSize = BATCH_SIZE;
+        learningRate = 0.01f;
         std::cout << "Training With BatchSize of " << batchSize << std::endl;
         this->inputBatch.resize(batchSize);
         this->outputBatch.resize(batchSize);

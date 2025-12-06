@@ -5,13 +5,15 @@
 #include <stdexcept>
 #include <iostream>
 
-// zero out gradients before backprop
+// zero out gradients for new backprop
 void mnn::zeroGradients() {
     for(auto& layer : cgradients) {
-        for(auto& row : layer) std::fill(row.begin(), row.end(), 0.0f);
+        for(auto& row : layer)
+            std::fill(row.begin(), row.end(), 0.0f);
     }
     for(auto& layer : bgradients) {
-        for(auto& row : layer) std::fill(row.begin(), row.end(), 0.0f);
+        for(auto& row : layer)
+            std::fill(row.begin(), row.end(), 0.0f);
     }
 }
 
@@ -23,10 +25,11 @@ void mnn::zeroGradients() {
  */
 void mnn::train(const std::vector<float>& input, const std::vector<float>& target) {
     int i = 0;
+    float initialLR = this->learningRate;
     while (1) {
         zeroGradients();
         // 1. Forward propagation
-        this->input = input;
+        this->input = softmax(input);
         forprop(this->input);
 
         if(maxIndex(output) == maxIndex(target)) {
@@ -36,23 +39,22 @@ void mnn::train(const std::vector<float>& input, const std::vector<float>& targe
         i++;
 
         // check for error and break if acceptable
-        float loss = crossEntropy(output, target);
-        std::cout << "Current CE Loss at epoch " << i << " : " <<loss << std::endl;
-/*
-        // Log diagnostic statistics every 10 epochs
-        if (i % 20 == 0) {
-            std::cout << "=== Diagnostic Statistics at Epoch " << i << " ===" << std::endl;
-            computeStats(cweights, bweights, cgradients, bgradients, activate);
-        }
-*/
-        if (i == EPOCH) break;
+        currloss = crossEntropy(output, target);
+        // if (i > 1) this->learningRate *= (currloss > prevloss) ? 0.95 : 1.01;
+        std::cout << "Current CE Loss at epoch " << i << " : " << currloss << std::endl;
+                  // << "\nOpting for new learning rate: " << this->learningRate << std::endl;
+
         // 2. Backward propagation
         this->target = target;
         backprop(this->target);
+        prevloss = currloss;
+        // if (i == EPOCH) break;
     }
 
+    this->learningRate = initialLR; // reset learning rate after training
     std::cout << "Training complete for this input-target pair." << std::endl;
 }
+
 
 /**
  * @brief trains the mnn network on a batch of data (input-target pairs).
@@ -97,17 +99,18 @@ void mnn::trainBatch(const std::vector<std::vector<float>>& inputs, const std::v
     int totalEpochs = 0;
     if (this->epochs < 1) this->epochs = 100;
     std::vector<int> correct(input.size(), -1);
- 
-    // inputBatch = inputs;
+    
+    float initialLR = this->learningRate;
+    for (size_t i = 0; i < inputs.size(); ++i) {
+        this->inputBatch[i] = softmax(inputs[i]);
+    }
+
     while (true) {
         zeroGradients();
         float total_loss = 0.0f;
-        forprop(inputBatch);
-        for (size_t i = 0; i < inputs.size(); ++i) {
-            total_loss += crossEntropy(outputBatch[i], targets[i]);
-        }
+        forprop(inputBatch);       
         totalEpochs++;
- 
+
         int correct_predictions = 0;
         for (size_t i = 0; i < inputs.size(); ++i) {
             // Use outputBatch for checking accuracy to avoid re-computation
@@ -120,7 +123,17 @@ void mnn::trainBatch(const std::vector<std::vector<float>>& inputs, const std::v
         }
 
         if (correct_predictions == inputs.size()) {
-            std::cout << "All " << inputs.size() << " outputs in the batch are correct after " << totalEpochs << " epochs. training complete." << std::endl;
+            std::cout << "Correct Predictions: ";
+            for (size_t i = 0; i < inputs.size(); ++i) {
+                std::cout << correct[i] << " ";
+            }
+            // loss calculation
+            for (size_t i = 0; i < inputs.size(); ++i) {
+                total_loss += crossEntropy(outputBatch[i], targets[i]);
+            }
+            currloss = static_cast<float>(total_loss / BATCH_SIZE);
+            std::cout << "All " << inputs.size() << " outputs in the batch are correct after " << totalEpochs 
+                      << " epochs. Training complete with error " << currloss << "." << std::endl;
             break;
         }
         else {
@@ -128,17 +141,23 @@ void mnn::trainBatch(const std::vector<std::vector<float>>& inputs, const std::v
             for (size_t i = 0; i < inputs.size(); ++i) {
                 std::cout << correct[i] << " ";
             }
-            std::cout << "\nEpoch: " << totalEpochs << " \t|\t predictions: " << correct_predictions << "/" << inputs.size() 
-                      << " \t|\t Average CE Loss: " << static_cast<float>(total_loss / batchSize) << std::endl;
+            // loss calculation
+            for (size_t i = 0; i < inputs.size(); ++i) {
+                total_loss += crossEntropy(outputBatch[i], targets[i]);
+            }
+            currloss = static_cast<float>(total_loss / BATCH_SIZE);
+            std::cout << "-> Epoch: " << totalEpochs << "\tPredictions: " << correct_predictions << "/" << inputs.size() 
+                      << "\tAvg. CE Loss: " << currloss << std::endl;
         }
 
         if (totalEpochs >= this->epochs) {
-            std::cout << correct_predictions << "/" << inputs.size() << " correct. Increasing epochs by 10 and continuing training." << std::endl;
-            this->epochs += 10;
+            std::cout << correct_predictions << "/" << inputs.size() << " correct. Increasing epochs by 50 and continuing training." << std::endl;
+            this->epochs += 50;
         }
         // targetBatch = targets;
         backprop(targets);
     }
+    this->learningRate = initialLR; // reset learning rate after training
 }
 
 
@@ -149,9 +168,10 @@ void mnn::trainBatch(const std::vector<std::vector<float>>& inputs, const std::v
  */
 void mnn2d::train(const std::vector<std::vector<float>>& input, const std::vector<float>& target) {
     int i = 0;
+    float initialLR = this->learningRate;
     while (1) {
         // 1. Forward propagation
-        this->input = input;
+        this->input = softmax(input);
         forprop(this->input);
 
         if(maxIndex(output) == maxIndex(target)) {
@@ -161,18 +181,21 @@ void mnn2d::train(const std::vector<std::vector<float>>& input, const std::vecto
         i++;
 
         // check for error and break if acceptable
-        float loss = crossEntropy(output, target);
-        std::cout << "Current CE Loss at epoch " << i << ": " << loss << std::endl;
+        currloss = crossEntropy(output, target);
+        // if (i > 1) this->learningRate *= (currloss > prevloss) ? 0.95 : 1.01;
+        std::cout << "Current CE Loss at epoch " << i << " : " << currloss << std::endl;
+                  // << "\nOpting for new learning rate: " << this->learningRate << std::endl;
 
-        if (i == EPOCH) break;
-
+        // if (i == EPOCH) break;
         // 2. Backward propagation
         this->target = target;
         backprop(this->target);
     }
 
+    this->learningRate = initialLR; // reset learning rate after training
     std::cout << "Training complete for this input-target pair." << std::endl;
 }
+
 
 /**
  * @brief trains the mnn2d network on a batch of data (input-target pairs).
@@ -217,21 +240,12 @@ void mnn2d::trainBatch(const std::vector<std::vector<std::vector<float>>>& input
     if (this->epochs < 1) this->epochs = 100;
     std::vector<int> correct(input.size(), -1);
 
-    inputBatch = inputs;
+    float initialLR = this->learningRate;
+
     while (true) {
         float total_loss = 0.0f;
         forprop(inputBatch); // Batch forprop
-        for (size_t i = 0; i < inputs.size(); ++i) {
-            total_loss += crossEntropy(outputBatch[i], targets[i]);
-        }
         totalEpochs++;
-/*
-        // Log diagnostic statistics every 10 epochs
-        if (totalEpochs % 20 == 0) {
-            std::cout << "=== Diagnostic Statistics at Epoch " << totalEpochs << " ===" << std::endl;
-            computeStats(cweights, bweights, cgradients, bgradients, activate);
-        }
-*/
 
         int correct_predictions = 0;
         for (size_t i = 0; i < inputs.size(); ++i) {
@@ -253,7 +267,13 @@ void mnn2d::trainBatch(const std::vector<std::vector<std::vector<float>>>& input
             for (size_t i = 0; i < inputs.size(); ++i) {
                 std::cout << correct[i] << " ";
             }
-            std::cout << "\nEpoch: " << totalEpochs << " \t|\t predictions: " << correct_predictions << "/" << inputs.size() << " \t|\t Average CE Loss: " << total_loss / inputs.size() << std::endl;
+            // loss calculation
+            for (size_t i = 0; i < inputs.size(); ++i) {
+                total_loss += crossEntropy(outputBatch[i], targets[i]);
+            }
+            currloss = static_cast<float>(total_loss / batchSize);
+            std::cout << " | Epoch: " << totalEpochs << "\tPredictions: " << correct_predictions << "/" << inputs.size() 
+                      << "\tAvg. CE Loss: " << currloss << std::endl;
         }
 
         if (totalEpochs >= this->epochs) {
@@ -262,6 +282,7 @@ void mnn2d::trainBatch(const std::vector<std::vector<std::vector<float>>>& input
         }
         backprop(targets);
     }
+    this->learningRate = initialLR; // reset learning rate after training
 }
 
 #endif

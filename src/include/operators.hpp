@@ -6,6 +6,7 @@
 #include <cmath>
 #include <string>
 #include <map>
+#include "progress.hpp"
 
 // file operations for weights serialization
 
@@ -46,6 +47,10 @@ std::vector<float> softmax(const std::vector<float>& x);
 std::vector<float> softmaxDer(const std::vector<float>& x);
 std::vector<float> softmax(const std::vector<float>& x, float temp);
 std::vector<float> softmaxDer(const std::vector<float>& x, float temp);
+std::vector<std::vector<float>> softmax(const std::vector<std::vector<float>>& x);
+std::vector<std::vector<float>> softmaxDer(const std::vector<std::vector<float>>& x);
+std::vector<std::vector<float>> softmax(const std::vector<std::vector<float>>& x, float temp);
+std::vector<std::vector<float>> softmaxDer(const std::vector<std::vector<float>>& x, float temp);
 
 // errors
 
@@ -53,6 +58,11 @@ float mse(const std::vector<float>& output, const std::vector<float>& target);
 float crossEntropy(const std::vector<float>& output, const std::vector<float>& target);
 float binaryCrossEntropy(const std::vector<float>& output, const std::vector<float>& target);
 float categoricalCrossEntropy(const std::vector<std::vector<float>>& output, const std::vector<std::vector<float>>& target);
+
+// learning rate schedulers
+
+float cosineAnnealing(float initialLR, int epoch, int totalEpochs);
+float learningRateOnPlateau(float currentLR, float previousLoss, float currentLoss, int& patienceCounter, int patience, float factor);
 
 // math operators
 

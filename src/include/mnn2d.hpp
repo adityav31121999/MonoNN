@@ -27,6 +27,8 @@ public:
     int epochs;                     // number of epochs
     int iterations;                 // number of iterations
     float learningRate;             // learning rate
+    float currloss;                 // current loss
+    float prevloss;                 // previous iterations loss
     std::vector<int> width;         // width of each layer
 
     std::vector<std::vector<float>> input;      // input vector

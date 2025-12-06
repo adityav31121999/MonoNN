@@ -6,6 +6,7 @@ set(MNN_SOURCES
     mnn/activations.cpp
     mnn/loss.cpp
     mnn/weights.cpp
+    mnn/schedLr.cpp
     mnn/mnn.cpp
     mnn/mnn2d.cpp
     mnn/access.cpp

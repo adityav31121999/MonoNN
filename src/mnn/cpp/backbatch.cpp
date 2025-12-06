@@ -87,13 +87,13 @@ void layerBackwardBatch(const std::vector<std::vector<float>>& incoming,
         }
 
         // Compute outgoing gradient for this item
-        // dprev_p
-        std::vector<float> dprev_p(prevAct[b].size(), 0.0f);
-        std::transform(prevAct[b].begin(), prevAct[b].end(), dprev_p.begin(), 
-                        [&m](float x) { 
-                            float result = m * std::pow(x, m - 1.0f);
-                            return std::max(-1e5f, std::min(1e5f, result)); // Clamp to a larger range
-                        });
+        // dprev_p = m * prevAct^(m-1) = m * prev_p / prevAct
+        const float epsilon = 1e-8f;
+        std::vector<float> dprev_p(prevAct[b].size());
+        for (size_t i = 0; i < prevAct[b].size(); ++i) {
+            dprev_p[i] = m * prev_p[i] / (prevAct[b][i] + epsilon);
+        }
+    
         // dprevAct
         std::vector<float> dprevAct(prevAct[b].size(), 0.0f);
         std::transform(prevAct[b].begin(), prevAct[b].end(), dprevAct.begin(), 

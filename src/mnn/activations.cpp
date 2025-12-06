@@ -497,3 +497,39 @@ std::vector<std::vector<float>> LOTAder(const std::vector<std::vector<float>>& y
 
     return result; // Return the derivative matrix
 }
+
+std::vector<std::vector<float>> softmax(const std::vector<std::vector<float>>& x) {
+    if (x.empty() || x[0].empty()) return {};
+    int rows = x.size();
+    int cols = x[0].size();
+    std::vector<float> flat_x = flatten(x);
+    std::vector<float> flat_softmax = softmax(flat_x);
+    return reshape(flat_softmax, rows, cols);
+}
+
+std::vector<std::vector<float>> softmaxDer(const std::vector<std::vector<float>>& x) {
+    if (x.empty() || x[0].empty()) return {};
+    int rows = x.size();
+    int cols = x[0].size();
+    std::vector<float> flat_x = flatten(x);
+    std::vector<float> flat_softmax_der = softmaxDer(flat_x);
+    return reshape(flat_softmax_der, rows, cols);
+}
+
+std::vector<std::vector<float>> softmax(const std::vector<std::vector<float>>& x, float temp) {
+    if (x.empty() || x[0].empty()) return {};
+    int rows = x.size();
+    int cols = x[0].size();
+    std::vector<float> flat_x = flatten(x);
+    std::vector<float> flat_softmax = softmax(flat_x, temp);
+    return reshape(flat_softmax, rows, cols);
+}
+
+std::vector<std::vector<float>> softmaxDer(const std::vector<std::vector<float>>& x, float temp) {
+    if (x.empty() || x[0].empty()) return {};
+    int rows = x.size();
+    int cols = x[0].size();
+    std::vector<float> flat_x = flatten(x);
+    std::vector<float> flat_softmax_der = softmaxDer(flat_x, temp);
+    return reshape(flat_softmax_der, rows, cols);
+}

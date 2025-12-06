@@ -71,8 +71,7 @@ void layerBackward(const std::vector<float>& incoming,          // width[l]
     std::vector<float> dprev_p(prevAct.size(), 0.0f);   // This is dz_l/da_{l-1} part 1
     std::transform(prevAct.begin(), prevAct.end(), dprev_p.begin(), 
                     [&m](float x) { 
-                        float result = m * std::pow(x, m - 1.0f);
-                        return std::max(-1e5f, std::min(1e5f, result)); // Clamp to a larger range
+                        return (m * std::pow(x, m - 1.0f));
                     });
     // derivativ of prevAct
     std::vector<float> dprevAct(prevAct.size(), 0.0f);

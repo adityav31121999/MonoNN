@@ -34,11 +34,11 @@ int main() {
     try {
         std::cout << "----------------------MNN----------------------" << std::endl;
         mnn network1(inSize, outSize, hidden_layers1, order, binFileAddress1);
-        network1.initiateWeights(3);
-        network1.saveNetwork();
+        // network1.initiateWeights(3);
+        // network1.saveNetwork();
+        network1.loadNetwork();
         network1.path2progress = progressData1;
         network1.mnnPrg.sessionSize = 50;
-        network1.learningRate = 0.01f;
         network1.train(digitTrain, batchMode);
 
 /*
@@ -47,7 +47,6 @@ int main() {
         network2.loadNetwork();
         network2.path2progress = progressData3;
         network2.mnn2dPrg.sessionSize = 50;
-        network2.learningRate = 0.009f;\
         network2.train(digitTrain, batchMode);
 */
     }

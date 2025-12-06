@@ -46,7 +46,13 @@ void mnn::forprop(const std::vector<std::vector<float>>& input)
             actBatch[j][i] = sigmoid(dotBatch[j][i]);
         }
     }
-    outputBatch = actBatch[layers-1];
+
+    /*
+    // normalise output batch with softmax
+    for(int i = 0; i < batchSize; i++)
+        outputBatch[i] = softmax(actBatch[layers-1][i], SOFTMAX_TEMP);
+    */
+   outputBatch = actBatch[layers-1];
 }
 
 // forprop for mnn2d
