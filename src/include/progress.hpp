@@ -44,7 +44,7 @@ struct progress {
     unsigned int sessionSize;           // number of batches to be trained in single session (1 or many)
     unsigned int totalTrainFiles;       // total training files
     unsigned int totalTestFiles;        // total test files
-    unsigned int filesProcessed;                // number of files processed in training so far
+    unsigned int filesProcessed;        // number of files processed in training so far
     unsigned long long totalCycleCount;         // total cycles after full training
     unsigned int totalSessionsOfTraining;       // total sessions used for training
 
@@ -61,7 +61,21 @@ struct progress {
     unsigned int correctPredictions;            // correct predictions done in testing
 };
 
+struct test_progress {
+    // files
+    unsigned int totalTestFiles;        // total test files
+    unsigned int testFilesProcessed;    // number of files processed in testing so far
+
+    // testing
+    float testError;                    // error recorded during testing
+    float testAccuracy;                 // accuracy recorded during testing
+    unsigned int correctPredictions;    // correct predictions done in testing
+};
+
 bool logProgressToCSV(const progress& p, const std::string& filePath);
 bool loadLastProgress(progress& p, const std::string& filePath);
+
+bool logTestProgressToCSV(const test_progress& p, const std::string& filePath);
+bool loadLastTestProgress(test_progress& p, const std::string& filePath);
 
 #endif // PROGRESS_HPP

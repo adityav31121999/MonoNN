@@ -109,6 +109,82 @@ bool loadLastProgress(progress& p, const std::string& filePath) {
 }
 
 /**
+ * @brief Appends the current testing progress as a new row in a CSV file.
+ * @param p The test_progress struct to log.
+ * @param filePath The path to the output CSV file.
+ * @return true if logging was successful, false otherwise.
+ */
+bool logTestProgressToCSV(const test_progress& p, const std::string& filePath) {
+    bool fileIsEmpty = false;
+    {
+        std::ifstream file(filePath);
+        fileIsEmpty = (file.peek() == std::ifstream::traits_type::eof());
+    }
+
+    std::ofstream file(filePath, std::ios::app);
+    if (!file.is_open()) {
+        std::cerr << "Error: Could not open file for appending: " << filePath << std::endl;
+        return false;
+    }
+
+    if (fileIsEmpty) {
+        file << "totalTestFiles,testFilesProcessed,testError,testAccuracy,correctPredictions\n";
+    }
+
+    file << p.totalTestFiles << "," << p.testFilesProcessed << "," << p.testError << ","
+         << p.testAccuracy << "," << p.correctPredictions << "\n";
+
+    file.close();
+    return true;
+}
+
+/**
+ * @brief Loads the most recent testing progress from the last line of a CSV log file.
+ * @param p The test_progress struct to populate.
+ * @param filePath The path to the input CSV file.
+ * @return true if loading was successful, false otherwise.
+ */
+bool loadLastTestProgress(test_progress& p, const std::string& filePath) {
+    std::ifstream file(filePath);
+    if (!file.is_open()) {
+        std::cout << "Info: Test progress file not found. Starting a new test log." << std::endl;
+        return false;
+    }
+
+    std::string line;
+    std::string lastLine;
+
+    while (std::getline(file, line)) {
+        if (!line.empty()) {
+            lastLine = line;
+        }
+    }
+
+    if (lastLine.empty() || lastLine.find("totalTestFiles") != std::string::npos) {
+        std::cerr << "Warning: Test progress file contains no valid data rows to load." << std::endl;
+        return false;
+    }
+
+    std::stringstream ss(lastLine);
+    std::string token;
+
+    try {
+        std::getline(ss, token, ','); p.totalTestFiles = std::stoul(token);
+        std::getline(ss, token, ','); p.testFilesProcessed = std::stoul(token);
+        std::getline(ss, token, ','); p.testError = std::stof(token);
+        std::getline(ss, token, ','); p.testAccuracy = std::stof(token);
+        std::getline(ss, token, ','); p.correctPredictions = std::stoul(token);
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Error: Failed to parse last test progress line. " << e.what() << std::endl;
+        return false;
+    }
+
+    file.close();
+    return true;
+}
+
+/**
  * @brief Create a binary file initialized with zeros for weights and biases.
  * @param fileAddress Address of the binary file.
  * @param param Total number of parameters (weights + biases).
@@ -306,20 +382,29 @@ void mnn::saveNetwork() {
 
 // mnn2d: load data of networ from binary file
 void mnn2d::loadNetwork() {
-    std::vector<float> c(param/2, 0.0f);
-    std::vector<float> b(param/2, 0.0f);
-    deserializeWeights(c, b, binFileAddress);
-    unsigned long long offset = 0;
-    for(int i = 0; i < cweights.size(); i++) {
-        for(int j = 0; j < cweights[i].size(); j++) {
-            for(int k = 0; k < cweights[i][j].size(); k++) {
-                cweights[i][j][k] = c[offset + (unsigned long long)j * cweights[i][j].size() + k];
-                bweights[i][j][k] = b[offset + (unsigned long long)j * cweights[i][j].size() + k];
-            }
-        }
-        offset += (unsigned long long)cweights[i].size() * cweights[i][0].size();
+    if (!std::filesystem::exists(binFileAddress)) {
+        // create new file
+        makeBinFile(binFileAddress);
+        initiateWeights(3);
+        saveNetwork();
+        std::cout << "Binary File " << binFileAddress << " created successfully." << std::endl;
     }
-    std::cout << "Binary File " << binFileAddress << " loaded successfully." << std::endl;
+    else {
+        std::vector<float> c(param/2, 0.0f);
+        std::vector<float> b(param/2, 0.0f);
+        deserializeWeights(c, b, binFileAddress);
+        unsigned long long offset = 0;
+        for(int i = 0; i < cweights.size(); i++) {
+            for(int j = 0; j < cweights[i].size(); j++) {
+                for(int k = 0; k < cweights[i][j].size(); k++) {
+                    cweights[i][j][k] = c[offset + (unsigned long long)j * cweights[i][j].size() + k];
+                    bweights[i][j][k] = b[offset + (unsigned long long)j * cweights[i][j].size() + k];
+                }
+            }
+            offset += (unsigned long long)cweights[i].size() * cweights[i][0].size();
+        }
+        std::cout << "Binary File " << binFileAddress << " loaded successfully." << std::endl;
+    }
 }
 
 // mnn2d: save data of network to binary file

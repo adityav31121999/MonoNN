@@ -38,7 +38,9 @@ public:
     unsigned long long param;       // counter for iterations
     std::string binFileAddress;     // binary file address to save weights and biases
     std::string path2progress;      // path to progress file
+    std::string path2test_progress; // path to test progress file
     progress mnnPrg;                // progress for mnn
+    test_progress mnnTestPrg;       // test progress for mnn
 
 // store values for training
 
@@ -114,8 +116,8 @@ public:
     #endif
 
     void zeroGradients();
-    void train(const std::string& dataSetPath, bool isBatchTrain);
-    void test(const std::string& dataSetPath, float& loss);
+    void train(const std::string& dataSetPath, bool isBatchTrain); // No change
+    void test(const std::string& dataSetPath);
 
 // destructor
     ~mnn() = default;
