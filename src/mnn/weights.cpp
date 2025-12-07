@@ -5,6 +5,31 @@
 #include "mnn.hpp"
 #include "mnn2d.hpp"
 
+// zero out gradients for new backprop
+void mnn::zeroGradients() {
+    for(auto& layer : cgradients) {
+        for(auto& row : layer)
+            std::fill(row.begin(), row.end(), 0.0f);
+    }
+    for(auto& layer : bgradients) {
+        for(auto& row : layer)
+            std::fill(row.begin(), row.end(), 0.0f);
+    }
+}
+
+
+// zero out gradients for new backprop
+void mnn2d::zeroGradients() {
+    for(auto& layer : cgradients) {
+        for(auto& row : layer)
+            std::fill(row.begin(), row.end(), 0.0f);
+    }
+    for(auto& layer : bgradients) {
+        for(auto& row : layer)
+            std::fill(row.begin(), row.end(), 0.0f);
+    }
+}
+
 // update weights
 
 /**

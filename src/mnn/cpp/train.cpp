@@ -5,19 +5,6 @@
 #include <stdexcept>
 #include <iostream>
 
-// zero out gradients for new backprop
-void mnn::zeroGradients() {
-    for(auto& layer : cgradients) {
-        for(auto& row : layer)
-            std::fill(row.begin(), row.end(), 0.0f);
-    }
-    for(auto& layer : bgradients) {
-        for(auto& row : layer)
-            std::fill(row.begin(), row.end(), 0.0f);
-    }
-}
-
-
 /**
  * @brief trains the mnn network on a single input-target pair.
  * @param input The input vector.

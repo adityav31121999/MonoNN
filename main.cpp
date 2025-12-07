@@ -43,7 +43,8 @@ int main() {
 /*
         std::cout << "---------------------MNN2D---------------------" << std::endl;
         mnn2d network2(inh, inw, outSize, hidden_layers2, order, binFileAddress3);
-        network2.loadNetwork();
+        network2.initiateWeights(3);
+        network2.weightUpdateType = 3;
         network2.path2progress = progressData3;
         network2.mnn2dPrg.sessionSize = 50;
         network2.train(digitTrain, batchMode);

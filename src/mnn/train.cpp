@@ -68,10 +68,10 @@ void mnn::train(const std::string &dataSetPath, bool isBatchTrain)
     }
     else {
         std::cout << "Successfully loaded progress. Resuming training." << std::endl;
-        this->learningRate = this->mnnPrg.currentLearningRate; // Use the learning rate from the last session
-        previousTrainingTime = this->mnnPrg.timeTakenForTraining; // Carry over total time
+        this->learningRate = this->mnnPrg.currentLearningRate;
+        previousTrainingTime = this->mnnPrg.timeTakenForTraining;
+        std::cout << "Found " << totalFiles << " files for training. Resuming from file index " << this->mnnPrg.filesProcessed << "." << std::endl;
     }
-    std::cout << "Found " << totalFiles << " files for training. Resuming from file index " << this->mnnPrg.filesProcessed << "." << std::endl;
 
     int fileCount = 0;
     int filesInCurrentSession = 0;
@@ -79,7 +79,10 @@ void mnn::train(const std::string &dataSetPath, bool isBatchTrain)
     this->mnnPrg.totalTrainFiles = totalFiles;
     this->mnnPrg.batchSize = batchSize;
     int sessionFiles = this->mnnPrg.sessionSize * this->mnnPrg.batchSize;
-    std::cout << "Training with batch size: " << BATCH_SIZE << std::endl;
+    if(isBatchTrain == false)
+        std::cout << "Online Training" << std::endl;
+    else
+        std::cout << "Batch Training with batch size: " << BATCH_SIZE << std::endl;
     std::cout << "Session Size (in batches/session): " << this->mnnPrg.sessionSize << std::endl;
     std::cout << "Files in Single Session: " << sessionFiles << std::endl;
 
