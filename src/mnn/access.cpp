@@ -274,20 +274,29 @@ void deserializeWeights(std::vector<std::vector<std::vector<float>>>& cweights,
 
 // mnn: load data of networ from binary file
 void mnn::loadNetwork() {
-    std::vector<float> c(param/2, 0.0f);
-    std::vector<float> b(param/2, 0.0f);
-    deserializeWeights(c, b, binFileAddress);
-    unsigned long long offset = 0;
-    for(int i = 0; i < cweights.size(); i++) {
-        for(int j = 0; j < cweights[i].size(); j++) {
-            for(int k = 0; k < cweights[i][j].size(); k++) {
-                cweights[i][j][k] = c[offset + (unsigned long long)j * cweights[i][j].size() + k];
-                bweights[i][j][k] = b[offset + (unsigned long long)j * cweights[i][j].size() + k];
-            }
-        }
-        offset += (unsigned long long)cweights[i].size() * cweights[i][0].size();
+    if (!std::filesystem::exists(binFileAddress)) {
+        // create new file
+        makeBinFile(binFileAddress);
+        initiateWeights(3);
+        saveNetwork();
+        std::cout << "Binary File " << binFileAddress << " created successfully." << std::endl;
     }
-    std::cout << "Binary File " << binFileAddress << " loaded successfully." << std::endl;
+    else {
+        std::vector<float> c(param/2, 0.0f);
+        std::vector<float> b(param/2, 0.0f);
+        deserializeWeights(c, b, binFileAddress);
+        unsigned long long offset = 0;
+        for(int i = 0; i < cweights.size(); i++) {
+            for(int j = 0; j < cweights[i].size(); j++) {
+                for(int k = 0; k < cweights[i][j].size(); k++) {
+                    cweights[i][j][k] = c[offset + (unsigned long long)j * cweights[i][j].size() + k];
+                    bweights[i][j][k] = b[offset + (unsigned long long)j * cweights[i][j].size() + k];
+                }
+            }
+            offset += (unsigned long long)cweights[i].size() * cweights[i][0].size();
+        }
+        std::cout << "Binary File " << binFileAddress << " loaded successfully." << std::endl;
+    }
 }
 
 // mnn: save data of network to binary file

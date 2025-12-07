@@ -27,16 +27,15 @@ int main() {
     int inh = 28, inw = 28;
     int outSize = 10;
     float order = 1.4f;
-    bool batchMode = 1;
-    std::vector<int> hidden_layers1 = { 784, 392, 196, 98, 49, outSize };
-    std::vector<int> hidden_layers2 = { 28, 56, 112, 224, 224, 224, 112, 56, 28, outSize };
+    bool batchMode = 0;
+    std::vector<int> hidden_layers1 = { 784, 392, outSize };
+    std::vector<int> hidden_layers2 = { 28, 56, 112, 112, 56, 28, outSize };
 
     try {
         std::cout << "----------------------MNN----------------------" << std::endl;
         mnn network1(inSize, outSize, hidden_layers1, order, binFileAddress1);
-        // network1.initiateWeights(3);
-        // network1.saveNetwork();
-        network1.loadNetwork();
+        network1.initiateWeights(3);
+        network1.weightUpdateType = 3;
         network1.path2progress = progressData1;
         network1.mnnPrg.sessionSize = 50;
         network1.train(digitTrain, batchMode);

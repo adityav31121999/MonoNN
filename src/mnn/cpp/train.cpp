@@ -27,7 +27,6 @@ void mnn::train(const std::vector<float>& input, const std::vector<float>& targe
     int i = 0;
     float initialLR = this->learningRate;
     while (1) {
-        zeroGradients();
         // 1. Forward propagation
         this->input = softmax(input);
         forprop(this->input);
@@ -106,7 +105,6 @@ void mnn::trainBatch(const std::vector<std::vector<float>>& inputs, const std::v
     }
 
     while (true) {
-        zeroGradients();
         float total_loss = 0.0f;
         forprop(inputBatch);       
         totalEpochs++;

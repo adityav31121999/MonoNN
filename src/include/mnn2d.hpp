@@ -26,6 +26,7 @@ public:
     int batchSize;                  // batch size for training
     int epochs;                     // number of epochs
     int iterations;                 // number of iterations
+    int weightUpdateType;           // type of weight update
     float learningRate;             // learning rate
     float currloss;                 // current loss
     float prevloss;                 // previous iterations loss

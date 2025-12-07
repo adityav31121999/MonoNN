@@ -110,7 +110,9 @@ void updateWeightsDropout(std::vector<std::vector<float>>& weights, std::vector<
                 if (dis(gen) < dropoutRate) {
                     return w; // Keep weight unchanged (gradient is effectively zero)
                 }
-                return clamp(w - learningRate * g);
+                // dropout applied, update with elastic net regularization
+                // return clamp(w - (learningRate * g+ std::copysignf(LAMBDA_L1, w) + (2.0f * LAMBDA_L2 * w)));
+                return clamp(w - (learningRate * g));
             });
     }
 }
@@ -225,7 +227,6 @@ void setWeightsByXavier(std::vector<std::vector<std::vector<float>>>& weights, i
 void setWeightsByHe(std::vector<std::vector<std::vector<float>>>& weights, int fin, int fout) {
     float stddev = std::sqrt(2.0f / fin);
     setWeightsByNormalDist(weights, 0.0f, stddev);
-    std::cout << "-> Weights initialized using He initialization.\n";
 }
 
 /**
@@ -237,7 +238,6 @@ void setWeightsByHe(std::vector<std::vector<std::vector<float>>>& weights, int f
 void setWeightsByLeCunn(std::vector<std::vector<std::vector<float>>>& weights, int fin, int fout) {
     float stddev = std::sqrt(1.0f / fin);
     setWeightsByNormalDist(weights, 0.0f, stddev);
-    std::cout << "-> Weights initialized using LeCun initialization.\n";
 }
 
 
@@ -283,13 +283,15 @@ void mnn::initiateWeights(int type)
             break;
         }
         case 3: {
-            setWeightsByHe(cweights, inSize, outSize);
-            setWeightsByHe(bweights, inSize, outSize);
+            std::cout << "-> Weights initialized using He initialization.\n";
+            std::cout << "C: "; setWeightsByHe(cweights, inSize, outSize);
+            std::cout << "B: "; setWeightsByHe(bweights, inSize, outSize);
             break;
         }
         case 4: {
             setWeightsByLeCunn(cweights, inSize, outSize);
             setWeightsByLeCunn(bweights, inSize, outSize);
+            std::cout << "Weights initialized using LeCunn initialization.\n";
             break;
         }
         default: {
