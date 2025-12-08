@@ -81,10 +81,10 @@ std::vector<std::vector<float>> transpose(const std::vector<std::vector<float>>&
 std::vector<std::vector<float>> average(const std::vector<std::vector<std::vector<float>>>& input);
 int maxIndex(const std::vector<float>& input);
 
+std::vector<std::vector<float>> hadamard(const std::vector<std::vector<float>>& a, const std::vector<std::vector<float>>& b);
 std::vector<float> multiply(const std::vector<float>& a, const std::vector<float>& b);
 std::vector<float> multiply(const std::vector<float>& a, const std::vector<std::vector<float>>& b);
 std::vector<std::vector<float>> multiply(const std::vector<std::vector<float>>& a, const std::vector<std::vector<float>>& b);
-std::vector<float> multiplyWithThreads(const std::vector<float>& a, const std::vector<float>& b);
 std::vector<float> multiplyWithThreads(const std::vector<float>& a, const std::vector<std::vector<float>>& b);
 std::vector<std::vector<float>> multiplyWithThreads(const std::vector<std::vector<float>>& a, const std::vector<std::vector<float>>& b);
 
@@ -129,7 +129,7 @@ void layerForwardBatchThread(const std::vector<std::vector<float>>& input, std::
 void layerForwardBatchThread(const std::vector<std::vector<std::vector<float>>>& input, std::vector<std::vector<std::vector<float>>>& output,
                        const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights, float n);
 
-// single layer backprop (with direct weights update) for mnn and mnn2d
+// single layer backprop (with direct weights update) for mnn and mnn2d for online training
 
 void layerBackward(const std::vector<float>& incoming, const std::vector<float>& input, std::vector<std::vector<float>>& C,
                     std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb, float m, float alpha);
@@ -157,7 +157,7 @@ void layerBackwardThread(const std::vector<std::vector<float>>& incoming, std::v
                     std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& gradc,
                     std::vector<std::vector<float>>& gradb, float m, float alpha);
 
-// batch layer backprop (with averaging and direct weights update) for mnn and mnn2d
+// batch layer backprop (with averaging and direct weights update) for mnn and mnn2d for batch training
 
 void layerBackwardBatch(const std::vector<std::vector<float>>& incoming, const std::vector<std::vector<float>>& input, 
                     std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb,

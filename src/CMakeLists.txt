@@ -3,6 +3,7 @@ include_directories(include)
 
 set(MNN_SOURCES
     mnn/cpp/operators.cpp
+    mnn/multiply.cpp
     mnn/activations.cpp
     mnn/loss.cpp
     mnn/progress.cpp

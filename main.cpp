@@ -54,11 +54,11 @@ int main() {
         std::cout << "----------------------MNN----------------------" << std::endl;
         mnn network1(inSize, outSize, hidden_layers1, order, binFileAddress1);
         network1.loadNetwork();
-        network1.weightUpdateType = 3;
+        network1.weightUpdateType = 5;
         network1.path2progress = progressData1;
         network1.path2test_progress = testProgress1;
         network1.mnnPrg.sessionSize = 50;
-        // network1.train(digitTrain, batchMode);
+        network1.onlineTraining(digitTrain, batchMode, useThreadOrBuffer);
         network1.test(digitTest, useThreadOrBuffer); // Added test call for mnn
 #else
         std::cout << "---------------------MNN2D---------------------" << std::endl;
@@ -68,7 +68,7 @@ int main() {
         network2.path2progress = progressData4;
         network2.path2test_progress = testProgress4;
         network2.mnn2dPrg.sessionSize = 50;
-        network2.train(fashionTrain, batchMode);
+        network2.onlineTraining(fashionTrain, batchMode);
         network2.test(fashionTest); // Added test call for mnn2d
 #endif
     }

@@ -245,4 +245,368 @@ void layerBackwardBatch(const std::vector<std::vector<std::vector<float>>>& inco
     }
 }
 
+// thread versions
+#include <thread>
+#include <mutex>
+
+// Helper for thread counts
+inline unsigned int get_concurrency(size_t limit) {
+    unsigned int num = std::thread::hardware_concurrency();
+    return num == 0 ? 2 : std::min(num, static_cast<unsigned int>(limit));
+}
+
+/**
+ * @brief Threaded batch layer backprop for mnn for first layer
+ * Strategy: Parallelize over Input Features (rows of gradc/gradb) to avoid locks.
+ */
+void layerBackwardBatchThread(const std::vector<std::vector<float>>& incoming,
+                              const std::vector<std::vector<float>>& input, 
+                              std::vector<std::vector<float>>& C,
+                              std::vector<std::vector<float>>& gradc,
+                              std::vector<std::vector<float>>& gradb,
+                              float m,
+                              float alpha)
+{
+    size_t batchSize = incoming.size();
+    if (batchSize == 0) return;
+    size_t inSize = input[0].size();
+    size_t outSize = incoming[0].size();
+    float invBatch = 1.0f / batchSize;
+
+    // 1. Pre-calculate Power (Parallel over Batch)
+    std::vector<std::vector<float>> prev_p(batchSize, std::vector<float>(inSize));
+    {
+        unsigned int nt = get_concurrency(batchSize);
+        std::vector<std::thread> pool;
+        size_t cs = batchSize / nt;
+        auto power_task = [&](size_t s, size_t e) {
+            for(size_t b=s; b<e; ++b) prev_p[b] = power(input[b], m);
+        };
+        for(unsigned t=0; t<nt; ++t) 
+            pool.emplace_back(power_task, t*cs, (t==nt-1)?batchSize:(t+1)*cs);
+        for(auto& t : pool) t.join();
+    }
+
+    // 2. Accumulate Gradients (Parallel over Input Rows 'i')
+    // Each thread takes a set of rows and sums the whole batch for those rows.
+    // No Mutex needed.
+    unsigned int num_threads = get_concurrency(inSize);
+    std::vector<std::thread> threads;
+    size_t chunk_size = inSize / num_threads;
+
+    auto grad_worker = [&](size_t start_i, size_t end_i) {
+        for(size_t i = start_i; i < end_i; ++i) {
+            for(size_t j = 0; j < outSize; ++j) {
+                float sum_c = 0.0f;
+                float sum_b = 0.0f;
+                
+                // Sum over batch
+                for(size_t b = 0; b < batchSize; ++b) {
+                    float inc = incoming[b][j];
+                    sum_c += prev_p[b][i] * inc;
+                    sum_b += inc;
+                }
+
+                // Apply alpha and average immediately
+                gradc[i][j] = (sum_c * alpha) * invBatch;
+                gradb[i][j] = (sum_b * (1.0f - alpha)) * invBatch;
+            }
+        }
+    };
+
+    for(unsigned int t = 0; t < num_threads; ++t) {
+        size_t start = t * chunk_size;
+        size_t end = (t == num_threads - 1) ? inSize : start + chunk_size;
+        threads.emplace_back(grad_worker, start, end);
+    }
+    for(auto& t : threads) t.join();
+}
+
+
+/**
+ * @brief Threaded batch layer backprop for mnn hidden layers
+ * Strategy: Two parallel passes. 
+ * 1. Parallelize Rows of GradC/GradB (Accumulation).
+ * 2. Parallelize Batch Index (Outgoing Calculation).
+ */
+void layerBackwardBatchThread(const std::vector<std::vector<float>>& incoming,
+                              std::vector<std::vector<float>>& outgoing,
+                              const std::vector<std::vector<float>>& prevAct,
+                              std::vector<std::vector<float>>& C,
+                              std::vector<std::vector<float>>& gradc,
+                              std::vector<std::vector<float>>& gradb,
+                              float m,
+                              float alpha)
+{
+    size_t batchSize = incoming.size();
+    if (batchSize == 0) return;
+    size_t inSize = prevAct[0].size();     // width[l-1]
+    size_t outSize = incoming[0].size();   // width[l]
+    float invBatch = 1.0f / batchSize;
+
+    outgoing.resize(batchSize, std::vector<float>(inSize));
+
+    // 1. Pre-calculate Power (Parallel Batch)
+    std::vector<std::vector<float>> prev_p(batchSize, std::vector<float>(inSize));
+    {
+        unsigned int nt = get_concurrency(batchSize);
+        std::vector<std::thread> pool;
+        size_t cs = batchSize / nt;
+        auto power_task = [&](size_t s, size_t e) {
+            for(size_t b=s; b<e; ++b) prev_p[b] = power(prevAct[b], m);
+        };
+        for(unsigned t=0; t<nt; ++t) 
+            pool.emplace_back(power_task, t*cs, (t==nt-1)?batchSize:(t+1)*cs);
+        for(auto& t : pool) t.join();
+    }
+
+    // 2. Gradients (Parallel over Input Rows 'i')
+    {
+        unsigned int nt = get_concurrency(inSize);
+        std::vector<std::thread> threads;
+        size_t cs = inSize / nt;
+
+        auto grad_worker = [&](size_t start_i, size_t end_i) {
+            for(size_t i = start_i; i < end_i; ++i) {
+                for(size_t j = 0; j < outSize; ++j) {
+                    float sum_c = 0.0f;
+                    float sum_b = 0.0f;
+                    for(size_t b = 0; b < batchSize; ++b) {
+                        float inc = incoming[b][j];
+                        sum_c += prev_p[b][i] * inc;
+                        sum_b += inc;
+                    }
+                    gradc[i][j] = (sum_c * alpha) * invBatch;
+                    gradb[i][j] = (sum_b * (1.0f - alpha)) * invBatch;
+                }
+            }
+        };
+
+        for(unsigned t=0; t<nt; ++t) {
+            threads.emplace_back(grad_worker, t*cs, (t==nt-1)?inSize:(t+1)*cs);
+        }
+        for(auto& t : threads) t.join();
+    }
+
+    // 3. Outgoing (Parallel over Batch 'b')
+    {
+        unsigned int nt = get_concurrency(batchSize);
+        std::vector<std::thread> threads;
+        size_t cs = batchSize / nt;
+
+        auto out_worker = [&](size_t start_b, size_t end_b) {
+            const float epsilon = 1e-8f;
+            for(size_t b = start_b; b < end_b; ++b) {
+                // Calculate vector-matrix product: incoming[b] * C^T 
+                // Equivalent to: for each input node i, sum(incoming[j] * C[i][j])
+                for(size_t i = 0; i < inSize; ++i) {
+                    float dot = 0.0f;
+                    for(size_t j = 0; j < outSize; ++j) {
+                        dot += incoming[b][j] * C[i][j];
+                    }
+
+                    // Derivatives
+                    float val = prevAct[b][i];
+                    // dprev_p = m * x^(m-1)
+                    float d_pow = m * std::pow(val, m - 1.0f); 
+                    // dprevAct = x * (1-x)
+                    float d_act = val * (1.0f - val);
+
+                    outgoing[b][i] = dot * d_pow * d_act;
+                }
+            }
+        };
+
+        for(unsigned t=0; t<nt; ++t) {
+            threads.emplace_back(out_worker, t*cs, (t==nt-1)?batchSize:(t+1)*cs);
+        }
+        for(auto& t : threads) t.join();
+    }
+}
+
+
+/**
+ * @brief Threaded batch layer backprop for mnn2d for first layer
+ * Strategy: Parallelize over Input Feature columns (gradc rows).
+ */
+void layerBackwardBatchThread(const std::vector<std::vector<std::vector<float>>>& incoming,
+                              const std::vector<std::vector<std::vector<float>>>& input,
+                              std::vector<std::vector<float>>& C,
+                              std::vector<std::vector<float>>& gradc,
+                              std::vector<std::vector<float>>& gradb,
+                              float m,
+                              float alpha)
+{
+    // incoming: [Batch][Row][Col] -> Row is spatial, Col is OutFeature
+    // input:    [Batch][Row][Col] -> Row is spatial, Col is InFeature
+    
+    size_t batchSize = incoming.size();
+    if(batchSize == 0) return;
+    size_t numRows = incoming[0].size();    // Spatial dimension
+    size_t inFeatures = input[0][0].size(); // gradc rows
+    size_t outFeatures = incoming[0][0].size(); // gradc cols
+    float invBatch = 1.0f / batchSize;
+
+    // 1. Pre-calculate Power (Parallel Batch)
+    std::vector<std::vector<std::vector<float>>> prev_p(batchSize);
+    {
+        unsigned int nt = get_concurrency(batchSize);
+        std::vector<std::thread> pool;
+        size_t cs = batchSize / nt;
+        auto power_task = [&](size_t s, size_t e) {
+            for(size_t b=s; b<e; ++b) prev_p[b] = power(input[b], m);
+        };
+        for(unsigned t=0; t<nt; ++t) 
+            pool.emplace_back(power_task, t*cs, (t==nt-1)?batchSize:(t+1)*cs);
+        for(auto& t : pool) t.join();
+    }
+
+    // 2. Gradients (Parallel over InFeatures 'i')
+    {
+        unsigned int nt = get_concurrency(inFeatures);
+        std::vector<std::thread> threads;
+        size_t cs = inFeatures / nt;
+
+        auto grad_worker = [&](size_t start_i, size_t end_i) {
+            for(size_t i = start_i; i < end_i; ++i) {
+                for(size_t j = 0; j < outFeatures; ++j) {
+                    float sum_c = 0.0f;
+                    float sum_b = 0.0f;
+                    
+                    // Sum over Batch AND Spatial Rows
+                    for(size_t b = 0; b < batchSize; ++b) {
+                        for(size_t r = 0; r < numRows; ++r) {
+                            float inc = incoming[b][r][j];
+                            // prev_p^T * incoming effectively matches [r][i] with [r][j]
+                            sum_c += prev_p[b][r][i] * inc;
+                            sum_b += inc;
+                        }
+                    }
+                    
+                    gradc[i][j] = (sum_c * alpha) * invBatch;
+                    gradb[i][j] = (sum_b * (1.0f - alpha)) * invBatch;
+                }
+            }
+        };
+
+        for(unsigned t=0; t<nt; ++t) {
+            threads.emplace_back(grad_worker, t*cs, (t==nt-1)?inFeatures:(t+1)*cs);
+        }
+        for(auto& t : threads) t.join();
+    }
+}
+
+
+/**
+ * @brief Threaded batch layer backprop for mnn2d hidden layers
+ */
+void layerBackwardBatchThread(const std::vector<std::vector<std::vector<float>>>& incoming,
+                              std::vector<std::vector<std::vector<float>>>& outgoing,
+                              const std::vector<std::vector<std::vector<float>>>& dotProds,
+                              const std::vector<std::vector<std::vector<float>>>& prevAct,
+                              std::vector<std::vector<float>>& C,
+                              std::vector<std::vector<float>>& gradc,
+                              std::vector<std::vector<float>>& gradb,
+                              float m,
+                              float alpha)
+{
+    size_t batchSize = incoming.size();
+    if(batchSize == 0) return;
+    size_t numRows = prevAct[0].size();
+    size_t inFeatures = prevAct[0][0].size();
+    size_t outFeatures = incoming[0][0].size();
+    float invBatch = 1.0f / batchSize;
+
+    outgoing.resize(batchSize);
+
+    // 1. Pre-calculate Power (Parallel Batch)
+    std::vector<std::vector<std::vector<float>>> prev_p(batchSize);
+    {
+        unsigned int nt = get_concurrency(batchSize);
+        std::vector<std::thread> pool;
+        size_t cs = batchSize / nt;
+        auto power_task = [&](size_t s, size_t e) {
+            for(size_t b=s; b<e; ++b) prev_p[b] = power(prevAct[b], m);
+        };
+        for(unsigned t=0; t<nt; ++t) 
+            pool.emplace_back(power_task, t*cs, (t==nt-1)?batchSize:(t+1)*cs);
+        for(auto& t : pool) t.join();
+    }
+
+    // 2. Gradients (Parallel over InFeatures 'i')
+    {
+        unsigned int nt = get_concurrency(inFeatures);
+        std::vector<std::thread> threads;
+        size_t cs = inFeatures / nt;
+
+        auto grad_worker = [&](size_t start_i, size_t end_i) {
+            for(size_t i = start_i; i < end_i; ++i) {
+                for(size_t j = 0; j < outFeatures; ++j) {
+                    float sum_c = 0.0f;
+                    float sum_b = 0.0f;
+                    // Sum over Batch and Spatial Rows
+                    for(size_t b = 0; b < batchSize; ++b) {
+                        for(size_t r = 0; r < numRows; ++r) {
+                            float inc = incoming[b][r][j];
+                            sum_c += prev_p[b][r][i] * inc;
+                            sum_b += inc;
+                        }
+                    }
+                    gradc[i][j] = (sum_c * alpha) * invBatch;
+                    gradb[i][j] = (sum_b * (1.0f - alpha)) * invBatch;
+                }
+            }
+        };
+        for(unsigned t=0; t<nt; ++t) 
+            threads.emplace_back(grad_worker, t*cs, (t==nt-1)?inFeatures:(t+1)*cs);
+        for(auto& t : threads) t.join();
+    }
+
+    // 3. Outgoing (Parallel over Batch 'b')
+    {
+        unsigned int nt = get_concurrency(batchSize);
+        std::vector<std::thread> threads;
+        size_t cs = batchSize / nt;
+
+        auto out_worker = [&](size_t start_b, size_t end_b) {
+            for(size_t b = start_b; b < end_b; ++b) {
+                
+                // Helper: dprevAct logic (Sequential within thread, but parallel across batches)
+                // Note: reshape/softmaxDer/flatten are expensive. 
+                // We assume these functions (mnn2d.hpp) are thread-safe (stateless).
+                std::vector<std::vector<float>> dprevAct = reshape(
+                    softmaxDer(flatten(dotProds[b])), 
+                    dotProds[b].size(), 
+                    dotProds[b][0].size()
+                );
+
+                outgoing[b].resize(numRows, std::vector<float>(inFeatures));
+
+                for(size_t r = 0; r < numRows; ++r) {
+                    for(size_t i = 0; i < inFeatures; ++i) {
+                        
+                        // Dot Product: incoming[b][r] . C[i] (implicitly C^T row i)
+                        float dot = 0.0f;
+                        for(size_t j = 0; j < outFeatures; ++j) {
+                            dot += incoming[b][r][j] * C[i][j];
+                        }
+
+                        // dprev_p
+                        float p_val = prevAct[b][r][i];
+                        float d_pow = m * std::pow(p_val, m - 1.0f);
+                        // Clamp logic from sequential code
+                        d_pow = std::max(-1e5f, std::min(1e5f, d_pow));
+
+                        outgoing[b][r][i] = dot * d_pow * dprevAct[r][i];
+                    }
+                }
+            }
+        };
+
+        for(unsigned t=0; t<nt; ++t) 
+            threads.emplace_back(out_worker, t*cs, (t==nt-1)?batchSize:(t+1)*cs);
+        for(auto& t : threads) t.join();
+    }
+}
+
 #endif

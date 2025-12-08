@@ -180,6 +180,8 @@ Gradients for Monomial neural nets are calculated in a similar manner to MLPs.
   - Backend support for compute
 - **0.0.2**: Batch Training (in progress)
   - Calculation for batch input training
+  - Mini-batch online training fails and network becomes dead immeadiately (implemented in onlineTraining)
+  - Mini-batch and full dataset works.
 
 ## Project Structure
 
