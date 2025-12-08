@@ -50,41 +50,41 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bool
 
     int totalFiles = filePaths.size();
     std::cout << "\n--- Starting Training (mnn) ---" << std::endl;
-    std::cout << "Resuming from file index: " << this->mnnPrg.filesProcessed << std::endl;
+    std::cout << "Resuming from file index: " << this->trainPrg.filesProcessed << std::endl;
 
     // access training progress information from file address and use it to re-start training
     // from new session
     double previousTrainingTime = 0.0;
-    if (!loadLastProgress(this->mnnPrg, this->path2progress)) {
+    if (!loadLastProgress(this->trainPrg, this->path2progress)) {
         // Preserve session and batch size set before calling train
-        unsigned int sessionSizeBackup = this->mnnPrg.sessionSize;
+        unsigned int sessionSizeBackup = this->trainPrg.sessionSize;
         unsigned int batchSizeBackup = this->batchSize;
         std::cout << "No progress file found or file is empty. Starting fresh training." << std::endl;
-        this->mnnPrg = {}; // Reset progress
-        this->mnnPrg.sessionSize = SESSION_SIZE;
-        this->mnnPrg.batchSize = batchSize;
-        this->mnnPrg.currentLearningRate = this->learningRate;
-        this->mnnPrg.sessionSize = sessionSizeBackup;
-        this->mnnPrg.batchSize = batchSizeBackup;
+        this->trainPrg = {}; // Reset progress
+        this->trainPrg.sessionSize = SESSION_SIZE;
+        this->trainPrg.batchSize = batchSize;
+        this->trainPrg.currentLearningRate = this->learningRate;
+        this->trainPrg.sessionSize = sessionSizeBackup;
+        this->trainPrg.batchSize = batchSizeBackup;
     }
     else {
         std::cout << "Successfully loaded progress. Resuming training." << std::endl;
-        this->learningRate = this->mnnPrg.currentLearningRate;
-        previousTrainingTime = this->mnnPrg.timeTakenForTraining;
-        std::cout << "Found " << totalFiles << " files for training. Resuming from file index " << this->mnnPrg.filesProcessed << "." << std::endl;
+        this->learningRate = this->trainPrg.currentLearningRate;
+        previousTrainingTime = this->trainPrg.timeTakenForTraining;
+        std::cout << "Found " << totalFiles << " files for training. Resuming from file index " << this->trainPrg.filesProcessed << "." << std::endl;
     }
 
     int fileCount = 0;
     int filesInCurrentSession = 0;
     // Update progress struct with file and batch info
-    this->mnnPrg.totalTrainFiles = totalFiles;
-    this->mnnPrg.batchSize = batchSize;
-    int sessionFiles = this->mnnPrg.sessionSize * this->mnnPrg.batchSize;
+    this->trainPrg.totalTrainFiles = totalFiles;
+    this->trainPrg.batchSize = batchSize;
+    int sessionFiles = this->trainPrg.sessionSize * this->trainPrg.batchSize;
     if(isBatchTrain == false)
         std::cout << "Online Training" << std::endl;
     else
         std::cout << "Batch Training with batch size: " << BATCH_SIZE << std::endl;
-    std::cout << "Session Size (in batches/session): " << this->mnnPrg.sessionSize << std::endl;
+    std::cout << "Session Size (in batches/session): " << this->trainPrg.sessionSize << std::endl;
     std::cout << "Files in Single Session: " << sessionFiles << std::endl;
 
     // start time count
@@ -97,7 +97,7 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bool
         std::cout << "learning rate: " << learningRate << std::endl;
         for(const auto& filePath : filePaths) {
             // Skip files that have already been processed in previous sessions
-            if (fileCount < this->mnnPrg.filesProcessed) {
+            if (fileCount < this->trainPrg.filesProcessed) {
                 fileCount++;
                 continue;
             }
@@ -124,16 +124,16 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bool
 
             // for progress tracking
             fileCount++;
-            this->mnnPrg.filesProcessed++;
+            this->trainPrg.filesProcessed++;
             filesInCurrentSession++;
             bool sessionEnd = 0;
-            if (sessionFiles > 0 && filesInCurrentSession == this->mnnPrg.sessionSize) {
-                std::cout << "Session file limit (" << this->mnnPrg.sessionSize << ") reached." << std::endl;
+            if (sessionFiles > 0 && filesInCurrentSession == this->trainPrg.sessionSize) {
+                std::cout << "Session file limit (" << this->trainPrg.sessionSize << ") reached." << std::endl;
                 auto endTime = std::chrono::high_resolution_clock::now();
-                this->mnnPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
-                this->mnnPrg.timeTakenForTraining = previousTrainingTime + this->mnnPrg.timeForCurrentSession;
-                this->learningRate = this->mnnPrg.currentLearningRate;
-                this->mnnPrg.totalSessionsOfTraining++;
+                this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
+                this->trainPrg.timeTakenForTraining = previousTrainingTime + this->trainPrg.timeForCurrentSession;
+                this->learningRate = this->trainPrg.currentLearningRate;
+                this->trainPrg.totalSessionsOfTraining++;
                 sessionEnd = 1;
             }
             std::cout<< "File count: " << fileCount << std::endl;
@@ -143,7 +143,7 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bool
                 std::cout << "Processed " << fileCount << "/" << totalFiles << " files..." << std::endl;
                 std::cout << "====== Diagnostics For Current Session ======" << std::endl;
                 computeStats(cweights, bweights, cgradients, bgradients, activate);
-                if (logProgressToCSV(this->mnnPrg, this->path2progress) == 1)
+                if (logProgressToCSV(this->trainPrg, this->path2progress) == 1)
                     std::cout << "Progress logged successfully." << std::endl;
                 else 
                     throw std::runtime_error("Failed to log progress to CSV: " + this->path2progress);
@@ -152,7 +152,7 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bool
                 filesInCurrentSession = 0; // Reset for the next session
                 if (fileCount == totalFiles) {
                     std::cout << "All files processed. Ending training." << std::endl;
-                    this->mnnPrg.loss = this->mnnPrg.accLoss / static_cast<float>(this->mnnPrg.totalCycleCount);
+                    this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(this->trainPrg.totalCycleCount);
                     break;
                 }
             }
@@ -183,7 +183,7 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bool
         std::cout << "Training with batch size: " << batchSize << " (" << totalBatches << " batches)" << std::endl;
 
         // Start iterating from the beginning of the batch where the last processed file was
-        int startFileIndex = (this->mnnPrg.filesProcessed / batchSize) * batchSize;
+        int startFileIndex = (this->trainPrg.filesProcessed / batchSize) * batchSize;
         std::cout << "Starting from file index " << startFileIndex << " to align with batches." << std::endl;
 
         for(int i = startFileIndex; i < totalFiles; i += batchSize) {
@@ -213,16 +213,16 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bool
 
             // for progress tracking
             fileCount += batchSize;
-            this->mnnPrg.filesProcessed += batchSize;
+            this->trainPrg.filesProcessed += batchSize;
             filesInCurrentSession += batchSize;
             bool sessionEnd = 0;
-            if (sessionFiles > 0 && filesInCurrentSession == this->mnnPrg.sessionSize) {
-                std::cout << "Session file limit (" << this->mnnPrg.sessionSize << ") reached." << std::endl;
+            if (sessionFiles > 0 && filesInCurrentSession == this->trainPrg.sessionSize) {
+                std::cout << "Session file limit (" << this->trainPrg.sessionSize << ") reached." << std::endl;
                 auto endTime = std::chrono::high_resolution_clock::now();
-                this->mnnPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
-                this->mnnPrg.timeTakenForTraining = previousTrainingTime + this->mnnPrg.timeForCurrentSession;
-                this->mnnPrg.currentLearningRate = learningRate;
-                this->mnnPrg.totalSessionsOfTraining++;
+                this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
+                this->trainPrg.timeTakenForTraining = previousTrainingTime + this->trainPrg.timeForCurrentSession;
+                this->trainPrg.currentLearningRate = learningRate;
+                this->trainPrg.totalSessionsOfTraining++;
                 sessionEnd = 1;
             }
             std::cout<< "File count: " << fileCount << std::endl;
@@ -231,7 +231,7 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bool
             if (sessionEnd == 1 || fileCount == totalFiles) {
                 std::cout << "Processed " << fileCount << "/" << totalFiles << " files..." << std::endl;
                 std::cout << "====== Diagnostics For Current Session ======" << std::endl;
-                if (logProgressToCSV(this->mnnPrg, this->path2progress) == 1)
+                if (logProgressToCSV(this->trainPrg, this->path2progress) == 1)
                     std::cout << "Progress logged successfully." << std::endl;
                 else 
                     throw std::runtime_error("Failed to log progress to CSV: " + this->path2progress);
@@ -240,7 +240,7 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bool
                 filesInCurrentSession = 0; // Reset for the next session
                 if (fileCount == totalFiles) {
                     std::cout << "All files processed. Ending training." << std::endl;
-                    this->mnnPrg.loss = this->mnnPrg.accLoss / static_cast<float>(this->mnnPrg.totalCycleCount);
+                    this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(this->trainPrg.totalCycleCount);
                     break;
                 }
             }
@@ -248,10 +248,10 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bool
     }
 
     auto endTime = std::chrono::high_resolution_clock::now();
-    this->mnnPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
-    this->mnnPrg.timeTakenForTraining = previousTrainingTime + this->mnnPrg.timeForCurrentSession;
+    this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
+    this->trainPrg.timeTakenForTraining = previousTrainingTime + this->trainPrg.timeForCurrentSession;
     serializeWeights(cweights, bweights, binFileAddress);
-    logProgressToCSV(this->mnnPrg, this->path2progress);
+    logProgressToCSV(this->trainPrg, this->path2progress);
     std::cout << "--- Training Finished (mnn) ---" << std::endl;
 }
 
@@ -297,38 +297,38 @@ void mnn2d::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bo
 
     int totalFiles = filePaths.size();
     std::cout << "\n--- Starting Training (mnn) ---" << std::endl;
-    std::cout << "Resuming from file index: " << this->mnn2dPrg.filesProcessed << std::endl;
+    std::cout << "Resuming from file index: " << this->trainPrg.filesProcessed << std::endl;
 
     // access training progress information from file address and use it to re-start training
     // from new session
     double previousTrainingTime = 0.0;
-    if (!loadLastProgress(this->mnn2dPrg, this->path2progress)) {
+    if (!loadLastProgress(this->trainPrg, this->path2progress)) {
         // Preserve session and batch size set before calling train
-        unsigned int sessionSizeBackup = this->mnn2dPrg.sessionSize;
+        unsigned int sessionSizeBackup = this->trainPrg.sessionSize;
         unsigned int batchSizeBackup = this->batchSize;
         std::cout << "No progress file found or file is empty. Starting fresh training." << std::endl;
-        this->mnn2dPrg = {}; // Reset progress
-        this->mnn2dPrg.sessionSize = SESSION_SIZE;
-        this->mnn2dPrg.batchSize = batchSize;
-        this->mnn2dPrg.currentLearningRate = this->learningRate;
-        this->mnn2dPrg.sessionSize = sessionSizeBackup;
-        this->mnn2dPrg.batchSize = batchSizeBackup;
+        this->trainPrg = {}; // Reset progress
+        this->trainPrg.sessionSize = SESSION_SIZE;
+        this->trainPrg.batchSize = batchSize;
+        this->trainPrg.currentLearningRate = this->learningRate;
+        this->trainPrg.sessionSize = sessionSizeBackup;
+        this->trainPrg.batchSize = batchSizeBackup;
     }
     else {
         std::cout << "Successfully loaded progress. Resuming training." << std::endl;
-        this->learningRate = this->mnn2dPrg.currentLearningRate; // Use the learning rate from the last session
-        previousTrainingTime = this->mnn2dPrg.timeTakenForTraining; // Carry over total time
+        this->learningRate = this->trainPrg.currentLearningRate; // Use the learning rate from the last session
+        previousTrainingTime = this->trainPrg.timeTakenForTraining; // Carry over total time
     }
-    std::cout << "Found " << totalFiles << " files for training. Resuming from file index " << this->mnn2dPrg.filesProcessed << "." << std::endl;
+    std::cout << "Found " << totalFiles << " files for training. Resuming from file index " << this->trainPrg.filesProcessed << "." << std::endl;
 
     int fileCount = 0;
     int filesInCurrentSession = 0;
     // Update progress struct with file and batch info
-    this->mnn2dPrg.totalTrainFiles = totalFiles;
-    this->mnn2dPrg.batchSize = batchSize;
-    int sessionFiles = this->mnn2dPrg.sessionSize * this->mnn2dPrg.batchSize;
+    this->trainPrg.totalTrainFiles = totalFiles;
+    this->trainPrg.batchSize = batchSize;
+    int sessionFiles = this->trainPrg.sessionSize * this->trainPrg.batchSize;
     std::cout << "Training with batch size: " << BATCH_SIZE << std::endl;
-    std::cout << "Session Size (in batches/session): " << this->mnn2dPrg.sessionSize << std::endl;
+    std::cout << "Session Size (in batches/session): " << this->trainPrg.sessionSize << std::endl;
     std::cout << "Files in Single Session: " << sessionFiles << std::endl;
 
     // start time count
@@ -342,7 +342,7 @@ void mnn2d::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bo
         std::cout << "Training with batch size: 1" << std::endl;
         for(const auto& filePath : filePaths) {
             // Skip files that have already been processed in previous sessions
-            if (fileCount < this->mnn2dPrg.filesProcessed) {
+            if (fileCount < this->trainPrg.filesProcessed) {
                 fileCount++;
                 continue;
             }
@@ -369,16 +369,16 @@ void mnn2d::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bo
 
             // for progress tracking
             fileCount++;
-            this->mnn2dPrg.filesProcessed++;
+            this->trainPrg.filesProcessed++;
             filesInCurrentSession++;
             bool sessionEnd = 0;
-            if (sessionFiles > 0 && filesInCurrentSession == this->mnn2dPrg.sessionSize) {
-                std::cout << "Session file limit (" << this->mnn2dPrg.sessionSize << ") reached." << std::endl;
+            if (sessionFiles > 0 && filesInCurrentSession == this->trainPrg.sessionSize) {
+                std::cout << "Session file limit (" << this->trainPrg.sessionSize << ") reached." << std::endl;
                 auto endTime = std::chrono::high_resolution_clock::now();
-                this->mnn2dPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
-                this->mnn2dPrg.timeTakenForTraining = previousTrainingTime + this->mnn2dPrg.timeForCurrentSession;
-                this->learningRate = this->mnn2dPrg.currentLearningRate;
-                this->mnn2dPrg.totalSessionsOfTraining++;
+                this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
+                this->trainPrg.timeTakenForTraining = previousTrainingTime + this->trainPrg.timeForCurrentSession;
+                this->learningRate = this->trainPrg.currentLearningRate;
+                this->trainPrg.totalSessionsOfTraining++;
                 sessionEnd = 1;
             }
             std::cout<< "File count: " << fileCount << std::endl;
@@ -388,7 +388,7 @@ void mnn2d::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bo
                 std::cout << "Processed " << fileCount << "/" << totalFiles << " files..." << std::endl;
                 std::cout << "====== Diagnostics For Current Session ======" << std::endl;
                 computeStats(cweights, bweights, cgradients, bgradients, activate);
-                if (logProgressToCSV(this->mnn2dPrg, this->path2progress) == 1)
+                if (logProgressToCSV(this->trainPrg, this->path2progress) == 1)
                     std::cout << "Progress logged successfully." << std::endl;
                 else 
                     throw std::runtime_error("Failed to log progress to CSV: " + this->path2progress);
@@ -397,7 +397,7 @@ void mnn2d::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bo
                 filesInCurrentSession = 0; // Reset for the next session
                 if (fileCount == totalFiles) {
                     std::cout << "All files processed. Ending training." << std::endl;
-                    this->mnn2dPrg.loss = this->mnn2dPrg.accLoss / static_cast<float>(this->mnn2dPrg.totalCycleCount);
+                    this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(this->trainPrg.totalCycleCount);
                     break;
                 }
             }
@@ -430,7 +430,7 @@ void mnn2d::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bo
         std::cout << "Training with batch size: " << batchSize << " (" << totalBatches << " batches)" << std::endl;
 
         // Start iterating from the beginning of the batch where the last processed file was
-        int startFileIndex = (this->mnn2dPrg.filesProcessed / batchSize) * batchSize;
+        int startFileIndex = (this->trainPrg.filesProcessed / batchSize) * batchSize;
         std::cout << "Starting from file index " << startFileIndex << " to align with batches." << std::endl;
 
         for(int i = startFileIndex; i < totalFiles; i += batchSize) {
@@ -465,16 +465,16 @@ void mnn2d::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bo
 
             // for progress tracking
             fileCount += batchSize;
-            this->mnn2dPrg.filesProcessed += batchSize;
+            this->trainPrg.filesProcessed += batchSize;
             filesInCurrentSession += batchSize;
             bool sessionEnd = 0;
-            if (sessionFiles > 0 && filesInCurrentSession == this->mnn2dPrg.sessionSize) {
-                std::cout << "Session file limit (" << this->mnn2dPrg.sessionSize << ") reached." << std::endl;
+            if (sessionFiles > 0 && filesInCurrentSession == this->trainPrg.sessionSize) {
+                std::cout << "Session file limit (" << this->trainPrg.sessionSize << ") reached." << std::endl;
                 auto endTime = std::chrono::high_resolution_clock::now();
-                this->mnn2dPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
-                this->mnn2dPrg.timeTakenForTraining = previousTrainingTime + this->mnn2dPrg.timeForCurrentSession;
-                this->learningRate = this->mnn2dPrg.currentLearningRate;
-                this->mnn2dPrg.totalSessionsOfTraining++;
+                this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
+                this->trainPrg.timeTakenForTraining = previousTrainingTime + this->trainPrg.timeForCurrentSession;
+                this->learningRate = this->trainPrg.currentLearningRate;
+                this->trainPrg.totalSessionsOfTraining++;
                 sessionEnd = 1;
             }
             std::cout<< "File count: " << fileCount << std::endl;
@@ -484,7 +484,7 @@ void mnn2d::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bo
                 std::cout << "Processed " << fileCount << "/" << totalFiles << " files..." << std::endl;
                 std::cout << "====== Diagnostics For Current Session ======" << std::endl;
                 computeStats(cweights, bweights, cgradients, bgradients, activate);
-                if (logProgressToCSV(this->mnn2dPrg, this->path2progress) == 1)
+                if (logProgressToCSV(this->trainPrg, this->path2progress) == 1)
                     std::cout << "Progress logged successfully." << std::endl;
                 else 
                     throw std::runtime_error("Failed to log progress to CSV: " + this->path2progress);
@@ -493,7 +493,7 @@ void mnn2d::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bo
                 filesInCurrentSession = 0; // Reset for the next session
                 if (fileCount == totalFiles) {
                     std::cout << "All files processed. Ending training." << std::endl;
-                    this->mnn2dPrg.loss = this->mnn2dPrg.accLoss / static_cast<float>(this->mnn2dPrg.totalCycleCount);
+                    this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(this->trainPrg.totalCycleCount);
                     break;
                 }
             }
@@ -501,9 +501,9 @@ void mnn2d::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bo
     }
 
     auto endTime = std::chrono::high_resolution_clock::now();
-    this->mnn2dPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
-    this->mnn2dPrg.timeTakenForTraining = previousTrainingTime + this->mnn2dPrg.timeForCurrentSession;
+    this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
+    this->trainPrg.timeTakenForTraining = previousTrainingTime + this->trainPrg.timeForCurrentSession;
     serializeWeights(cweights, bweights, binFileAddress);
-    logProgressToCSV(this->mnn2dPrg, this->path2progress);
+    logProgressToCSV(this->trainPrg, this->path2progress);
     std::cout << "--- Training Finished (mnn2d) ---" << std::endl;
 }

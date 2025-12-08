@@ -39,8 +39,8 @@ public:
     std::string binFileAddress;     // binary file address to save weights and biases
     std::string path2progress;      // path to progress file
     std::string path2test_progress; // path to test progress file
-    progress mnnPrg;                // progress for mnn
-    test_progress mnnTestPrg;       // test progress for mnn
+    progress trainPrg;              // train progress
+    test_progress testPrg;          // test progress
 
 // store values for training
 

@@ -28,7 +28,7 @@ void mnn::test(const std::string &dataSetPath, bool useThreadOrBuffer)
 
     if (filePaths.empty()) {
         std::cout << "Warning: No files found in dataset directory: " << dataSetPath << std::endl;
-        this->mnnTestPrg.testError = 0.0f;
+        this->testPrg.testError = 0.0f;
         return;
     }
 
@@ -40,19 +40,19 @@ void mnn::test(const std::string &dataSetPath, bool useThreadOrBuffer)
     std::cout << "Found " << totalInputs << " files for testing." << std::endl;
 
     // Load previous progress to resume testing if applicable
-    if (loadLastTestProgress(this->mnnTestPrg, this->path2test_progress)) {
+    if (loadLastTestProgress(this->testPrg, this->path2test_progress)) {
         std::cout << "Successfully loaded test progress. Resuming testing." << std::endl;
-        correctPredictions = this->mnnTestPrg.correctPredictions;
-        accLoss = this->mnnTestPrg.testError * this->mnnTestPrg.testFilesProcessed; // Recalculate accumulated loss
+        correctPredictions = this->testPrg.correctPredictions;
+        accLoss = this->testPrg.testError * this->testPrg.testFilesProcessed; // Recalculate accumulated loss
     } else {
         std::cout << "No test progress file found or file is empty. Starting fresh test." << std::endl;
-        this->mnnTestPrg = {}; // Reset test progress
+        this->testPrg = {}; // Reset test progress
     }
-    std::cout << "Found " << totalInputs << " files for testing. Resuming from file index " << this->mnnTestPrg.testFilesProcessed << "." << std::endl;
-    this->mnnTestPrg.totalTestFiles = totalInputs;
+    std::cout << "Found " << totalInputs << " files for testing. Resuming from file index " << this->testPrg.testFilesProcessed << "." << std::endl;
+    this->testPrg.totalTestFiles = totalInputs;
 
     for(size_t i = 0; i < totalInputs; ++i) {
-        if (i < this->mnnTestPrg.testFilesProcessed) {
+        if (i < this->testPrg.testFilesProcessed) {
             continue; // Skip already processed files
         }
         const auto& filePath = filePaths[i];
@@ -88,18 +88,18 @@ void mnn::test(const std::string &dataSetPath, bool useThreadOrBuffer)
             std::cout << "Processed " << i + 1 << "/" << totalInputs
                       << " \t Accuracy: " << currentAccuracy * 100.0f << "%\t"
                       << " | Avg Loss: " << accLoss / (i + 1.0f) << std::endl;
-            this->mnnTestPrg.testAccuracy = currentAccuracy;
-            this->mnnTestPrg.testError = accLoss / (i + 1.0f);
-            this->mnnTestPrg.testFilesProcessed = i + 1;
-            this->mnnTestPrg.correctPredictions = correctPredictions;
-            logTestProgressToCSV(this->mnnTestPrg, this->path2test_progress);
+            this->testPrg.testAccuracy = currentAccuracy;
+            this->testPrg.testError = accLoss / (i + 1.0f);
+            this->testPrg.testFilesProcessed = i + 1;
+            this->testPrg.correctPredictions = correctPredictions;
+            logTestProgressToCSV(this->testPrg, this->path2test_progress);
         }
     }
 
-    this->mnnTestPrg.testError = (totalInputs > 0) ? (accLoss / totalInputs) : 0.0f;
+    this->testPrg.testError = (totalInputs > 0) ? (accLoss / totalInputs) : 0.0f;
     std::cout << "--- Test Finished (mnn) ---" << std::endl;
     std::cout << "Final Accuracy: " << ((float)correctPredictions / totalInputs) * 100.0f << "%" << std::endl;
-    std::cout << "Final Average Loss: " << this->mnnTestPrg.testError << std::endl;
+    std::cout << "Final Average Loss: " << this->testPrg.testError << std::endl;
     std::cout << "Correct Predictions: " << correctPredictions << std::endl;
     std::cout << "Total Inputs: " << totalInputs << std::endl;
 }
@@ -123,7 +123,7 @@ void mnn2d::test(const std::string &dataSetPath, bool useThreadOrBuffer)
 
     if (filePaths.empty()) {
         std::cout << "Warning: No files found in dataset directory: " << dataSetPath << std::endl;
-        this->mnn2dTestPrg.testError = 0.0f;
+        this->testPrg.testError = 0.0f;
         return;
     }
 
@@ -135,19 +135,19 @@ void mnn2d::test(const std::string &dataSetPath, bool useThreadOrBuffer)
     std::cout << "Found " << totalInputs << " files for testing." << std::endl;
 
     // Load previous progress to resume testing if applicable
-    if (loadLastTestProgress(this->mnn2dTestPrg, this->path2test_progress)) {
+    if (loadLastTestProgress(this->testPrg, this->path2test_progress)) {
         std::cout << "Successfully loaded test progress. Resuming testing." << std::endl;
-        correctPredictions = this->mnn2dTestPrg.correctPredictions;
-        accLoss = this->mnn2dTestPrg.testError * this->mnn2dTestPrg.testFilesProcessed; // Recalculate accumulated loss
+        correctPredictions = this->testPrg.correctPredictions;
+        accLoss = this->testPrg.testError * this->testPrg.testFilesProcessed; // Recalculate accumulated loss
     } else {
         std::cout << "No test progress file found or file is empty. Starting fresh test." << std::endl;
-        this->mnn2dTestPrg = {}; // Reset test progress
+        this->testPrg = {}; // Reset test progress
     }
-    std::cout << "Found " << totalInputs << " files for testing. Resuming from file index " << this->mnn2dTestPrg.testFilesProcessed << "." << std::endl;
-    this->mnn2dTestPrg.totalTestFiles = totalInputs;
+    std::cout << "Found " << totalInputs << " files for testing. Resuming from file index " << this->testPrg.testFilesProcessed << "." << std::endl;
+    this->testPrg.totalTestFiles = totalInputs;
     
     for(size_t i = 0; i < totalInputs; ++i) {
-        if (i < this->mnn2dTestPrg.testFilesProcessed) {
+        if (i < this->testPrg.testFilesProcessed) {
             continue; // Skip already processed files
         }
         const auto& filePath = filePaths[i];
@@ -178,15 +178,15 @@ void mnn2d::test(const std::string &dataSetPath, bool useThreadOrBuffer)
             std::cout << "Processed " << i + 1 << "/" << totalInputs
                       << " | Accuracy: " << currentAccuracy * 100.0f << "%"
                       << " | Avg Loss: " << accLoss / (i + 1.0f) << std::endl;
-            this->mnn2dTestPrg.testAccuracy = currentAccuracy;
-            this->mnn2dTestPrg.testError = accLoss / (i + 1.0f);
-            this->mnn2dTestPrg.testFilesProcessed = i + 1;
-            this->mnn2dTestPrg.correctPredictions = correctPredictions;
-            logTestProgressToCSV(this->mnn2dTestPrg, this->path2test_progress);
+            this->testPrg.testAccuracy = currentAccuracy;
+            this->testPrg.testError = accLoss / (i + 1.0f);
+            this->testPrg.testFilesProcessed = i + 1;
+            this->testPrg.correctPredictions = correctPredictions;
+            logTestProgressToCSV(this->testPrg, this->path2test_progress);
         }
     }
 
-    this->mnn2dTestPrg.testError = (totalInputs > 0) ? (accLoss / totalInputs) : 0.0f;
+    this->testPrg.testError = (totalInputs > 0) ? (accLoss / totalInputs) : 0.0f;
     std::cout << "--- Test Finished (mnn2d) ---" << std::endl;
     std::cout << "Final Accuracy: " << ((float)correctPredictions / totalInputs) * 100.0f << "%" << std::endl;
 }

@@ -13,7 +13,7 @@
 #define SOFTMAX_TEMP 1.05f          // softmax temperature
 #define EPOCH 100                   // epochs for single set training
 #define SESSION_SIZE 50             // number of batches in single session
-#define BATCH_SIZE 16               // number of inputs in single batch
+#define BATCH_SIZE 4                // number of inputs in single batch
 #define ALPHA 0.80f                 // gradient splitting factor
 
 // struct to hold statistical information about data
@@ -42,14 +42,14 @@ void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, 
 struct progress {
     unsigned int sessionSize;           // number of batches to be trained in single session (1 or many)
     unsigned int filesProcessed;        // number of files processed in training so far
-    unsigned int batchSize;             // number of files in single batch (1 or many)
+    unsigned int batchSize;             // number of files in single batch (1 or many, for mini-batch)
     unsigned int totalTrainFiles;       // total training files
-    unsigned int epoch;                         // for full data training epoch
+    unsigned int epoch;                         // for full data training epoch (for mini-batch and full dataset)
     float trainingPredictions;                  // correct training predictions in full dataset training
     float currentLearningRate;                  // current session's learning rate after successful training
     float loss;                                 // loss after successful training
     double accLoss;                             // accumulated loss till current session
-    float trainAccuracy;                        // training accuracy in full data set training
+    float trainAccuracy;                        // training accuracy in full data set training (for mini-batch and full dataset)
     unsigned long long totalCycleCount;         // total cycles after full training
     unsigned int totalSessionsOfTraining;       // total sessions used for training
     double timeForCurrentSession;               // time taken for current session
