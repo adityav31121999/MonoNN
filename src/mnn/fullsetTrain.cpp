@@ -10,11 +10,11 @@
 #include "mnn2d.hpp"
 
 /**
- * @brief train network with mini batches over dataset epochs
+ * @brief train network with full dataset as single batch
  * @param dataSetPath path to dataset folder
  * @param useThreadOrBuffer use threads in CPU and full buffer-based operation in CUDA and OpenCL
  */
-void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuffer)
+void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBuffer)
 {
     // Access all image files from the dataset path
     std::vector<std::filesystem::path> filePaths;
@@ -114,45 +114,47 @@ void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuff
     std::cout << "Starting from file index " << startFileIndex << " to align with batches." << std::endl;
 
     while (1) {
-        for(int i = startFileIndex; i < totalFiles; i += batchSize) {
-            std::vector<std::vector<float>> inBatch;
-            std::vector<std::vector<float>> expBatch;
-            int currentBatchEnd = std::min<int>(i + batchSize, totalFiles);
-            // get image 
-            for(int j = i; j < currentBatchEnd; ++j) {
-                const auto& filePath = filePaths[j];
-                inBatch.push_back(flatten(cvMat2vec(image2grey(filePath.string()))));
-                std::string filename = filePath.stem().string();
-                int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
-                std::vector<float> exp(this->outSize, 0.0f);
-                if (label < this->outSize) {
-                    exp[label] = 1.0f;
-                }
-                expBatch.push_back(exp);
+        batchSize = 1;
+        learningRate = 0.001f;
+        std::cout << "learning rate: " << learningRate << std::endl;
+        for(const auto& filePath : filePaths) {
+            // Skip files that have already been processed in previous sessions
+            if (fileCount < this->mnnPrg.filesProcessed) {
+                fileCount++;
+                continue;
             }
+
+            // Convert image to a flat 1D vector
+            std::vector<float> in = flatten(cvMat2vec(image2grey(filePath.string())));
+            // Extract label from filename (e.g., "image_7.png" -> 7)
+            std::string filename = filePath.stem().string();
+            int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
+            // Create one-hot encoded target vector
+            std::vector<float> exp(this->outSize, 0.0f);
+            if (label < this->outSize) {
+                exp[label] = 1.0f;
+            }
+            input = in, target = exp;
             // backend selection
             #ifdef USE_CPU
-                forprop(inBatch);
-                backprop(expBatch);
+                train(in, exp);
             #elif USE_CU
-                cuForprop(inBatch);
-                cuBackprop(expBatch);
+                cuTrain(in, exp);
             #elif USE_CL
-                clForprop(inBatch);
-                clBackprop(expBatch);
+                clTrain(in, exp);
             #endif
 
             // for progress tracking
-            fileCount += batchSize;
-            this->mnnPrg.filesProcessed += batchSize;
-            filesInCurrentSession += batchSize;
+            fileCount++;
+            this->mnnPrg.filesProcessed++;
+            filesInCurrentSession++;
             bool sessionEnd = 0;
             if (sessionFiles > 0 && filesInCurrentSession == this->mnnPrg.sessionSize) {
                 std::cout << "Session file limit (" << this->mnnPrg.sessionSize << ") reached." << std::endl;
                 auto endTime = std::chrono::high_resolution_clock::now();
                 this->mnnPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
                 this->mnnPrg.timeTakenForTraining = previousTrainingTime + this->mnnPrg.timeForCurrentSession;
-                this->mnnPrg.currentLearningRate = learningRate;
+                this->learningRate = this->mnnPrg.currentLearningRate;
                 this->mnnPrg.totalSessionsOfTraining++;
                 sessionEnd = 1;
             }
@@ -162,6 +164,7 @@ void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuff
             if (sessionEnd == 1 || fileCount == totalFiles) {
                 std::cout << "Processed " << fileCount << "/" << totalFiles << " files..." << std::endl;
                 std::cout << "====== Diagnostics For Current Session ======" << std::endl;
+                computeStats(cweights, bweights, cgradients, bgradients, activate);
                 if (logProgressToCSV(this->mnnPrg, this->path2progress) == 1)
                     std::cout << "Progress logged successfully." << std::endl;
                 else 
@@ -195,11 +198,11 @@ void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuff
 
 
 /**
- * @brief train network with mini batches over dataset epochs
+ * @brief train network with full dataset as single batch
  * @param dataSetPath path to dataset folder
  * @param useThreadOrBuffer use threads in CPU and full buffer-based operation in CUDA and OpenCL
  */
-void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuffer)
+void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBuffer)
 {
     // Access all image files from the dataset path
     std::vector<std::filesystem::path> filePaths;
@@ -301,45 +304,44 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
     std::cout << "Starting from file index " << startFileIndex << " to align with batches." << std::endl;
 
     while (1) {
-        for(int i = startFileIndex; i < totalFiles; i += batchSize) {
-            std::vector<std::vector<float>> inBatch;
-            std::vector<std::vector<float>> expBatch;
-            int currentBatchEnd = std::min<int>(i + batchSize, totalFiles);
-            // get image 
-            for(int j = i; j < currentBatchEnd; ++j) {
-                const auto& filePath = filePaths[j];
-                inBatch.push_back(flatten(cvMat2vec(image2grey(filePath.string()))));
-                std::string filename = filePath.stem().string();
-                int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
-                std::vector<float> exp(this->outWidth, 0.0f);
-                if (label < this->outWidth) {
-                    exp[label] = 1.0f;
-                }
-                expBatch.push_back(exp);
+        for(const auto& filePath : filePaths) {
+            // Skip files that have already been processed in previous sessions
+            if (fileCount < this->mnn2dPrg.filesProcessed) {
+                fileCount++;
+                continue;
             }
-            // backend selection
+
+            // Convert image to a 2D vector
+            std::vector<std::vector<float>> in = cvMat2vec(image2grey(filePath.string()));
+
+            // Extract label and create one-hot target vector
+            std::string filename = filePath.stem().string();
+            int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
+            std::vector<float> exp(this->outWidth, 0.0f);
+            if (label < this->outWidth) {
+                exp[label] = 1.0f;
+            }
+            input = in;
+            target = exp;
             #ifdef USE_CPU
-                forprop(inBatch);
-                backprop(expBatch);
+                train(in, exp);
             #elif USE_CU
-                cuForprop(inBatch);
-                cuBackprop(expBatch);
+                cuTrain(in, exp);
             #elif USE_CL
-                clForprop(inBatch);
-                clBackprop(expBatch);
+                clTrain(in, exp);
             #endif
 
             // for progress tracking
-            fileCount += batchSize;
-            this->mnn2dPrg.filesProcessed += batchSize;
-            filesInCurrentSession += batchSize;
+            fileCount++;
+            this->mnn2dPrg.filesProcessed++;
+            filesInCurrentSession++;
             bool sessionEnd = 0;
             if (sessionFiles > 0 && filesInCurrentSession == this->mnn2dPrg.sessionSize) {
                 std::cout << "Session file limit (" << this->mnn2dPrg.sessionSize << ") reached." << std::endl;
                 auto endTime = std::chrono::high_resolution_clock::now();
                 this->mnn2dPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
                 this->mnn2dPrg.timeTakenForTraining = previousTrainingTime + this->mnn2dPrg.timeForCurrentSession;
-                this->mnn2dPrg.currentLearningRate = learningRate;
+                this->learningRate = this->mnn2dPrg.currentLearningRate;
                 this->mnn2dPrg.totalSessionsOfTraining++;
                 sessionEnd = 1;
             }
@@ -349,6 +351,7 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
             if (sessionEnd == 1 || fileCount == totalFiles) {
                 std::cout << "Processed " << fileCount << "/" << totalFiles << " files..." << std::endl;
                 std::cout << "====== Diagnostics For Current Session ======" << std::endl;
+                computeStats(cweights, bweights, cgradients, bgradients, activate);
                 if (logProgressToCSV(this->mnn2dPrg, this->path2progress) == 1)
                     std::cout << "Progress logged successfully." << std::endl;
                 else 

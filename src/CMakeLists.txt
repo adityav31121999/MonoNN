@@ -16,6 +16,7 @@ set(MNN_SOURCES
     mnn/image.cpp
     mnn/onlineTrain.cpp
     mnn/batchTrain.cpp
+    mnn/fullsetTrain.cpp
     mnn/test.cpp
     mnn/stats.cpp
 )
