@@ -1,0 +1,187 @@
+#include <random>
+#include <algorithm>
+#include <cmath>
+#include <iostream>
+#include <fstream>
+#include <filesystem>
+#include "mnn.hpp"
+#include "mnn2d.hpp"
+
+// zero out gradients for new backprop
+void mnn::zeroGradients() {
+    for(auto& layer : cgradients) {
+        for(auto& row : layer)
+            std::fill(row.begin(), row.end(), 0.0f);
+    }
+    for(auto& layer : bgradients) {
+        for(auto& row : layer)
+            std::fill(row.begin(), row.end(), 0.0f);
+    }
+}
+
+
+// zero out gradients for new backprop
+void mnn2d::zeroGradients() {
+    for(auto& layer : cgradients) {
+        for(auto& row : layer)
+            std::fill(row.begin(), row.end(), 0.0f);
+    }
+    for(auto& layer : bgradients) {
+        for(auto& row : layer)
+            std::fill(row.begin(), row.end(), 0.0f);
+    }
+}
+
+// update weights
+
+/**
+ * @brief Update weights using standard gradient descent.
+ * @param weights The weights of a layer to be updated. Passed by reference.
+ * @param gradients The gradients corresponding to the weights.
+ * @param learningRate The learning rate for the update step.
+ */
+void updateWeights(std::vector<std::vector<float>>& weights, std::vector<std::vector<float>>& gradients, float& learningRate) {
+    for (size_t i = 0; i < weights.size(); ++i) {
+        std::transform(weights[i].begin(), weights[i].end(), gradients[i].begin(), weights[i].begin(),
+            [learningRate](float w, float g) {
+                return clamp(w - learningRate * g);
+            }
+        );
+    }
+}
+
+/**
+ * @brief Update weights using gradient descent with L1 regularization.
+ * @param weights The weights of a layer to be updated. Passed by reference.
+ * @param gradients The gradients corresponding to the weights.
+ * @param learningRate The learning rate for the update step.
+ * @param lambdaL1 The L1 regularization parameter.
+ */
+void updateWeightsL1(std::vector<std::vector<float>>& weights, std::vector<std::vector<float>>& gradients, float learningRate, float lambdaL1) {
+    for (size_t i = 0; i < weights.size(); ++i) {
+        std::transform(weights[i].begin(), weights[i].end(), gradients[i].begin(), weights[i].begin(),
+            [learningRate, lambdaL1](float w, float g) {
+                float l1_grad = (w > 0.0f) ? lambdaL1 : ((w < 0.0f) ? -lambdaL1 : 0.0f);
+                return clamp(w - learningRate * (g + l1_grad));
+            }
+        );
+    }
+}
+
+/**
+ * @brief Update weights using gradient descent with L2 regularization.
+ * @param weights The weights of a layer to be updated. Passed by reference.
+ * @param gradients The gradients corresponding to the weights.
+ * @param learningRate The learning rate for the update step.
+ * @param lambdaL2 The L2 regularization parameter.
+ */
+void updateWeightsL2(std::vector<std::vector<float>>& weights, std::vector<std::vector<float>>& gradients, float learningRate, float lambdaL2) {
+    for (size_t i = 0; i < weights.size(); ++i) {
+        std::transform(weights[i].begin(), weights[i].end(), gradients[i].begin(), weights[i].begin(),
+            [learningRate, lambdaL2](float w, float g) {
+                return clamp(w - learningRate * (g + 2.0f * lambdaL2 * w));
+            });
+    }
+}
+
+/**
+ * @brief Update weights using gradient descent with Elastic Net (L1 and L2) regularization.
+ * @param weights The weights of a layer to be updated. Passed by reference.
+ * @param gradients The gradients corresponding to the weights.
+ * @param learningRate The learning rate for the update step.
+ * @param lambdaL1 The L1 regularization parameter.
+ * @param lambdaL2 The L2 regularization parameter.
+ */
+void updateWeightsElastic(std::vector<std::vector<float>>& weights, std::vector<std::vector<float>>& gradients, float learningRate, float lambdaL1, float lambdaL2) {
+    for (size_t i = 0; i < weights.size(); ++i) {
+        std::transform(weights[i].begin(), weights[i].end(), gradients[i].begin(), weights[i].begin(),
+            [learningRate, lambdaL1, lambdaL2](float w, float g) {
+                float l1_grad = (w > 0.0f) ? lambdaL1 : ((w < 0.0f) ? -lambdaL1 : 0.0f);
+                return clamp(w - learningRate * (g + l1_grad + 2.0f * lambdaL2 * w));
+            });
+    }
+}
+
+/**
+ * @brief Update weights using gradient descent with weight decay.
+ * @param weights The weights of a layer to be updated. Passed by reference.
+ * @param gradients The gradients corresponding to the weights.
+ * @param learningRate The learning rate for the update step.
+ * @param decayRate The rate at which weights decay.
+ */
+void updateWeightsWeightDecay(std::vector<std::vector<float>>& weights, std::vector<std::vector<float>>& gradients, float learningRate, float decayRate) {
+    for (size_t i = 0; i < weights.size(); ++i) {
+        std::transform(weights[i].begin(), weights[i].end(), gradients[i].begin(), weights[i].begin(),
+            [learningRate, decayRate](float w, float g) {
+                return clamp(w * (1.0f - decayRate) - learningRate * g);
+            });
+    }
+}
+
+/**
+ * @brief Update weights with a dropout mechanism.
+ * @details Some weights are randomly not updated based on the dropout rate. This is a form of regularization applied during training.
+ * @param weights The weights of a layer to be updated. Passed by reference.
+ * @param gradients The gradients corresponding to the weights.
+ * @param learningRate The learning rate for the update step.
+ * @param dropoutRate The probability of a weight update being "dropped out" (skipped).
+ */
+void updateWeightsDropout(std::vector<std::vector<float>>& weights, std::vector<std::vector<float>>& gradients, float learningRate, float dropoutRate) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> dis(0.0f, 1.0f);
+
+    for (size_t i = 0; i < weights.size(); ++i) {
+        std::transform(weights[i].begin(), weights[i].end(), gradients[i].begin(), weights[i].begin(),
+            [&](float w, float g) {
+                if (dis(gen) < dropoutRate) {
+                    return w; // Keep weight unchanged (gradient is effectively zero)
+                }
+                // dropout applied, update with elastic net regularization
+                // return clamp(w - (learningRate * g+ std::copysignf(LAMBDA_L1, w) + (2.0f * LAMBDA_L2 * w)));
+                return clamp(w - (learningRate * g));
+            });
+    }
+}
+
+/**
+ * @brief update wieights using gradients using given type
+ * @param weights original value matrix
+ * @param gradient gradients for values
+ * @param learningRate step size of change to be applied
+ * @param type for update method (0-5) simple (0), L1(1),
+ *      L2(2), elastic net(3), weight decay(4), dropout(5).
+ */
+void updateWeights(std::vector<std::vector<float>> &weights, std::vector<std::vector<float>> &gradients, float &learningRate, int type)
+{
+    // update weights
+    switch (type) {
+        case 0:
+            // updateWeights
+            updateWeights(weights, gradients, learningRate);
+            break;
+        case 1:
+            // updateWeightsL1
+            updateWeightsL1(weights, gradients, learningRate, LAMBDA_L1);
+            break;
+        case 2:
+            // updateWeightsL2
+            updateWeightsL2(weights, gradients, learningRate, LAMBDA_L2);
+            break;
+        case 3:
+            // updateWeightsElasticNet
+            updateWeightsElastic(weights, gradients, learningRate, LAMBDA_L1, LAMBDA_L2);
+            break;
+        case 4:
+            // updateWeightsWeightDecay
+            updateWeightsWeightDecay(weights, gradients, learningRate, WEIGHT_DECAY);
+            break;
+        case 5:
+            // updateWeightsDropout
+            updateWeightsDropout(weights, gradients, learningRate, DROPOUT_RATE);
+            break;
+        default:
+            std::cout << "Invalid update type" << std::endl;
+            break;
+    }
+}

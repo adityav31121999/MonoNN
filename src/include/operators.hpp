@@ -70,9 +70,6 @@ std::vector<float> operator+(const std::vector<float>& a, const std::vector<floa
 std::vector<std::vector<float>> operator+(const std::vector<std::vector<float>>& a, const std::vector<std::vector<float>>& b);
 std::vector<float> operator*(const std::vector<float>& a, const std::vector<std::vector<float>>& b);
 std::vector<std::vector<float>> operator*(const std::vector<std::vector<float>>& a, const std::vector<std::vector<float>>& b);
-std::vector<float> multiply(const std::vector<float>& a, const std::vector<float>& b);
-std::vector<float> multiply(const std::vector<float>& a, const std::vector<std::vector<float>>& b);
-std::vector<std::vector<float>> multiply(const std::vector<std::vector<float>>& a, const std::vector<std::vector<float>>& b);
 std::vector<float> power(const std::vector<float>& input, const float& powerOfValues);
 std::vector<std::vector<float>> power(const std::vector<std::vector<float>>& input, const float& powerOfValues);
 std::vector<float> meanPool(const std::vector<std::vector<float>>& input);
@@ -83,6 +80,13 @@ std::vector<std::vector<float>> reshape(const std::vector<float>& input, int row
 std::vector<std::vector<float>> transpose(const std::vector<std::vector<float>>& input);
 std::vector<std::vector<float>> average(const std::vector<std::vector<std::vector<float>>>& input);
 int maxIndex(const std::vector<float>& input);
+
+std::vector<float> multiply(const std::vector<float>& a, const std::vector<float>& b);
+std::vector<float> multiply(const std::vector<float>& a, const std::vector<std::vector<float>>& b);
+std::vector<std::vector<float>> multiply(const std::vector<std::vector<float>>& a, const std::vector<std::vector<float>>& b);
+std::vector<float> multiplyWithThreads(const std::vector<float>& a, const std::vector<float>& b);
+std::vector<float> multiplyWithThreads(const std::vector<float>& a, const std::vector<std::vector<float>>& b);
+std::vector<std::vector<float>> multiplyWithThreads(const std::vector<std::vector<float>>& a, const std::vector<std::vector<float>>& b);
 
 // weight initialisation
 void setWeightsByNormalDist(std::vector<std::vector<std::vector<float>>>& weights, float mean, float stddev);
@@ -108,11 +112,21 @@ void layerForward(const std::vector<float>& input, std::vector<float>& output, c
 void layerForward(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output, 
                     const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights, float n);
 
+void layerForwardThread(const std::vector<float>& input, std::vector<float>& output, const std::vector<std::vector<float>>& cweights,
+                    const std::vector<std::vector<float>>& bweights, float n);
+void layerForwardThread(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output, 
+                    const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights, float n);
+
 // batch layer forprop for mnn
 
 void layerForwardBatch(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output,
                        const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights, float n);
 void layerForwardBatch(const std::vector<std::vector<std::vector<float>>>& input, std::vector<std::vector<std::vector<float>>>& output,
+                       const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights, float n);
+
+void layerForwardBatchThread(const std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& output,
+                       const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights, float n);
+void layerForwardBatchThread(const std::vector<std::vector<std::vector<float>>>& input, std::vector<std::vector<std::vector<float>>>& output,
                        const std::vector<std::vector<float>>& cweights, const std::vector<std::vector<float>>& bweights, float n);
 
 // single layer backprop (with direct weights update) for mnn and mnn2d
@@ -130,6 +144,19 @@ void layerBackward(const std::vector<std::vector<float>>& incoming, std::vector<
                     std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& gradc,
                     std::vector<std::vector<float>>& gradb, float m, float alpha);
 
+void layerBackwardThread(const std::vector<float>& incoming, const std::vector<float>& input, std::vector<std::vector<float>>& C,
+                    std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb, float m, float alpha);
+void layerBackwardThread(const std::vector<float>& incoming, std::vector<float>& outgoing, const std::vector<float>& prevAct,
+                    std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& gradc,
+                    std::vector<std::vector<float>>& gradb, float m, float alpha);
+void layerBackwardThread(const std::vector<std::vector<float>>& incoming, const std::vector<std::vector<float>>& input,
+                    std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& gradc,
+                    std::vector<std::vector<float>>& gradb, float m, float alpha);
+void layerBackwardThread(const std::vector<std::vector<float>>& incoming, std::vector<std::vector<float>>& outgoing,
+                    const std::vector<std::vector<float>>& dotProds, const std::vector<std::vector<float>>& prevAct,
+                    std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& gradc,
+                    std::vector<std::vector<float>>& gradb, float m, float alpha);
+
 // batch layer backprop (with averaging and direct weights update) for mnn and mnn2d
 
 void layerBackwardBatch(const std::vector<std::vector<float>>& incoming, const std::vector<std::vector<float>>& input, 
@@ -143,6 +170,21 @@ void layerBackwardBatch(const std::vector<std::vector<float>>& incoming, std::ve
                     std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb,
                     float m, float alpha);
 void layerBackwardBatch(const std::vector<std::vector<std::vector<float>>>& incoming, std::vector<std::vector<std::vector<float>>>& outgoing,
+                    const std::vector<std::vector<std::vector<float>>>& dotProds, const std::vector<std::vector<std::vector<float>>>& prevAct,
+                    std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb,
+                    float m, float alpha);
+
+void layerBackwardBatchThread(const std::vector<std::vector<float>>& incoming, const std::vector<std::vector<float>>& input, 
+                    std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb,
+                    float m, float alpha);
+void layerBackwardBatchThread(const std::vector<std::vector<std::vector<float>>>& incoming, const std::vector<std::vector<std::vector<float>>>& prevAct,
+                    std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb, 
+                    float m, float alpha);
+void layerBackwardBatchThread(const std::vector<std::vector<float>>& incoming, std::vector<std::vector<float>>& outgoing,
+                    const std::vector<std::vector<float>>& prevAct, std::vector<std::vector<float>>& C,
+                    std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb,
+                    float m, float alpha);
+void layerBackwardBatchThread(const std::vector<std::vector<std::vector<float>>>& incoming, std::vector<std::vector<std::vector<float>>>& outgoing,
                     const std::vector<std::vector<std::vector<float>>>& dotProds, const std::vector<std::vector<std::vector<float>>>& prevAct,
                     std::vector<std::vector<float>>& C, std::vector<std::vector<float>>& gradc, std::vector<std::vector<float>>& gradb,
                     float m, float alpha);

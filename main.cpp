@@ -43,6 +43,7 @@ int main() {
     int outSize = 10;
     float order = 1.4f;
     bool batchMode = 0;
+    bool useThreadOrBuffer = 0;
     std::vector<int> hidden_layers1 = { 784, 392, outSize };
     std::vector<int> hidden_layers2 = { 28, 56, 112, 112, 56, 28, outSize };
 
@@ -58,7 +59,7 @@ int main() {
         network1.path2test_progress = testProgress1;
         network1.mnnPrg.sessionSize = 50;
         // network1.train(digitTrain, batchMode);
-        network1.test(digitTest); // Added test call for mnn
+        network1.test(digitTest, useThreadOrBuffer); // Added test call for mnn
 #else
         std::cout << "---------------------MNN2D---------------------" << std::endl;
         mnn2d network2(inh, inw, outSize, hidden_layers2, order, binFileAddress3);

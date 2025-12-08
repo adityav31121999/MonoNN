@@ -26,6 +26,7 @@ struct Statistics {
 
 Statistics computeStats(const std::vector<float>& data);
 Statistics computeStats(const std::vector<std::vector<float>>& data);
+Statistics computeStats(const std::vector<std::vector<std::vector<float>>>& data);
 void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights,
         const std::vector<std::vector<std::vector<float>>>& cgrad, const std::vector<std::vector<std::vector<float>>>& bgrad,
         const std::vector<std::vector<float>>& act);
@@ -36,31 +37,26 @@ void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, 
         const std::vector<std::vector<std::vector<float>>>& cgrad, const std::vector<std::vector<std::vector<float>>>& bgrad,
         const std::vector<std::vector<std::vector<std::vector<float>>>>& act);
 
-// struct to save and access information on testing and training of neural network
+// struct to save and access information on training of neural network
 // single session will have fixed number of batches or files to be trained on
 struct progress {
-    // files
-    unsigned int batchSize;             // number of files in single batch (1 or many)
     unsigned int sessionSize;           // number of batches to be trained in single session (1 or many)
-    unsigned int totalTrainFiles;       // total training files
-    unsigned int totalTestFiles;        // total test files
     unsigned int filesProcessed;        // number of files processed in training so far
-    unsigned long long totalCycleCount;         // total cycles after full training
-    unsigned int totalSessionsOfTraining;       // total sessions used for training
-
-    // training
+    unsigned int batchSize;             // number of files in single batch (1 or many)
+    unsigned int totalTrainFiles;       // total training files
+    unsigned int epoch;                         // for full data training epoch
+    float trainingPredictions;                  // correct training predictions in full dataset training
     float currentLearningRate;                  // current session's learning rate after successful training
     float loss;                                 // loss after successful training
     double accLoss;                             // accumulated loss till current session
+    float trainAccuracy;                        // training accuracy in full data set training
+    unsigned long long totalCycleCount;         // total cycles after full training
+    unsigned int totalSessionsOfTraining;       // total sessions used for training
     double timeForCurrentSession;               // time taken for current session
     double timeTakenForTraining;                // total time taken throughout sessions
-
-    // testing
-    float testError;                            // error recorded during testing
-    float testAccuracy;                         // accuracy recorded during testing (correct predictions / total testing files)
-    unsigned int correctPredictions;            // correct predictions done in testing
 };
 
+// struct to save testing data
 struct test_progress {
     // files
     unsigned int totalTestFiles;        // total test files
@@ -74,7 +70,6 @@ struct test_progress {
 
 bool logProgressToCSV(const progress& p, const std::string& filePath);
 bool loadLastProgress(progress& p, const std::string& filePath);
-
 bool logTestProgressToCSV(const test_progress& p, const std::string& filePath);
 bool loadLastTestProgress(test_progress& p, const std::string& filePath);
 

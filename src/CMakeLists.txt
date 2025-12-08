@@ -5,13 +5,16 @@ set(MNN_SOURCES
     mnn/cpp/operators.cpp
     mnn/activations.cpp
     mnn/loss.cpp
-    mnn/weights.cpp
+    mnn/progress.cpp
+    mnn/updateweights.cpp
+    mnn/setweights.cpp
     mnn/schedLr.cpp
     mnn/mnn.cpp
     mnn/mnn2d.cpp
-    mnn/access.cpp
+    mnn/accessbin.cpp
     mnn/image.cpp
-    mnn/train.cpp
+    mnn/onlineTrain.cpp
+    mnn/batchTrain.cpp
     mnn/test.cpp
     mnn/stats.cpp
 )

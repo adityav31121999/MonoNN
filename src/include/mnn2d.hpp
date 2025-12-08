@@ -115,8 +115,10 @@ public:
     #endif
 
     void zeroGradients();
-    void train(const std::string& dataSetPath, bool isBatchTrain); // No change
-    void test(const std::string& dataSetPath);
+    void onlineTraining(const std::string& dataSetPath, bool useBatchTrain, bool useThreadOrBuffer);
+    void miniBatchTraining(const std::string& dataSetPath, bool useThreadOrBuffer);
+    void fullDataSetTraining(const std::string& dataSetPath, bool useThreadOrBuffer);
+    void test(const std::string& dataSetPath, bool useThreadOrBuffer);
 
 // destructor
     ~mnn2d() = default;

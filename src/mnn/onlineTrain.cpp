@@ -10,11 +10,12 @@
 #include "mnn2d.hpp"
 
 /**
- * @brief train network on given dataset
+ * @brief train network online on given dataset
  * @param dataSetPath path to dataset folder
- * @param isBatchTrain whether to use batch training or not
+ * @param isBatchTrain whether to use mini-batch online or online training
+ * @param useThreadOrBuffer use threads in CPU and full buffer-based operation in CUDA and OpenCL
  */
-void mnn::train(const std::string &dataSetPath, bool isBatchTrain)
+void mnn::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bool useThreadOrBuffer)
 {
     // Access all image files from the dataset path
     std::vector<std::filesystem::path> filePaths;
@@ -256,11 +257,12 @@ void mnn::train(const std::string &dataSetPath, bool isBatchTrain)
 
 
 /**
- * @brief train network on given dataset
+ * @brief train network online on given dataset
  * @param dataSetPath path to dataset folder.
- * @param isBatchTrain whether to use batch training or not
+ * @param isBatchTrain whether to use mini-batch online or online training
+ * @param useThreadOrBuffer use threads in CPU and full buffer-based operation in CUDA and OpenCL
  */
-void mnn2d::train(const std::string &dataSetPath, bool isBatchTrain)
+void mnn2d::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bool useThreadOrBuffer)
 {
     // Access all image files from the dataset path
     std::vector<std::filesystem::path> filePaths;
