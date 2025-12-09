@@ -1,5 +1,5 @@
-#ifndef LOSS_HPP
-#define LOSS_HPP 1
+#ifndef OPERATORS_HPP
+#define OPERATORS_HPP 1
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -406,4 +406,4 @@ extern "C" __global__ void kernelUpdateWeightsDropout(float* weights, float* gwe
 
 #endif
 
-#endif // LOSS_HPP
+#endif // OPERATORS_HPP

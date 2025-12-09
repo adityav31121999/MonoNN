@@ -49,7 +49,7 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
     std::sort(filePaths.begin(), filePaths.end());
 
     int totalFiles = filePaths.size();
-    std::cout << "\n--- Starting Training (mnn) ---" << std::endl;
+    std::cout << "\n--- Starting Full Dataset Training (mnn) ---" << std::endl;
 
     // access training progress information from file address and use it to re-start training
     // from new session
@@ -81,6 +81,7 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
     int sessionFiles = this->trainPrg.sessionSize * this->trainPrg.batchSize;
     std::cout << "Session Size (in batches/session): " << this->trainPrg.sessionSize << std::endl;
     std::cout << "Files in Single Session: " << sessionFiles << std::endl;
+    std::cout << "learning rate: " << learningRate << std::endl;
 
     // start time count
     auto startTime = std::chrono::high_resolution_clock::now();
@@ -108,7 +109,10 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
             if (label < this->outSize) {
                 exp[label] = 1.0f;
             }
-            input = in, target = exp;
+            for(int i = 0; i < in.size(); i++) {
+                in[i] /= 255;
+            }
+            target = exp;
             // backend selection
             #ifdef USE_CPU
                 forprop(in);
@@ -137,8 +141,8 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
                 this->trainPrg.totalSessionsOfTraining++;
                 this->trainPrg.totalCycleCount += sessionFiles;
                 sessionEnd = 1;
-                std::cout << "Files: " << fileCount << "/" << totalFiles << " \t Predictions: " << correctPredictions << " \t Training Accuracy: " << this->trainPrg.trainAccuracy << "%" 
-                          << " \t\t Loss: " << this->trainPrg.accLoss / static_cast<float>(this->trainPrg.filesProcessed)<< std::endl;
+                std::cout << "Epoch: " << this->trainPrg.epoch << "\tFiles: " << fileCount << "/" << totalFiles << " \tPredictions: " << correctPredictions << " \tTraining Accuracy: " << this->trainPrg.trainAccuracy << "%" 
+                          << " \tLoss: " << this->trainPrg.accLoss / static_cast<float>(this->trainPrg.filesProcessed)<< std::endl;
             }
 
             // If a session size is defined and reached, stop training for this session
@@ -246,6 +250,7 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
     int sessionFiles = this->trainPrg.sessionSize * this->trainPrg.batchSize;
     std::cout << "Session Size (in batches/session): " << this->trainPrg.sessionSize << std::endl;
     std::cout << "Files in Single Session: " << sessionFiles << std::endl;
+    std::cout << "learning rate: " << learningRate << std::endl;
 
     // start time count
     auto startTime = std::chrono::high_resolution_clock::now();
@@ -273,7 +278,12 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
             if (label < this->outWidth) {
                 exp[label] = 1.0f;
             }
-            input = in, target = exp;
+            for(int i = 0; i < in.size(); i++) {
+                for(int j = 0; j < in[i].size(); j++) {
+                    in[i][j] /= 255;
+                }
+            }
+            target = exp;
             // backend selection
             #ifdef USE_CPU
                 forprop(in);
@@ -302,8 +312,8 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
                 this->trainPrg.totalSessionsOfTraining++;
                 this->trainPrg.totalCycleCount += sessionFiles;
                 sessionEnd = 1;
-                std::cout << "Files: " << fileCount << "/" << totalFiles << " \t Predictions: " << correctPredictions << " \t Training Accuracy: " << this->trainPrg.trainAccuracy << "%" 
-                          << " \t\t Loss: " << this->trainPrg.accLoss / static_cast<float>(this->trainPrg.filesProcessed)<< std::endl;
+                std::cout << "Epoch: " << this->trainPrg.epoch << "\tFiles: " << fileCount << "/" << totalFiles << " \tPredictions: " << correctPredictions << " \tTraining Accuracy: " << this->trainPrg.trainAccuracy << "%" 
+                          << " \tLoss: " << this->trainPrg.accLoss / static_cast<float>(this->trainPrg.filesProcessed)<< std::endl;
             }
 
             // If a session size is defined and reached, stop training for this session

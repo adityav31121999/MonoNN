@@ -20,7 +20,7 @@ void makeBinFile(const std::string& fileAddress, unsigned long long param)
     #endif
 
     if (!file) {
-        throw std::runtime_error("Could not open file for writing: " + fileAddress);
+        throw std::runtime_error("makeBinFile: Could not open file for writing: " + fileAddress);
     }
 
     // Write in chunks to avoid allocating a potentially huge vector all at once.
@@ -49,13 +49,13 @@ void serializeWeights(const std::vector<std::vector<std::vector<float>>>& cweigh
 {
     FILE* file = nullptr;
     #ifdef _MSC_VER
-        fopen_s(&file, fileAddress.c_str(), "r+b");
+        fopen_s(&file, fileAddress.c_str(), "wb");
     #else
-        file = fopen(fileAddress.c_str(), "r+b");
+        file = fopen(fileAddress.c_str(), "wb");
     #endif
 
     if (!file) {
-        throw std::runtime_error("Could not open file for writing: " + fileAddress);
+        throw std::runtime_error("serializeWeights: Could not open file for writing: " + fileAddress);
     }
 
     // Serialize cweights
@@ -98,7 +98,7 @@ void deserializeWeights(std::vector<float>& cweights, std::vector<float>& bweigh
     #endif
 
     if (!file) {
-        throw std::runtime_error("Could not open file for reading: " + fileAddress);
+        throw std::runtime_error("deserializeWeights: Could not open file for reading: " + fileAddress);
     }
 
     fseek(file, 0, SEEK_END);
@@ -147,7 +147,7 @@ void deserializeWeights(std::vector<std::vector<std::vector<float>>>& cweights,
     #endif
 
     if (!file) {
-        throw std::runtime_error("Could not open file for reading: " + fileAddress);
+        throw std::runtime_error("deserializeWeights: Could not open file for reading: " + fileAddress);
     }
 
     // Deserialize cweights
@@ -172,29 +172,20 @@ void deserializeWeights(std::vector<std::vector<std::vector<float>>>& cweights,
 
 // mnn: load data of networ from binary file
 void mnn::loadNetwork() {
-    if (!std::filesystem::exists(binFileAddress)) {
-        // create new file
-        makeBinFile(binFileAddress);
-        initiateWeights(3);
-        saveNetwork();
-        std::cout << "Binary File " << binFileAddress << " created successfully." << std::endl;
-    }
-    else {
-        std::vector<float> c(param/2, 0.0f);
-        std::vector<float> b(param/2, 0.0f);
-        deserializeWeights(c, b, binFileAddress);
-        unsigned long long offset = 0;
-        for(int i = 0; i < cweights.size(); i++) {
-            for(int j = 0; j < cweights[i].size(); j++) {
-                for(int k = 0; k < cweights[i][j].size(); k++) {
-                    cweights[i][j][k] = c[offset + (unsigned long long)j * cweights[i][j].size() + k];
-                    bweights[i][j][k] = b[offset + (unsigned long long)j * cweights[i][j].size() + k];
-                }
+    std::vector<float> c(param/2, 0.0f);
+    std::vector<float> b(param/2, 0.0f);
+    deserializeWeights(c, b, binFileAddress);
+    unsigned long long offset = 0;
+    for(int i = 0; i < cweights.size(); i++) {
+        for(int j = 0; j < cweights[i].size(); j++) {
+            for(int k = 0; k < cweights[i][j].size(); k++) {
+                cweights[i][j][k] = c[offset + (unsigned long long)j * cweights[i][j].size() + k];
+                bweights[i][j][k] = b[offset + (unsigned long long)j * cweights[i][j].size() + k];
             }
-            offset += (unsigned long long)cweights[i].size() * cweights[i][0].size();
         }
-        std::cout << "Binary File " << binFileAddress << " loaded successfully." << std::endl;
+        offset += (unsigned long long)cweights[i].size() * cweights[i][0].size();
     }
+    std::cout << "Binary File " << binFileAddress << " loaded successfully." << std::endl;
 }
 
 // mnn: save data of network to binary file
@@ -204,29 +195,20 @@ void mnn::saveNetwork() {
 
 // mnn2d: load data of networ from binary file
 void mnn2d::loadNetwork() {
-    if (!std::filesystem::exists(binFileAddress)) {
-        // create new file
-        makeBinFile(binFileAddress);
-        initiateWeights(3);
-        saveNetwork();
-        std::cout << "Binary File " << binFileAddress << " created successfully." << std::endl;
-    }
-    else {
-        std::vector<float> c(param/2, 0.0f);
-        std::vector<float> b(param/2, 0.0f);
-        deserializeWeights(c, b, binFileAddress);
-        unsigned long long offset = 0;
-        for(int i = 0; i < cweights.size(); i++) {
-            for(int j = 0; j < cweights[i].size(); j++) {
-                for(int k = 0; k < cweights[i][j].size(); k++) {
-                    cweights[i][j][k] = c[offset + (unsigned long long)j * cweights[i][j].size() + k];
-                    bweights[i][j][k] = b[offset + (unsigned long long)j * cweights[i][j].size() + k];
-                }
+    std::vector<float> c(param/2, 0.0f);
+    std::vector<float> b(param/2, 0.0f);
+    deserializeWeights(c, b, binFileAddress);
+    unsigned long long offset = 0;
+    for(int i = 0; i < cweights.size(); i++) {
+        for(int j = 0; j < cweights[i].size(); j++) {
+            for(int k = 0; k < cweights[i][j].size(); k++) {
+                cweights[i][j][k] = c[offset + (unsigned long long)j * cweights[i][j].size() + k];
+                bweights[i][j][k] = b[offset + (unsigned long long)j * cweights[i][j].size() + k];
             }
-            offset += (unsigned long long)cweights[i].size() * cweights[i][0].size();
         }
-        std::cout << "Binary File " << binFileAddress << " loaded successfully." << std::endl;
+        offset += (unsigned long long)cweights[i].size() * cweights[i][0].size();
     }
+    std::cout << "Binary File " << binFileAddress << " loaded successfully." << std::endl;
 }
 
 // mnn2d: save data of network to binary file

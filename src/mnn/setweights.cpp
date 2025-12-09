@@ -99,58 +99,52 @@ void setWeightsByLeCunn(std::vector<std::vector<std::vector<float>>>& weights, i
  */
 void mnn::initiateWeights(int type)
 {
-    if (!std::filesystem::exists(binFileAddress)) {
-        makeBinFile(binFileAddress);
-        switch (type)
-        {
-            case 0: {
-                float mean = 0.1f;
-                float stddev = 0.1f;
-                std::cout << "Provide mean and standard deviation for distribution:";
-                std::cin >> mean;
-                std::cin >> stddev;
-                setWeightsByNormalDist(cweights, mean, stddev);
-                setWeightsByNormalDist(bweights, mean, stddev);
-                break;
-            }
-            case 1: {
-                float lower = -1.0f;
-                float upper = 1.0f;
-                std::cout << "Provide lower and upper bounds for distribution:";
-                std::cin >> lower;
-                std::cin >> upper;
-                setWeightsByUniformDist(cweights, lower, upper);
-                setWeightsByUniformDist(bweights, lower, upper);
-                break;
-            }
-            case 2: {
-                std::cout << "Set boolean for uniform or not: ";
-                bool uni;
-                std::cin >> uni;
-                setWeightsByXavier(cweights, inSize, outSize, uni);
-                setWeightsByXavier(bweights, inSize, outSize, uni);
-                break;
-            }
-            case 3: {
-                std::cout << "-> Weights initialized using He initialization.\n";
-                std::cout << "C: "; setWeightsByHe(cweights, inSize, outSize);
-                std::cout << "B: "; setWeightsByHe(bweights, inSize, outSize);
-                break;
-            }
-            case 4: {
-                setWeightsByLeCunn(cweights, inSize, outSize);
-                setWeightsByLeCunn(bweights, inSize, outSize);
-                std::cout << "Weights initialized using LeCunn initialization.\n";
-                break;
-            }
-            default: {
-                std::cout << "Invalid type" << std::endl;
-                break;
-            }
+    switch (type)
+    {
+        case 0: {
+            float mean = 0.1f;
+            float stddev = 0.1f;
+            std::cout << "Provide mean and standard deviation for distribution:";
+            std::cin >> mean;
+            std::cin >> stddev;
+            setWeightsByNormalDist(cweights, mean, stddev);
+            setWeightsByNormalDist(bweights, mean, stddev);
+            break;
         }
-    }
-    else {
-        loadNetwork();
+        case 1: {
+            float lower = -1.0f;
+            float upper = 1.0f;
+            std::cout << "Provide lower and upper bounds for distribution:";
+            std::cin >> lower;
+            std::cin >> upper;
+            setWeightsByUniformDist(cweights, lower, upper);
+            setWeightsByUniformDist(bweights, lower, upper);
+            break;
+        }
+        case 2: {
+            std::cout << "Set boolean for uniform or not: ";
+            bool uni;
+            std::cin >> uni;
+            setWeightsByXavier(cweights, inSize, outSize, uni);
+            setWeightsByXavier(bweights, inSize, outSize, uni);
+            break;
+        }
+        case 3: {
+            std::cout << "-> Weights initialized using He initialization.\n";
+            std::cout << "C: "; setWeightsByHe(cweights, inSize, outSize);
+            std::cout << "B: "; setWeightsByHe(bweights, inSize, outSize);
+            break;
+        }
+        case 4: {
+            setWeightsByLeCunn(cweights, inSize, outSize);
+            setWeightsByLeCunn(bweights, inSize, outSize);
+            std::cout << "Weights initialized using LeCunn initialization.\n";
+            break;
+        }
+        default: {
+            std::cout << "Invalid type" << std::endl;
+            break;
+        }
     }
 }
 

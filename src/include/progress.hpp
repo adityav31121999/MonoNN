@@ -12,8 +12,8 @@
 #define WEIGHT_DECAY 0.001f         // weight decay parameter
 #define SOFTMAX_TEMP 1.05f          // softmax temperature
 #define EPOCH 100                   // epochs for single set training
-#define SESSION_SIZE 50             // number of batches in single session
-#define BATCH_SIZE 4                // number of inputs in single batch
+#define SESSION_SIZE 5              // number of batches in single session
+#define BATCH_SIZE 16                // number of inputs in single batch
 #define ALPHA 0.80f                 // gradient splitting factor
 
 // struct to hold statistical information about data

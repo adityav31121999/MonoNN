@@ -5,7 +5,7 @@
 #include <fstream>
 #include "mononn.h"
 
-#define TRAIN_2D 1
+#define TRAIN_2D 0
 
 int main() {
     try {
@@ -41,7 +41,7 @@ int main() {
     int inSize = 784;
     int inh = 28, inw = 28;
     int outSize = 10;
-    float order = 1.4f;
+    float order = 2.0f;
     bool batchMode = 0;
     bool useThreadOrBuffer = 0;
     std::vector<int> hidden_layers1 = { 784, 392, outSize };
@@ -53,19 +53,17 @@ int main() {
 #if TRAIN_2D == 0
         std::cout << "----------------------MNN----------------------" << std::endl;
         mnn network1(inSize, outSize, hidden_layers1, order, binFileAddress1);
-        network1.loadNetwork();
         network1.weightUpdateType = 3;
         network1.path2progress = progressData1;
         network1.path2test_progress = testProgress1;
         network1.trainPrg.sessionSize = 50;
-        network1.onlineTraining(digitTrain, batchMode, useThreadOrBuffer);
-        // network1.miniBatchTraining(digitTrain, batchMode);
+        // network1.onlineTraining(digitTrain, batchMode, useThreadOrBuffer);
+        network1.miniBatchTraining(digitTrain, batchMode);
         // network1.fullDataSetTraining(digitTrain, useThreadOrBuffer);
         // network1.test(digitTest, useThreadOrBuffer);
 #else
         std::cout << "---------------------MNN2D---------------------" << std::endl;
         mnn2d network2(inh, inw, outSize, hidden_layers2, order, binFileAddress3);
-        network2.initiateWeights(3);
         network2.weightUpdateType = 3;
         network2.path2progress = progressData3;
         network2.path2test_progress = testProgress3;

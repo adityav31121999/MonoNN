@@ -81,9 +81,9 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bool
     this->trainPrg.batchSize = batchSize;
     int sessionFiles = this->trainPrg.sessionSize * this->trainPrg.batchSize;
     if(isBatchTrain == false)
-        std::cout << "Online Training" << std::endl;
+        std::cout << "Online Training For single file-2-file" << std::endl;
     else
-        std::cout << "Batch Training with batch size: " << BATCH_SIZE << std::endl;
+        std::cout << "Online Training Batches of size : " << BATCH_SIZE << std::endl;
     std::cout << "Session Size (in batches/session): " << this->trainPrg.sessionSize << std::endl;
     std::cout << "Files in Single Session: " << sessionFiles << std::endl;
 
@@ -112,7 +112,10 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bool
             if (label < this->outSize) {
                 exp[label] = 1.0f;
             }
-            input = in, target = exp;
+            for(int i = 0; i < in.size(); i++) {
+                in[i] /= 255;
+            }
+            target = exp;
             // backend selection
             #ifdef USE_CPU
                 train(in, exp);
@@ -161,7 +164,7 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bool
     else {
         batchSize = BATCH_SIZE;
         this->learningRate = 0.01f;
-        std::cout << "learning rate for batch size: " << this->learningRate << std::endl;
+        std::cout << "learning rate: " << this->learningRate << std::endl;
         this->inputBatch.resize(batchSize);
         this->outputBatch.resize(batchSize);
         this->targetBatch.resize(batchSize);
@@ -327,7 +330,10 @@ void mnn2d::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bo
     this->trainPrg.totalTrainFiles = totalFiles;
     this->trainPrg.batchSize = batchSize;
     int sessionFiles = this->trainPrg.sessionSize * this->trainPrg.batchSize;
-    std::cout << "Training with batch size: " << BATCH_SIZE << std::endl;
+    if(isBatchTrain == false)
+        std::cout << "Online Training For single file-2-file" << std::endl;
+    else
+        std::cout << "Online Training Batches of size : " << BATCH_SIZE << std::endl;
     std::cout << "Session Size (in batches/session): " << this->trainPrg.sessionSize << std::endl;
     std::cout << "Files in Single Session: " << sessionFiles << std::endl;
 
@@ -337,9 +343,9 @@ void mnn2d::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bo
     // 3. Train based on batch size
     if (isBatchTrain == false) {
         batchSize = 1;
-        int fileCount = 0;
         learningRate = 0.001f;
-        std::cout << "Training with batch size: 1" << std::endl;
+        std::cout << "learning rate: " << learningRate << std::endl;
+        int fileCount = 0;
         for(const auto& filePath : filePaths) {
             // Skip files that have already been processed in previous sessions
             if (fileCount < this->trainPrg.filesProcessed) {
@@ -357,7 +363,11 @@ void mnn2d::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bo
             if (label < this->outWidth) {
                 exp[label] = 1.0f;
             }
-            input = in;
+            for(int i = 0; i < in.size(); i++) {
+                for(int j = 0; j < in[i].size(); j++) {
+                    in[i][j] /= 255;
+                }
+            }
             target = exp;
             #ifdef USE_CPU
                 train(in, exp);
@@ -405,8 +415,8 @@ void mnn2d::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bo
     }
     else {
         batchSize = BATCH_SIZE;
-        learningRate = 0.01f;
-        std::cout << "Training With BatchSize of " << batchSize << std::endl;
+        learningRate = 0.001f;
+        std::cout << "learning rate: " << learningRate << std::endl;
         this->inputBatch.resize(batchSize);
         this->outputBatch.resize(batchSize);
         this->targetBatch.resize(batchSize);

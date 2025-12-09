@@ -81,7 +81,7 @@ mnn::mnn(int insize, int outsize, int layers, float order, std::string binFileAd
         if (devices.empty()) {
             throw std::runtime_error("No OpenCL devices found in the default context.");
         }
-        clCommandQueue = cl::CommandQueue(clContext, devices[0], cl::QueueProperties::None, &err); CL_CHECK(err);
+        clCommandQueue = cl::CommandQueue(clContext, devices[0], 0, &err); CL_CHECK(err);
         createKernelsFromFile(clContext, kernelFiles, kernels);
         std::cout << "OpenCL kernels created successfully." << std::endl;
     }
@@ -298,7 +298,7 @@ mnn::mnn(int insize, int outsize, std::vector<int> width, float order, std::stri
         if (devices.empty()) {
             throw std::runtime_error("No OpenCL devices found in the default context.");
         }
-        clCommandQueue = cl::CommandQueue(clContext, devices[0], cl::QueueProperties::None, &err); CL_CHECK(err);
+        clCommandQueue = cl::CommandQueue(clContext, devices[0], 0, &err); CL_CHECK(err);
 
         createKernelsFromFile(clContext, kernelFiles, kernels);
         std::cout << "OpenCL kernels created successfully." << std::endl;
@@ -345,6 +345,19 @@ void mnn::makeBinFile(const std::string &fileAddress)
 	this->binFileAddress = fileAddress;
 	long expectedFileSize = (long)(this->param * sizeof(float));
 
+    // Ensure the directory exists before trying to access the file.
+    std::filesystem::path filePath(fileAddress);
+    std::filesystem::path dirPath = filePath.parent_path();
+    if (!dirPath.empty() && !std::filesystem::exists(dirPath)) {
+        std::cout << "Directory " << dirPath << " does not exist. Creating it." << std::endl;
+        if (!std::filesystem::create_directories(dirPath)) {
+            throw std::runtime_error("MNN CONSTRUCTOR: could not create directory: " + dirPath.string());
+        }
+    }
+    else {
+        std::cout << "Directory " << dirPath << " exists." << std::endl;
+    }
+
 	// Check if the file exists and has the correct size.
 	if (std::filesystem::exists(fileAddress)) {
 		long fileSize = std::filesystem::file_size(fileAddress);
@@ -357,17 +370,78 @@ void mnn::makeBinFile(const std::string &fileAddress)
 				return; // Success, we are done.
 			}
 			catch (const std::runtime_error& e) {
-				std::cerr << "Error loading existing weights file: " << e.what() << ". Re-creating file." << std::endl;
+				std::cerr << "MNN CONSTRUCTOR: Error loading existing weights file: " << e.what() << ". Re-creating file." << std::endl;
 			}
 		}
 		else {
 			// If it exists but size is wrong, log it and proceed to create a new one.
-			std::cout << "File size mismatch. Expected " << expectedFileSize << " bytes, found " << fileSize << ". Re-creating file." << std::endl;
+            if(expectedFileSize != fileSize) {
+                std::cout << "File size mismatch. Expected " << expectedFileSize << " bytes, found " 
+                          << fileSize << ". Re-creating file." << std::endl;
+            }
+            // If the file does not exist, is the wrong size, or failed to load, create a new one.
+            std::cout << "Re-creating weights file: " << fileAddress << std::endl;
+            FILE* file = nullptr;
+            #if defined(_WIN32) || defined(_MSC_VER)
+                fopen_s(&file, fileAddress.c_str(), "wb");
+            #else
+                file = fopen(fileAddress.c_str(), "wb");
+            #endif
+
+            if (!file) {
+                throw std::runtime_error("MNN CONSTRUCTOR: Could not open file for writing: " + fileAddress);
+            }
+
+            // Write in chunks to avoid allocating a potentially huge vector all at once.
+            const size_t chunkSize = 1024 * 1024; // 1M floats (4MB)
+            std::vector<float> zeros(chunkSize, 0.0f);
+            unsigned long long remaining = param;
+
+            while (remaining > 0) {
+                size_t toWrite = (remaining < chunkSize) ? static_cast<size_t>(remaining) : chunkSize;
+                fwrite(zeros.data(), sizeof(float), toWrite, file);
+                remaining -= toWrite;
+            }
+
+            fclose(file);
+            std::cout << "Binary file created successfully." << std::endl;
+            std::cout << "Provide weight initialisation type: ";
+            std::cin >> weightUpdateType;
+            std::cout << std::endl;
+            initiateWeights(weightUpdateType);
 		}
 	}
+    else {
+        // If it doesn't exist, create a new
+        std::cout << "Creating new weights file: " << fileAddress << std::endl;
+        FILE* file = nullptr;
+        #if defined(_WIN32) || defined(_MSC_VER)
+            fopen_s(&file, fileAddress.c_str(), "wb");
+        #else
+            file = fopen(fileAddress.c_str(), "wb");
+        #endif
 
-	// If the file does not exist, is the wrong size, or failed to load, create a new one.
-	std::cout << "Creating new weights file: " << fileAddress << std::endl;
-	::makeBinFile(fileAddress, this->param); // Use the global makeBinFile function from access.cpp
-	std::cout << "Binary file created successfully." << std::endl;
+        if (!file) {
+            throw std::runtime_error("MNN CONSTRUCTOR: Could not open file for writing: " + fileAddress);
+        }
+
+        // Write in chunks to avoid allocating a potentially huge vector all at once.
+        const size_t chunkSize = 1024 * 1024; // 1M floats (4MB)
+        std::vector<float> zeros(chunkSize, 0.0f);
+        unsigned long long remaining = param;
+
+        while (remaining > 0) {
+            size_t toWrite = (remaining < chunkSize) ? static_cast<size_t>(remaining) : chunkSize;
+            fwrite(zeros.data(), sizeof(float), toWrite, file);
+            remaining -= toWrite;
+        }
+
+        fclose(file);
+        std::cout << "Binary file created successfully." << std::endl;
+        std::cout << "Provide weight initialisation type: ";
+        std::cin >> weightUpdateType;
+        std::cout << std::endl;
+        initiateWeights(weightUpdateType);
+    }
+    saveNetwork();
 }

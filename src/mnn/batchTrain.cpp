@@ -84,8 +84,8 @@ void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuff
     auto startTime = std::chrono::high_resolution_clock::now();
 
     batchSize = BATCH_SIZE;
-    this->learningRate = 0.01f;
-    std::cout << "learning rate for batch size: " << this->learningRate << std::endl;
+    this->learningRate = 0.02f;
+    std::cout << "learning rate: " << this->learningRate << std::endl;
     this->inputBatch.resize(batchSize);
     this->outputBatch.resize(batchSize);
     this->targetBatch.resize(batchSize);
@@ -133,6 +133,14 @@ void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuff
                 }
                 expBatch.push_back(exp);
             }
+            for(int j = 0; j < batchSize; j++) {
+                for(int k = 0; k < inBatch[j].size(); k++) {
+                    inBatch[j][k] /= 255.0f;
+                }
+            }
+
+            inputBatch = inBatch;
+            targetBatch = expBatch;
             // backend selection
             #ifdef USE_CPU
                 forprop(inBatch);
@@ -277,8 +285,8 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
     auto startTime = std::chrono::high_resolution_clock::now();
 
     batchSize = BATCH_SIZE;
-    this->learningRate = 0.01f;
-    std::cout << "learning rate for batch size: " << this->learningRate << std::endl;
+    this->learningRate = 0.005f;
+    std::cout << "learning rate: " << this->learningRate << std::endl;
     this->inputBatch.resize(batchSize);
     this->outputBatch.resize(batchSize);
     this->targetBatch.resize(batchSize);
@@ -328,6 +336,16 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
                 }
                 expBatch.push_back(exp);
             }
+            for(int j = 0; j < batchSize; j++) {
+                for(int k = 0; k < inBatch[j].size(); k++) {
+                    for(int p = 0; p < inBatch[j][k].size(); j++) {
+                        inBatch[j][k][p] /= 255.0f;
+                    }
+                }
+            }
+
+            inputBatch = inBatch;
+            targetBatch = expBatch;
             // backend selection
             #ifdef USE_CPU
                 forprop(inBatch);
