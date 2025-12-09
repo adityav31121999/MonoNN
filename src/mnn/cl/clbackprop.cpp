@@ -322,11 +322,11 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
         kernelSub.setArg(3, (int)output.size());
         cl::NDRange globalSub = calculate_global_1d(WORKSIZE_1D, output.size());
         CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSub, cl::NullRange, globalSub, local_1d));
-        CL_CHECK(clCommandQueue.enqueueCopyBuffer(d_err, d_incoming[layers - 1], 0, 0, sizeof(float) * output.size()));
-        // distribute incoming error to each output channel
+
+        // Distribute the error from d_err to each row of the last layer's incoming gradient buffer.
+        // This correctly reverses the mean-pooling operation, similar to the CUDA implementation.
         for(size_t i = 0; i < activate[layers-1].size(); ++i) {
-            CL_CHECK(clCommandQueue.enqueueCopyBuffer(d_incoming[i], d_err, 0, i * output.size() * sizeof(float),
-                                                      sizeof(float) * output.size()));
+            CL_CHECK(clCommandQueue.enqueueCopyBuffer(d_err, d_incoming[layers-1], 0, i * output.size() * sizeof(float), sizeof(float) * output.size()));
         }
 
         // Backpropagation from last to second layer
@@ -369,14 +369,15 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
             size_t prev_dot_size = dotProds[layer-1].size() * dotProds[layer-1][0].size();
 
             if (prev_dot_size > WORKSIZE_1D) {
-                // Use multi-work-group approach for large sizes
+                // Use multi-work-group approach for large sizes, mirroring the CUDA implementation for numerical stability.
                 cl::Kernel kernelSoftMaxReduce = kernels.at("softmax_reduce");
                 cl::Kernel kernelSoftMaxDerNormalize = kernels.at("softmaxDer_normalize");
 
                 size_t num_work_groups = (prev_dot_size + WORKSIZE_1D - 1) / WORKSIZE_1D;
                 size_t partial_results_buffer_size = num_work_groups * 2;
 
-                cl::Buffer d_partial_results(clContext, CL_MEM_READ_WRITE, sizeof(float) * partial_results_buffer_size, nullptr, &err); CL_CHECK(err);
+                cl::Buffer d_partial_results(clContext, CL_MEM_READ_WRITE, sizeof(float) * partial_results_buffer_size);
+                CL_CHECK(err);
 
                 // Launch softmax_reduce kernel (same as in forprop)
                 kernelSoftMaxReduce.setArg(0, d_dotProds[layer-1]);
@@ -384,7 +385,6 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
                 kernelSoftMaxReduce.setArg(2, cl::Local(sizeof(float) * WORKSIZE_1D));
                 kernelSoftMaxReduce.setArg(3, cl::Local(sizeof(float) * WORKSIZE_1D));
                 kernelSoftMaxReduce.setArg(4, (int)prev_dot_size);
-                kernelSoftMaxReduce.setArg(5, SOFTMAX_TEMP);
                 cl::NDRange globalReduce = calculate_global_1d(WORKSIZE_1D, prev_dot_size);
                 cl::NDRange localReduce(WORKSIZE_1D);
                 CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSoftMaxReduce, cl::NullRange, globalReduce, localReduce));
@@ -414,7 +414,7 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
                 kernelSoftmaxDer.setArg(1, d_dprev_act);
                 kernelSoftmaxDer.setArg(2, SOFTMAX_TEMP);
                 kernelSoftmaxDer.setArg(3, (int)prev_dot_size);
-                CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSoftmaxDer, cl::NullRange, cl::NDRange(prev_dot_size), cl::NDRange(prev_dot_size)));
+                CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSoftmaxDer, cl::NullRange, calculate_global_1d(WORKSIZE_1D, prev_dot_size), local_1d));
             }
 
             // outgoing = (dL/dz_l * C^T) . d(prev_p) . d(prev_act)

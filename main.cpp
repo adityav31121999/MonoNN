@@ -5,7 +5,7 @@
 #include <fstream>
 #include "mononn.h"
 
-#define TRAIN_2D 0
+#define TRAIN_2D 1
 
 int main() {
     try {
@@ -42,7 +42,7 @@ int main() {
     int inh = 28, inw = 28;
     int outSize = 10;
     float order = 1.4f;
-    bool batchMode = 1;
+    bool batchMode = 0;
     bool useThreadOrBuffer = 0;
     std::vector<int> hidden_layers1 = { 784, 392, outSize };
     std::vector<int> hidden_layers2 = { 28, 56, 112, 112, 56, 28, outSize };
@@ -58,8 +58,8 @@ int main() {
         network1.path2progress = progressData1;
         network1.path2test_progress = testProgress1;
         network1.trainPrg.sessionSize = 50;
-        // network1.onlineTraining(digitTrain, batchMode, useThreadOrBuffer);
-        network1.miniBatchTraining(digitTrain, batchMode);
+        network1.onlineTraining(digitTrain, batchMode, useThreadOrBuffer);
+        // network1.miniBatchTraining(digitTrain, batchMode);
         // network1.fullDataSetTraining(digitTrain, useThreadOrBuffer);
         // network1.test(digitTest, useThreadOrBuffer);
 #else
@@ -67,11 +67,13 @@ int main() {
         mnn2d network2(inh, inw, outSize, hidden_layers2, order, binFileAddress3);
         network2.initiateWeights(3);
         network2.weightUpdateType = 3;
-        network2.path2progress = progressData4;
-        network2.path2test_progress = testProgress4;
+        network2.path2progress = progressData3;
+        network2.path2test_progress = testProgress3;
         network2.trainPrg.sessionSize = 50;
-        network2.onlineTraining(fashionTrain, batchMode);
-        network2.test(fashionTest); // Added test call for mnn2d
+        network2.onlineTraining(digitTrain, batchMode, useThreadOrBuffer);
+        // network2.miniBatchTraining(digitTrain, batchMode);
+        // network2.fullDataSetTraining(digitTrain, useThreadOrBuffer);
+        // network2.test(digitTest, useThreadOrBuffer);
 #endif
     }
     catch (const std::exception& e) {
