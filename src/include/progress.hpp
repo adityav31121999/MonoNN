@@ -11,9 +11,9 @@
 #define DECAY_RATE 0.0025f          // weight decay rate
 #define WEIGHT_DECAY 0.001f         // weight decay parameter
 #define SOFTMAX_TEMP 1.05f          // softmax temperature
-#define EPOCH 100                   // epochs for single set training
-#define SESSION_SIZE 5              // number of batches in single session
-#define BATCH_SIZE 16                // number of inputs in single batch
+#define EPOCH 50                    // epochs for single set training
+#define SESSION_SIZE 10             // number of batches in single session
+#define BATCH_SIZE 50               // number of inputs in single batch
 #define ALPHA 0.80f                 // gradient splitting factor
 
 // struct to hold statistical information about data
@@ -45,7 +45,7 @@ struct progress {
     unsigned int batchSize;             // number of files in single batch (1 or many, for mini-batch)
     unsigned int totalTrainFiles;       // total training files
     unsigned int epoch;                         // for full data training epoch (for mini-batch and full dataset)
-    float trainingPredictions;                  // correct training predictions in full dataset training
+    unsigned int trainingPredictions;           // correct training predictions in full dataset training
     float currentLearningRate;                  // current session's learning rate after successful training
     float loss;                                 // loss after successful training
     double accLoss;                             // accumulated loss till current session

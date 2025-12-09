@@ -116,20 +116,28 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
             // backend selection
             #ifdef USE_CPU
                 forprop(in);
-                backprop(exp);
             #elif USE_CU
                 cuForprop(in);
-                cuBackprop(exp);
             #elif USE_CL
                 clForprop(in);
-                clBackprop(exp);
             #endif
 
             fileCount++;
             this->trainPrg.filesProcessed++;
             filesInCurrentSession++;
-            if(maxIndex(output) == maxIndex(target)) correctPredictions++;
-            this->trainPrg.accLoss += crossEntropy(output, target);
+            if(maxIndex(output) == maxIndex(target)){
+                correctPredictions++;
+            }
+            else {
+                this->trainPrg.accLoss += crossEntropy(output, target);
+                #ifdef USE_CPU
+                    backprop(exp);
+                #elif USE_CU
+                    cuBackprop(exp);
+                #elif USE_CL
+                    clBackprop(exp);
+                #endif
+            }
 
             bool sessionEnd = 0;
             if (sessionFiles > 0 && filesInCurrentSession == this->trainPrg.sessionSize) {
@@ -159,20 +167,25 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
                 }
             }
         }
-        this->trainPrg.epoch += 1;
-        logProgressToCSV(this->trainPrg, this->path2progress);
         if(this->trainPrg.trainAccuracy >= 97.0f) {
             std::cout << "Training completed using minibatch of size " << BATCH_SIZE 
                       << "with accuracy of " << this->trainPrg.trainAccuracy << "%" << std::endl;
             break;
         }
         std::cout << "Training for next epoch: " << this->trainPrg.epoch << std::endl;
+        this->trainPrg.epoch++;
+        this->trainPrg.trainAccuracy = 0;
+        this->trainPrg.accLoss = 0;
+        this->trainPrg.filesProcessed = 0;
+        this->trainPrg.timeForCurrentSession = 0;
+        this->trainPrg.loss = 0;
+        this->trainPrg.timeForCurrentSession = 0;
+        logProgressToCSV(this->trainPrg, this->path2progress);
     }
 
     auto endTime = std::chrono::high_resolution_clock::now();
     this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
     this->trainPrg.timeTakenForTraining = previousTrainingTime + this->trainPrg.timeForCurrentSession;
-    serializeWeights(cweights, bweights, binFileAddress);
     logProgressToCSV(this->trainPrg, this->path2progress);
     std::cout << "--- Training Finished (mnn) ---" << std::endl;
 }
@@ -287,14 +300,28 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
             // backend selection
             #ifdef USE_CPU
                 forprop(in);
-                backprop(exp);
             #elif USE_CU
                 cuForprop(in);
-                cuBackprop(exp);
             #elif USE_CL
                 clForprop(in);
-                clBackprop(exp);
             #endif
+
+            fileCount++;
+            this->trainPrg.filesProcessed++;
+            filesInCurrentSession++;
+            if(maxIndex(output) == maxIndex(target)){
+                correctPredictions++;
+            }
+            else {
+                this->trainPrg.accLoss += crossEntropy(output, target);
+                #ifdef USE_CPU
+                    backprop(exp);
+                #elif USE_CU
+                    cuBackprop(exp);
+                #elif USE_CL
+                    clBackprop(exp);
+                #endif
+            }
 
             fileCount++;
             this->trainPrg.filesProcessed++;
@@ -330,20 +357,25 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
                 }
             }
         }
-        this->trainPrg.epoch += 1;
-        logProgressToCSV(this->trainPrg, this->path2progress);
         if(this->trainPrg.trainAccuracy >= 97.0f) {
             std::cout << "Training completed using minibatch of size " << BATCH_SIZE 
                       << "with accuracy of " << this->trainPrg.trainAccuracy << "%" << std::endl;
             break;
         }
         std::cout << "Training for next epoch: " << this->trainPrg.epoch << std::endl;
+        this->trainPrg.epoch++;
+        this->trainPrg.trainAccuracy = 0;
+        this->trainPrg.accLoss = 0;
+        this->trainPrg.filesProcessed = 0;
+        this->trainPrg.timeForCurrentSession = 0;
+        this->trainPrg.loss = 0;
+        this->trainPrg.timeForCurrentSession = 0;
+        logProgressToCSV(this->trainPrg, this->path2progress);
     }
 
     auto endTime = std::chrono::high_resolution_clock::now();
     this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
     this->trainPrg.timeTakenForTraining = previousTrainingTime + this->trainPrg.timeForCurrentSession;
-    serializeWeights(cweights, bweights, binFileAddress);
     logProgressToCSV(this->trainPrg, this->path2progress);
     std::cout << "--- Training Finished (mnn) ---" << std::endl;
 }

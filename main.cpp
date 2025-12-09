@@ -41,7 +41,7 @@ int main() {
     int inSize = 784;
     int inh = 28, inw = 28;
     int outSize = 10;
-    float order = 2.0f;
+    float order = 1.4f;
     bool batchMode = 0;
     bool useThreadOrBuffer = 0;
     std::vector<int> hidden_layers1 = { 784, 392, outSize };
@@ -53,7 +53,7 @@ int main() {
 #if TRAIN_2D == 0
         std::cout << "----------------------MNN----------------------" << std::endl;
         mnn network1(inSize, outSize, hidden_layers1, order, binFileAddress1);
-        network1.weightUpdateType = 3;
+        network1.weightUpdateType = 1;
         network1.path2progress = progressData1;
         network1.path2test_progress = testProgress1;
         network1.trainPrg.sessionSize = 50;

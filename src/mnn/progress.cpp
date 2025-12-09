@@ -30,17 +30,17 @@ bool logProgressToCSV(const progress& p, const std::string& filePath) {
 
     // If the file was empty, write the header first
     if (fileIsEmpty) {
-        file << "batchSize,sessionSize,totalTrainFiles,filesProcessed,"
-             << "epoch,currentLearningRate,loss,accLoss,trainAccuracy,totalCycleCount,"
+        file << "epoch,batchSize,sessionSize,totalTrainFiles,filesProcessed,"
+             << "currentLearningRate,loss,accLoss,trainingPredictions,trainAccuracy,totalCycleCount,"
              << "totalSessionsOfTraining,timeForCurrentSession,timeTakenForTraining,\n";
     }
 
     // Append the data row
-    file << p.batchSize << "," << p.sessionSize << "," << p.totalTrainFiles << ","
-         << p.epoch << "," << p.filesProcessed << "," << p.currentLearningRate << "," 
-         << p.loss << "," << p.accLoss << "," << p.trainAccuracy << "," 
-         << p.totalCycleCount << "," << p.totalSessionsOfTraining << "," << p.timeForCurrentSession << ","
-         << p.timeTakenForTraining << "," << "\n";
+    file << p.epoch << "," << p.batchSize << "," << p.sessionSize << "," << p.totalTrainFiles << ","
+         << p.filesProcessed << "," << p.currentLearningRate << "," << p.loss << "," << p.accLoss << ","
+         << p.trainingPredictions << "," << p.trainAccuracy << ","  << p.totalCycleCount << ","
+         << p.totalSessionsOfTraining << "," << p.timeForCurrentSession << "," << p.timeTakenForTraining
+         << "," << "\n";
 
     file.close();
     return true;
@@ -82,14 +82,15 @@ bool loadLastProgress(progress& p, const std::string& filePath) {
     
     try {
         // The order of reading must exactly match the order of writing
+        std::getline(ss, token, ','); p.epoch = std::stoul(token);
         std::getline(ss, token, ','); p.batchSize = std::stoi(token);
         std::getline(ss, token, ','); p.sessionSize = std::stoul(token);
         std::getline(ss, token, ','); p.totalTrainFiles = std::stoul(token);
         std::getline(ss, token, ','); p.filesProcessed = std::stoul(token);
-        std::getline(ss, token, ','); p.epoch = std::stoul(token);
         std::getline(ss, token, ','); p.currentLearningRate = std::stof(token);
         std::getline(ss, token, ','); p.loss = std::stof(token);
         std::getline(ss, token, ','); p.accLoss = std::stod(token);
+        std::getline(ss, token, ','); p.trainingPredictions = std::stoul(token);
         std::getline(ss, token, ','); p.trainAccuracy = std::stof(token);
         std::getline(ss, token, ','); p.totalCycleCount = std::stoull(token);
         std::getline(ss, token, ','); p.totalSessionsOfTraining = std::stoul(token);

@@ -59,6 +59,7 @@ void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuff
         // Preserve session and batch size set before calling train
         std::cout << "No progress file found or file is empty. Starting fresh training." << std::endl;
         this->trainPrg = {}; // Reset progress
+        this->trainPrg.epoch = 0;
         this->trainPrg.sessionSize = SESSION_SIZE;
         this->trainPrg.batchSize = batchSize;
         this->trainPrg.currentLearningRate = this->learningRate;
@@ -165,40 +166,53 @@ void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuff
             this->trainPrg.filesProcessed += batchSize;
             filesInCurrentSession += batchSize;
             bool sessionEnd = 0;
-            if (sessionFiles > 0 && filesInCurrentSession >= sessionFiles) {
+            if ((sessionFiles > 0 && filesInCurrentSession >= sessionFiles) || fileCount == totalFiles) {
                 auto endTime = std::chrono::high_resolution_clock::now();
                 this->trainPrg.trainAccuracy = static_cast<float>(100 * correctPredictions) / fileCount;
                 this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
-                this->trainPrg.timeTakenForTraining = previousTrainingTime + this->trainPrg.timeForCurrentSession;
+                this->trainPrg.trainingPredictions = correctPredictions;
+                this->trainPrg.timeTakenForTraining += this->trainPrg.timeForCurrentSession;
                 this->learningRate = this->trainPrg.currentLearningRate;
                 this->trainPrg.totalSessionsOfTraining++;
                 this->trainPrg.totalCycleCount += sessionFiles;
+                this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(this->trainPrg.filesProcessed);
                 sessionEnd = 1;
-                std::cout << "Files: " << fileCount << "/" << totalFiles << " \t Predictions: " << correctPredictions 
-                          << " \t Training Accuracy: " << this->trainPrg.trainAccuracy << "%" 
-                          << " \t\t Loss: " << this->trainPrg.accLoss / static_cast<float>(this->trainPrg.filesProcessed)<< std::endl;
+                logProgressToCSV(this->trainPrg, this->path2progress);
+                std::cout << "Epoch: " << this->trainPrg.epoch 
+                          << " \tFiles: " << fileCount << "/" << totalFiles
+                          << " \tPredictions: " << correctPredictions
+                          << " \tTraining Accuracy: " << this->trainPrg.trainAccuracy << "%"
+                          << " \tLoss: " << this->trainPrg.accLoss / static_cast<float>(this->trainPrg.filesProcessed)
+                          << std::endl;
+                serializeWeights(cweights, bweights, binFileAddress);
+                filesInCurrentSession = 0;
+                startTime = std::chrono::high_resolution_clock::now();
             }
 
             // If a session size is defined and reached, stop training for this session
             if (sessionEnd == 1 || fileCount == totalFiles) {
                 // computeStats(cweights, bweights, cgradients, bgradients, activate);
-                logProgressToCSV(this->trainPrg, this->path2progress);
-                serializeWeights(cweights, bweights, binFileAddress);
-                filesInCurrentSession = 0; // Reset for the next session
                 if (fileCount == totalFiles) {
-                    std::cout << "All files processed. Ending training." << std::endl;
+                    std::cout << "All files processed. Next Epoch." << std::endl;
                     this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(this->trainPrg.totalCycleCount);
                     break;
                 }
             }
         }
-        this->trainPrg.epoch += 1;
-        logProgressToCSV(this->trainPrg, this->path2progress);
-        if(this->trainPrg.trainAccuracy >= 97.0f) {
+
+        if(this->trainPrg.trainAccuracy >= 98.0f) {
             std::cout << "Training completed using minibatch of size " << BATCH_SIZE 
                       << "with accuracy of " << this->trainPrg.trainAccuracy << "%" << std::endl;
             break;
         }
+        this->trainPrg.epoch += 1;
+        this->trainPrg.filesProcessed = 0;
+        this->trainPrg.trainAccuracy = 0;
+        this->trainPrg.timeForCurrentSession = 0;
+        this->trainPrg.trainingPredictions = 0;
+        this->learningRate = this->trainPrg.currentLearningRate;
+        this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(this->trainPrg.filesProcessed);
+        logProgressToCSV(this->trainPrg, this->path2progress);
     }
 
     auto endTime = std::chrono::high_resolution_clock::now();
@@ -260,6 +274,7 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
         // Preserve session and batch size set before calling train
         std::cout << "No progress file found or file is empty. Starting fresh training." << std::endl;
         this->trainPrg = {}; // Reset progress
+        this->trainPrg.epoch = 0;
         this->trainPrg.sessionSize = SESSION_SIZE;
         this->trainPrg.batchSize = batchSize;
         this->trainPrg.currentLearningRate = this->learningRate;
@@ -374,22 +389,22 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
                 auto endTime = std::chrono::high_resolution_clock::now();
                 this->trainPrg.trainAccuracy = static_cast<float>(100 * correctPredictions) / fileCount;
                 this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
-                this->trainPrg.timeTakenForTraining = previousTrainingTime + this->trainPrg.timeForCurrentSession;
+                this->trainPrg.timeTakenForTraining += this->trainPrg.timeForCurrentSession;
                 this->learningRate = this->trainPrg.currentLearningRate;
                 this->trainPrg.totalSessionsOfTraining++;
                 this->trainPrg.totalCycleCount += sessionFiles;
+                this->trainPrg.filesProcessed += sessionFiles;
                 sessionEnd = 1;
-                std::cout << "Files: " << fileCount << "/" << totalFiles << " \t Predictions: " << correctPredictions 
-                          << " \t Training Accuracy: " << this->trainPrg.trainAccuracy << "%" 
-                          << " \t\t Loss: " << this->trainPrg.accLoss / static_cast<float>(this->trainPrg.filesProcessed)<< std::endl;
+                logProgressToCSV(this->trainPrg, this->path2progress);
+                std::cout << "Epoch: " << this->trainPrg.epoch << "\tFiles: " << fileCount << "/" << totalFiles << " \tPredictions: " << correctPredictions << " \tTraining Accuracy: " << this->trainPrg.trainAccuracy << "%" 
+                          << " \tLoss: " << this->trainPrg.accLoss / static_cast<float>(this->trainPrg.filesProcessed)<< std::endl;
             }
 
             // If a session size is defined and reached, stop training for this session
             if (sessionEnd == 1 || fileCount == totalFiles) {
                 // computeStats(cweights, bweights, cgradients, bgradients, activate);
-                logProgressToCSV(this->trainPrg, this->path2progress);
                 serializeWeights(cweights, bweights, binFileAddress);
-                filesInCurrentSession = 0; // Reset for the next session
+                filesInCurrentSession = 0;
                 if (fileCount == totalFiles) {
                     std::cout << "All files processed. Ending training." << std::endl;
                     this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(this->trainPrg.totalCycleCount);
@@ -397,13 +412,20 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
                 }
             }
         }
+
         this->trainPrg.epoch += 1;
-        logProgressToCSV(this->trainPrg, this->path2progress);
         if(this->trainPrg.trainAccuracy >= 97.0f) {
             std::cout << "Training completed using minibatch of size " << BATCH_SIZE 
                       << "with accuracy of " << this->trainPrg.trainAccuracy << "%" << std::endl;
             break;
         }
+        this->trainPrg.trainAccuracy = 0;
+        this->trainPrg.accLoss = 0;
+        this->trainPrg.filesProcessed = 0;
+        this->trainPrg.timeForCurrentSession = 0;
+        this->trainPrg.loss = 0;
+        this->trainPrg.timeForCurrentSession = 0;
+        logProgressToCSV(this->trainPrg, this->path2progress);
     }
 
     auto endTime = std::chrono::high_resolution_clock::now();

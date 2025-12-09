@@ -98,9 +98,10 @@ public:
 
     #elif USE_CL
 
-        cl::Context clContext;               // OpenCL context
-        cl::CommandQueue clCommandQueue;     // OpenCL command queue
-        std::map<std::string, cl::Kernel> kernels; // Map to store kernel objects by name
+        cl::Context clContext;              // OpenCL context
+        cl::CommandQueue clCommandQueue;    // OpenCL command queue
+        cl::Device device;                  // Represents the selected OpenCL device.
+        std::map<std::string, cl::Kernel> kernels;      // Map to store kernel objects by name
         cl_int err;                          // To hold OpenCL error codes
 
         void clForprop(const std::vector<std::vector<float>>& input);
