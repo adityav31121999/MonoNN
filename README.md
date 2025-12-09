@@ -178,10 +178,15 @@ Gradients for Monomial neural nets are calculated in a similar manner to MLPs.
   - Neural Network Structure
   - Calculation for single input training
   - Backend support for compute
-- **0.0.2**: Batch Training (in progress)
+- **0.0.2**: Batch Training
   - Calculation for batch input training
-  - Mini-batch online training fails and network becomes dead immeadiately (implemented in onlineTraining)
-  - Mini-batch and full dataset works.
+  - Online training for single files and batches
+  - Mini-batch training
+  - full dataset training over epochs
+- **0.0.3**: (in progress)
+  - Multi-threading for CPU
+  - Fast parallel executions for batch-based functions
+  - Complete buffer based training functions without use of standalone functions
 
 ## Project Structure
 

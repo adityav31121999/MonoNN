@@ -6,8 +6,8 @@ message("> Experimental Implementation of Monomial Neural Network")
 
 # backend for computations
 set(USE_CL OFF)
-set(USE_CU ON)
-set(USE_CPU OFF)
+set(USE_CU OFF)
+set(USE_CPU ON)
 
 # binaries for debug and release
 set(OSbit 32)
@@ -34,6 +34,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# get opencv
 find_package(OpenCV REQUIRED)
 if(OpenCV_FOUND)
     message(STATUS "Found OpenCV version ${OpenCV_VERSION}")
@@ -80,10 +81,10 @@ add_subdirectory(src)
 include_directories(src)
 
 # FOR EXECUTABLE
-add_executable(${PROJECT_NAME} main.cpp mononn.h)
-target_link_libraries(${PROJECT_NAME} PRIVATE mono)
-if(USE_CU)
-    target_link_libraries(${PROJECT_NAME} PRIVATE CUDA::cudart)
-elseif(USE_CL)
-    target_link_libraries(${PROJECT_NAME} PRIVATE OpenCL::OpenCL)
-endif()
+# add_executable(${PROJECT_NAME} main.cpp mononn.h)
+# target_link_libraries(${PROJECT_NAME} PRIVATE mono)
+# if(USE_CU)
+#     target_link_libraries(${PROJECT_NAME} PRIVATE CUDA::cudart)
+# elseif(USE_CL)
+#    target_link_libraries(${PROJECT_NAME} PRIVATE OpenCL::OpenCL)
+# endif()
