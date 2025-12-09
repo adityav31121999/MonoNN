@@ -29,6 +29,8 @@ if(USE_CPU)
         mnn/cpp/forprop.cpp
         mnn/cpp/backprop.cpp
         mnn/cpp/train.cpp
+        mnn/cpp/trainOnThreads1.cpp
+        mnn/cpp/trainOnThreads2.cpp
     )
 elseif(USE_CU)
     list(APPEND MNN_SOURCES
@@ -41,6 +43,8 @@ elseif(USE_CU)
         mnn/cu/backprop.cu
         mnn/cu/backBatch.cu
         mnn/cu/train.cu
+        mnn/cu/trainOnBuf1.cu
+        mnn/cu/trainOnBuf2.cu
     )
 elseif(USE_CL)
     list(APPEND MNN_SOURCES
@@ -53,6 +57,8 @@ elseif(USE_CL)
         mnn/cl/clbackprop.cpp
         mnn/cl/clBackBatch.cpp
         mnn/cl/cltrain.cpp
+        mnn/cl/trainOnBuf1.cpp
+        mnn/cl/trainOnBuf2.cpp
     )
 endif()
 
