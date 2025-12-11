@@ -78,7 +78,7 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
     int fileCount = 0;
     int filesInCurrentSession = 0;
     // Update progress struct with file and batch info
-    int sessionFiles = this->trainPrg.sessionSize * this->trainPrg.batchSize;
+    int sessionFiles = this->trainPrg.sessionSize; // * this->trainPrg.batchSize;
     std::cout << "Session Size (in batches/session): " << this->trainPrg.sessionSize << std::endl;
     std::cout << "Files in Single Session: " << sessionFiles << std::endl;
     std::cout << "learning rate: " << learningRate << std::endl;
@@ -122,9 +122,6 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
                 clForprop(in);
             #endif
 
-            fileCount++;
-            this->trainPrg.filesProcessed++;
-            filesInCurrentSession++;
             if(maxIndex(output) == maxIndex(target)){
                 correctPredictions++;
             }
@@ -138,9 +135,13 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
                     clBackprop(exp);
                 #endif
             }
+            
+            fileCount++;
+            this->trainPrg.filesProcessed++;
+            filesInCurrentSession++;
 
             bool sessionEnd = 0;
-            if (sessionFiles > 0 && filesInCurrentSession == this->trainPrg.sessionSize) {
+            if ((sessionFiles > 0 && filesInCurrentSession == this->trainPrg.sessionSize) || fileCount == totalFiles) {
                 auto endTime = std::chrono::high_resolution_clock::now();
                 this->trainPrg.trainAccuracy = static_cast<float>(100 * correctPredictions) / fileCount;
                 this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
@@ -148,6 +149,7 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
                 this->learningRate = this->trainPrg.currentLearningRate;
                 this->trainPrg.totalSessionsOfTraining++;
                 this->trainPrg.totalCycleCount += sessionFiles;
+                this->trainPrg.trainingPredictions = correctPredictions;
                 sessionEnd = 1;
                 std::cout << "Epoch: " << this->trainPrg.epoch << "\tFiles: " << fileCount << "/" << totalFiles << " \tPredictions: " << correctPredictions << " \tTraining Accuracy: " << this->trainPrg.trainAccuracy << "%" 
                           << " \tLoss: " << this->trainPrg.accLoss / static_cast<float>(this->trainPrg.filesProcessed)<< std::endl;

@@ -107,11 +107,11 @@ Gradients for Monomial neural nets are calculated in a similar manner to MLPs.
 
 ## Gradients for Network
 
-- Similar to the perceptron, the whole mechanism follows similar math, though for `MNN` and `MNN2D` it differs in dimensions.
+- Similar to the perceptron, the whole mechanism follows similar math, though for `MNN` and `MNN2D`, it only differs in dimensions.
 - In `MNN` gradients are passed as vectors; in `MNN2D` they are passed as matrices.
 - **Loss (Cross Entropy):**
-  - For MNN: $CE = -\sum_{i=1}^{N} (T_i \log P_i)$
-  - For MNN2D: $CE = -\sum_{i=1}^{N} \sum_{j} (T_{i,j} \log P_{i,j})$
+  - For MNN: $CE = -\sum_{i=1}^{N} (T_i \log P_i)$, here P = SoftMax($a_{l-1}$)
+  - For MNN2D: $CE = -\sum_{i=1}^{N} (T_i \log P_i)$, here P = meanpool($a_{l-1}$)
   - $T$: Target, $P$: Prediction.
 
 ### _Gradients for MNN:_
@@ -121,12 +121,13 @@ Gradients for Monomial neural nets are calculated in a similar manner to MLPs.
   - **Backpropagation (Layer $l$ to $l-1$):**
     - $\delta^{(l-1)} = \frac{\partial L}{\partial z_{l-1}} = \left( \delta^{(l)} \cdot C_l^T \right) \odot \left( m \cdot (a_{l-1})^{m-1} \right) \odot a'_{l-1}$
   - **Weight Gradients:**
-    - For $C$: $\frac{\partial L}{\partial C_l} = (a_{l-1})^m \cdot \delta^{(l)}$
+    - For $C$: $\frac{\partial L}{\partial C_l} = ((a_{l-1})^m)^T \cdot \delta^{(l)}$
     - For $B$: $\frac{\partial L}{\partial B_l} = \mathbf{1} \cdot \delta^{(l)}$ (where $\mathbf{1}$ is a vector of 1s) of size equal to size of $a_{l-1}$.
 
 ### _Gradients for MNN2D:_
 - **For Single Input:**
-  - Gradient w.r.t Loss: $\delta^{(l)} = P - T$.
+  - Gradient w.r.t Loss: $\delta^{(l)} = [P - T]_{rows-of-input-matrix}$, here $\delta^{(l)}$ is a matrix of size rows of input matrix x output size.
+    - $\delta^{(l)}(i,j) = P(j) - T(j)$
   - **Backpropagation:**
     - $\delta^{(l-1)} = \left( \delta^{(l)} \times C_l^T \right) \odot \left( m \cdot (a_{l-1})^{m-1} \right) \odot a'_{l-1}$
     - Note: $\times$ denotes matrix multiplication, $\odot$ denotes element-wise multiplication.

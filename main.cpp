@@ -58,8 +58,8 @@ int main() {
         network1.path2test_progress = testProgress1;
         network1.trainPrg.sessionSize = 50;
         // network1.onlineTraining(digitTrain, batchMode, useThreadOrBuffer);
-        network1.miniBatchTraining(digitTrain, batchMode);
-        // network1.fullDataSetTraining(digitTrain, useThreadOrBuffer);
+        // network1.miniBatchTraining(digitTrain, batchMode);
+        network1.fullDataSetTraining(digitTrain, useThreadOrBuffer);
         // network1.test(digitTest, useThreadOrBuffer);
 #else
         std::cout << "---------------------MNN2D---------------------" << std::endl;
