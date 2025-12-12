@@ -40,8 +40,11 @@ public:
     std::string binFileAddress;     // binary file address to save weights and biases
     std::string path2progress;      // path to progress file
     std::string path2test_progress; // path to test progress file
+    std::string path2EpochDir;      // epoch-based data stored here
     progress trainPrg;              // train progress
     test_progress testPrg;          // test progress
+    confMat confData;               // precision and accuracy data
+    std::vector<std::vector<int>> confusion;        // confusion matrix
 
 // weights and biases
 

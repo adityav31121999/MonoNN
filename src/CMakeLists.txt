@@ -6,7 +6,6 @@ set(MNN_SOURCES
     mnn/multiply.cpp
     mnn/activations.cpp
     mnn/loss.cpp
-    mnn/progress.cpp
     mnn/updateweights.cpp
     mnn/setweights.cpp
     mnn/schedLr.cpp
@@ -19,6 +18,8 @@ set(MNN_SOURCES
     mnn/fullsetTrain.cpp
     mnn/test.cpp
     mnn/stats.cpp
+    mnn/progress.cpp
+    mnn/confusion.cpp
 )
 
 if(USE_CPU)

@@ -288,3 +288,15 @@ Parameters which are fixed:
   - `LAMBDA_L1`: 0.0001
   - `LAMBDA_L2`: 0.0025
   - `SOFTMAX_TEMP`: 1.05
+
+## TRAINING and DATASET
+
+### DATASET
+Following are the datasets used in training these networks:
+- MNIST digits
+- MNIST fashion
+- KMNIST
+- CIFAR-10
+
+### TRAINED NETWORKS
+

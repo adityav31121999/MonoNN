@@ -5,8 +5,8 @@ message("> Project Name: ${PROJECT_NAME} | Version: ${VERSION}")
 message("> Experimental Implementation of Monomial Neural Network")
 
 # backend for computations
-set(USE_CL ON)
-set(USE_CU OFF)
+set(USE_CL OFF)
+set(USE_CU ON)
 set(USE_CPU OFF)
 
 # binaries for debug and release
@@ -32,7 +32,6 @@ set(CMAKE_C_STANDARD 17)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
 
 # get opencv
 find_package(OpenCV REQUIRED)
@@ -46,7 +45,7 @@ endif()
 # set compile definitions
 if(USE_CU)
     find_package(CUDAToolkit REQUIRED)
-    enable_language(CUDA)
+    set(CMAKE_CXX_EXTENSIONS OFF)
     if(LINUX)
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++")
     endif()

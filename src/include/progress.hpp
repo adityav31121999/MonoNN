@@ -16,6 +16,23 @@
 #define BATCH_SIZE 50               // number of inputs in single batch
 #define ALPHA 0.80f                 // gradient splitting factor
 
+// confusion matrix data for precision and accuracy
+struct confMat {
+    double accuracy;
+    double macro_f1Score;
+    double weighted_f1Score;
+    
+    std::vector<float> precision;  // per class
+    std::vector<float> recall;       // per class
+    std::vector<float> f1;          // per class f1-score
+    std::vector<int> support;       // number of true instances per class
+};
+
+confMat confusionMatrixFunc(const std::vector<std::vector<int>>& confusionMatrix);
+void printConfusionMatrix(const std::vector<std::vector<int>>& confusionMatrix);
+void printClassificationReport(const confMat& cm, const std::vector<std::string>& classNames = {});
+void logConfusionStatsToCsv(const std::vector<std::vector<int>>& confusionMatrix, const confMat& cm, const std::string& toCsv);
+
 // struct to hold statistical information about data
 struct Statistics {
     float mean;     // mean value
@@ -36,6 +53,15 @@ void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, 
 void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights,
         const std::vector<std::vector<std::vector<float>>>& cgrad, const std::vector<std::vector<std::vector<float>>>& bgrad,
         const std::vector<std::vector<std::vector<std::vector<float>>>>& act);
+void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights,
+        const std::vector<std::vector<std::vector<float>>>& cgrad, const std::vector<std::vector<std::vector<float>>>& bgrad,
+        const std::vector<std::vector<float>>& act, const std::vector<std::vector<float>>& stats);
+void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights,
+        const std::vector<std::vector<std::vector<float>>>& cgrad, const std::vector<std::vector<std::vector<float>>>& bgrad,
+        const std::vector<std::vector<std::vector<float>>>& act, const std::vector<std::vector<float>>& stats);
+void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights,
+        const std::vector<std::vector<std::vector<float>>>& cgrad, const std::vector<std::vector<std::vector<float>>>& bgrad,
+        const std::vector<std::vector<std::vector<std::vector<float>>>>& act, const std::vector<std::vector<float>>& stats);
 
 // struct to save and access information on training of neural network
 // single session will have fixed number of batches or files to be trained on
@@ -72,5 +98,7 @@ bool logProgressToCSV(const progress& p, const std::string& filePath);
 bool loadLastProgress(progress& p, const std::string& filePath);
 bool logTestProgressToCSV(const test_progress& p, const std::string& filePath);
 bool loadLastTestProgress(test_progress& p, const std::string& filePath);
+void epochDataToCsv(const std::string& dataSetName, const int epoch, const std::vector<std::vector<float>>& weightStats,
+                    const std::vector<std::vector<float>>& confusion, const confMat& scores);
 
 #endif // PROGRESS_HPP
