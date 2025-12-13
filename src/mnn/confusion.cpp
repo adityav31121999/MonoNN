@@ -16,6 +16,7 @@
 confMat confusionMatrixFunc(std::vector<std::vector<int>>& confusionMatrix) {
     confMat result;
     size_t n = confusionMatrix.size(); // number of classes
+    if (n == 0) return result;
 
     result.precision.resize(n);
     result.recall.resize(n);
@@ -23,6 +24,7 @@ confMat confusionMatrixFunc(std::vector<std::vector<int>>& confusionMatrix) {
     result.support.resize(n);
 
     std::vector<int> truePositives(n, 0);
+    std::vector<int> trueNegatives(n, 0);
     std::vector<int> predictedPositives(n, 0);
     std::vector<int> actualPositives(n, 0);
 
@@ -34,8 +36,8 @@ confMat confusionMatrixFunc(std::vector<std::vector<int>>& confusionMatrix) {
         for (size_t j = 0; j < n; ++j) {
             int val = confusionMatrix[i][j];
             if (i == j) {
-                truePositives[i] = val;
-                totalCorrect += val;
+                truePositives[i] = val;     // true positives are diagonal elements (i == j)
+                totalCorrect += val;        // all digonal elements
             }
             actualPositives[i] += val;        // row sum
             predictedPositives[j] += val;     // column sum
@@ -44,14 +46,24 @@ confMat confusionMatrixFunc(std::vector<std::vector<int>>& confusionMatrix) {
         result.support[i] = actualPositives[i];
     }
 
-    // Calculate accuracy
-    result.accuracy = totalSamples > 0 ? static_cast<double>(totalCorrect) / totalSamples : 0.0;
+    // Calculate overall accuracy
+    result.avgAccuracy = totalSamples > 0 ? static_cast<double>(totalCorrect) / totalSamples : 0.0;
+    result.accuracy.resize(n);
 
     // Calculate per-class precision, recall, f1
     double sum_f1_weighted = 0.0;
     double sum_f1_macro = 0.0;
 
     for (size_t i = 0; i < n; ++i) {
+        // Per-class accuracy = (TP + TN) / (TP + TN + FP + FN)
+        int falsePositives = predictedPositives[i] - truePositives[i];
+        int falseNegatives = actualPositives[i] - truePositives[i];
+        trueNegatives[i] = totalSamples - truePositives[i] - falsePositives - falseNegatives;
+
+        result.accuracy[i] = totalSamples > 0
+            ? static_cast<float>(truePositives[i] + trueNegatives[i]) / totalSamples
+            : 0.0f;
+
         // Precision = TP / (TP + FP)
         float prec = (truePositives[i] + predictedPositives[i] - truePositives[i]) > 0
             ? static_cast<float>(truePositives[i]) / (truePositives[i] + predictedPositives[i] - truePositives[i])
@@ -149,7 +161,7 @@ void printClassificationReport(const confMat& cm, const std::vector<std::string>
     }
     
     std::cout << std::string(60, '-') << "\n";
-    std::cout << std::setw(36) << "Accuracy" << std::setw(24) << cm.accuracy << "\n";
+    std::cout << std::setw(36) << "Avg. Accuracy" << std::setw(24) << cm.avgAccuracy << "\n";
     std::cout << std::setw(36) << "Macro Avg F1" << std::setw(24) << cm.macro_f1Score << "\n";
     std::cout << std::setw(36) << "Weighted Avg F1" << std::setw(24) << cm.weighted_f1Score << "\n\n";
 }

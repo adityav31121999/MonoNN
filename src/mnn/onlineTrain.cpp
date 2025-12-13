@@ -158,6 +158,7 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bool
                     this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(this->trainPrg.totalCycleCount);
                     break;
                 }
+                startTime = std::chrono::high_resolution_clock::now();
             }
         }
     }
@@ -246,6 +247,7 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bool
                     this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(this->trainPrg.totalCycleCount);
                     break;
                 }
+                startTime = std::chrono::high_resolution_clock::now();
             }
         }
     }
@@ -410,6 +412,7 @@ void mnn2d::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bo
                     this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(this->trainPrg.totalCycleCount);
                     break;
                 }
+                startTime = std::chrono::high_resolution_clock::now();
             }
         }
     }
@@ -506,6 +509,7 @@ void mnn2d::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bo
                     this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(this->trainPrg.totalCycleCount);
                     break;
                 }
+                startTime = std::chrono::high_resolution_clock::now();
             }
         }
     }

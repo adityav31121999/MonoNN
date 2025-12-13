@@ -98,7 +98,7 @@ public:
         void cuTrain(const std::vector<float>& input, const std::vector<float>& target);
         void cuTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets); 
         void cuBufTrain(const std::vector<float>& input, const std::vector<float>& target);
-        void cuBufTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets); 
+        void cuBufTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets);
 
     #elif USE_CL
 

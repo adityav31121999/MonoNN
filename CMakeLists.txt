@@ -6,8 +6,8 @@ message("> Experimental Implementation of Monomial Neural Network")
 
 # backend for computations
 set(USE_CL OFF)
-set(USE_CU ON)
-set(USE_CPU OFF)
+set(USE_CU OFF)
+set(USE_CPU ON)
 
 # binaries for debug and release
 set(OSbit 32)
@@ -45,6 +45,7 @@ endif()
 # set compile definitions
 if(USE_CU)
     find_package(CUDAToolkit REQUIRED)
+    enable_language(CUDA)
     set(CMAKE_CXX_EXTENSIONS OFF)
     if(LINUX)
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++")
@@ -71,8 +72,9 @@ elseif(USE_CL)
     include_directories(${OpenCL_INCLUDE_DIRS})
     add_compile_definitions(USE_CL)
 else()
-    message(STATUS "OpenCL and CUDA not found or not using:(")
-    message(STATUS "Using C++ on CPU for operations:)")
+    message(STATUS "OpenCL and CUDA not found or not using...")
+    message(STATUS "Using C++ on CPU for operations-_-")
+    message(STATUS "Process might be slow, so have patience:)")
     add_compile_definitions(USE_CPU)
 endif()
 

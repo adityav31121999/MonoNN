@@ -249,12 +249,6 @@ void layerBackwardBatch(const std::vector<std::vector<std::vector<float>>>& inco
 #include <thread>
 #include <mutex>
 
-// Helper for thread counts
-inline unsigned int get_concurrency(size_t limit) {
-    unsigned int num = std::thread::hardware_concurrency();
-    return num == 0 ? 2 : std::min(num, static_cast<unsigned int>(limit));
-}
-
 /**
  * @brief Threaded batch layer backprop for mnn for first layer
  * Strategy: Parallelize over Input Features (rows of gradc/gradb) to avoid locks.
@@ -276,7 +270,7 @@ void layerBackwardBatchThread(const std::vector<std::vector<float>>& incoming,
     // 1. Pre-calculate Power (Parallel over Batch)
     std::vector<std::vector<float>> prev_p(batchSize, std::vector<float>(inSize));
     {
-        unsigned int nt = get_concurrency(batchSize);
+        unsigned int nt = get_thread_count(batchSize);
         std::vector<std::thread> pool;
         size_t cs = batchSize / nt;
         auto power_task = [&](size_t s, size_t e) {
@@ -290,7 +284,7 @@ void layerBackwardBatchThread(const std::vector<std::vector<float>>& incoming,
     // 2. Accumulate Gradients (Parallel over Input Rows 'i')
     // Each thread takes a set of rows and sums the whole batch for those rows.
     // No Mutex needed.
-    unsigned int num_threads = get_concurrency(inSize);
+    unsigned int num_threads = get_thread_count(inSize);
     std::vector<std::thread> threads;
     size_t chunk_size = inSize / num_threads;
 
@@ -349,7 +343,7 @@ void layerBackwardBatchThread(const std::vector<std::vector<float>>& incoming,
     // 1. Pre-calculate Power (Parallel Batch)
     std::vector<std::vector<float>> prev_p(batchSize, std::vector<float>(inSize));
     {
-        unsigned int nt = get_concurrency(batchSize);
+        unsigned int nt = get_thread_count(batchSize);
         std::vector<std::thread> pool;
         size_t cs = batchSize / nt;
         auto power_task = [&](size_t s, size_t e) {
@@ -362,7 +356,7 @@ void layerBackwardBatchThread(const std::vector<std::vector<float>>& incoming,
 
     // 2. Gradients (Parallel over Input Rows 'i')
     {
-        unsigned int nt = get_concurrency(inSize);
+        unsigned int nt = get_thread_count(inSize);
         std::vector<std::thread> threads;
         size_t cs = inSize / nt;
 
@@ -390,7 +384,7 @@ void layerBackwardBatchThread(const std::vector<std::vector<float>>& incoming,
 
     // 3. Outgoing (Parallel over Batch 'b')
     {
-        unsigned int nt = get_concurrency(batchSize);
+        unsigned int nt = get_thread_count(batchSize);
         std::vector<std::thread> threads;
         size_t cs = batchSize / nt;
 
@@ -450,7 +444,7 @@ void layerBackwardBatchThread(const std::vector<std::vector<std::vector<float>>>
     // 1. Pre-calculate Power (Parallel Batch)
     std::vector<std::vector<std::vector<float>>> prev_p(batchSize);
     {
-        unsigned int nt = get_concurrency(batchSize);
+        unsigned int nt = get_thread_count(batchSize);
         std::vector<std::thread> pool;
         size_t cs = batchSize / nt;
         auto power_task = [&](size_t s, size_t e) {
@@ -463,7 +457,7 @@ void layerBackwardBatchThread(const std::vector<std::vector<std::vector<float>>>
 
     // 2. Gradients (Parallel over InFeatures 'i')
     {
-        unsigned int nt = get_concurrency(inFeatures);
+        unsigned int nt = get_thread_count(inFeatures);
         std::vector<std::thread> threads;
         size_t cs = inFeatures / nt;
 
@@ -522,7 +516,7 @@ void layerBackwardBatchThread(const std::vector<std::vector<std::vector<float>>>
     // 1. Pre-calculate Power (Parallel Batch)
     std::vector<std::vector<std::vector<float>>> prev_p(batchSize);
     {
-        unsigned int nt = get_concurrency(batchSize);
+        unsigned int nt = get_thread_count(batchSize);
         std::vector<std::thread> pool;
         size_t cs = batchSize / nt;
         auto power_task = [&](size_t s, size_t e) {
@@ -535,7 +529,7 @@ void layerBackwardBatchThread(const std::vector<std::vector<std::vector<float>>>
 
     // 2. Gradients (Parallel over InFeatures 'i')
     {
-        unsigned int nt = get_concurrency(inFeatures);
+        unsigned int nt = get_thread_count(inFeatures);
         std::vector<std::thread> threads;
         size_t cs = inFeatures / nt;
 
@@ -564,7 +558,7 @@ void layerBackwardBatchThread(const std::vector<std::vector<std::vector<float>>>
 
     // 3. Outgoing (Parallel over Batch 'b')
     {
-        unsigned int nt = get_concurrency(batchSize);
+        unsigned int nt = get_thread_count(batchSize);
         std::vector<std::thread> threads;
         size_t cs = batchSize / nt;
 

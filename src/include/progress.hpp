@@ -16,22 +16,34 @@
 #define BATCH_SIZE 50               // number of inputs in single batch
 #define ALPHA 0.80f                 // gradient splitting factor
 
-// confusion matrix data for precision and accuracy
+// evaluation of network
 struct confMat {
-    double accuracy;
+    double avgAccuracy;
     double macro_f1Score;
     double weighted_f1Score;
-    
-    std::vector<float> precision;  // per class
-    std::vector<float> recall;       // per class
-    std::vector<float> f1;          // per class f1-score
-    std::vector<int> support;       // number of true instances per class
+
+    std::vector<float> accuracy;        // accuracy
+    std::vector<float> precision;       // per class
+    std::vector<float> recall;          // per class
+    std::vector<float> f1;              // per class f1-score
+    std::vector<int> support;           // number of true instances per class
+
 };
 
 confMat confusionMatrixFunc(const std::vector<std::vector<int>>& confusionMatrix);
 void printConfusionMatrix(const std::vector<std::vector<int>>& confusionMatrix);
 void printClassificationReport(const confMat& cm, const std::vector<std::string>& classNames = {});
-void logConfusionStatsToCsv(const std::vector<std::vector<int>>& confusionMatrix, const confMat& cm, const std::string& toCsv);
+struct scores {
+    float mse;          // mean squared error
+    float mae;          // mean absolute error
+    float rmse;         // root mean squared error
+    float r2;           // coefficient of determination
+    float sst;          // total sum of squares
+    float ssr;          // regression sum of squares
+    float sse;          // error sum of squares
+};
+
+void logEvaluation(const confMat&, const scores&, int epoch, int session, const std::string&);
 
 // struct to hold statistical information about data
 struct Statistics {

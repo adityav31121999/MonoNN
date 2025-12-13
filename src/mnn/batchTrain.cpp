@@ -55,6 +55,7 @@ void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuff
     // from new session
     double previousTrainingTime = 0.0;
     batchSize = BATCH_SIZE;
+    int curPreds = 0;
     if (!loadLastProgress(this->trainPrg, this->path2progress)) {
         // Preserve session and batch size set before calling train
         std::cout << "No progress file found or file is empty. Starting fresh training." << std::endl;
@@ -63,11 +64,13 @@ void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuff
         this->trainPrg.sessionSize = SESSION_SIZE;
         this->trainPrg.batchSize = batchSize;
         this->trainPrg.currentLearningRate = this->learningRate;
+        curPreds = 0;
     }
     else {
         std::cout << "Successfully loaded progress. Resuming training." << std::endl;
         this->learningRate = this->trainPrg.currentLearningRate;
         previousTrainingTime = this->trainPrg.timeTakenForTraining;
+        curPreds = this->trainPrg.trainingPredictions;
         std::cout << "Found " << totalFiles << " files for training. Resuming from file index " << this->trainPrg.filesProcessed << "." << std::endl;
     }
 
@@ -117,7 +120,7 @@ void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuff
         std::random_device rd;
         std::mt19937 g(rd());
         std::shuffle(filePaths.begin(), filePaths.end(), g);
-        unsigned int correctPredictions = 0;
+        unsigned int correctPredictions = curPreds;
         for(int i = startFileIndex; i < totalFiles; i += batchSize) {
             std::vector<std::vector<float>> inBatch;
             std::vector<std::vector<float>> expBatch;
@@ -270,6 +273,7 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
     // from new session
     double previousTrainingTime = 0.0;
     batchSize = BATCH_SIZE;
+    int curPreds = 0;
     if (!loadLastProgress(this->trainPrg, this->path2progress)) {
         // Preserve session and batch size set before calling train
         std::cout << "No progress file found or file is empty. Starting fresh training." << std::endl;
@@ -278,11 +282,13 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
         this->trainPrg.sessionSize = SESSION_SIZE;
         this->trainPrg.batchSize = batchSize;
         this->trainPrg.currentLearningRate = this->learningRate;
+        curPreds = 0;
     }
     else {
         std::cout << "Successfully loaded progress. Resuming training." << std::endl;
         this->learningRate = this->trainPrg.currentLearningRate;
         previousTrainingTime = this->trainPrg.timeTakenForTraining;
+        curPreds = this->trainPrg.trainingPredictions;
         std::cout << "Found " << totalFiles << " files for training. Resuming from file index " << this->trainPrg.filesProcessed << "." << std::endl;
     }
 
@@ -334,7 +340,7 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
         std::random_device rd;
         std::mt19937 g(rd());
         std::shuffle(filePaths.begin(), filePaths.end(), g);
-        unsigned int correctPredictions = 0;
+        unsigned int correctPredictions = curPreds;
         for(int i = startFileIndex; i < totalFiles; i += batchSize) {
             std::vector<std::vector<std::vector<float>>> inBatch;
             std::vector<std::vector<float>> expBatch;

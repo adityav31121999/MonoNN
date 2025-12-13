@@ -69,7 +69,6 @@ void mnn::backprop(const std::vector<std::vector<float>>& expected)
         updateWeights(cweights[i], cgradients[i], learningRate, weightUpdateType);
         updateWeights(bweights[i], bgradients[i], learningRate, weightUpdateType);
     }
-    zeroGradients();
 }
 
 // Backprop for mnn2d
@@ -79,6 +78,7 @@ void mnn::backprop(const std::vector<std::vector<float>>& expected)
  * @param expected The expected output vector (after pooling).
  */
 void mnn2d::backprop(const std::vector<float>& expected) {
+    zeroGradients();
     this->target = expected;
     std::vector<float> output_error(target.size(), 0.0f);
     for(int i = 0; i < outWidth; i++) {
@@ -116,6 +116,7 @@ void mnn2d::backprop(const std::vector<float>& expected) {
  * @param expected The expected output vector (after pooling).
  */
 void mnn2d::backprop(const std::vector<std::vector<float>>& expected) {
+    zeroGradients();
     std::vector<std::vector<float>> output_error(expected.size(), std::vector<float>(expected[0].size(), 0.0f));
     for(int i = 0; i < expected.size(); i++) {
         for(int j = 0; j < expected[i].size(); j++) {

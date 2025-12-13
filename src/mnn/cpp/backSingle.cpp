@@ -198,12 +198,6 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
 #include <thread>
 #include <mutex>
 
-// Helper to determine thread count
-inline unsigned int get_thread_count(size_t work_size) {
-    unsigned int num = std::thread::hardware_concurrency();
-    return num == 0 ? 2 : std::min(num, static_cast<unsigned int>(work_size));
-}
-
 /**
  * @brief Threaded single layer backprop for mnn for first layer
  * Parallelizes over the rows of the gradient matrices (input size).

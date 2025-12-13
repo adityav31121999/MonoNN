@@ -54,6 +54,7 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
     // access training progress information from file address and use it to re-start training
     // from new session
     double previousTrainingTime = 0.0;
+    int curPreds = 0;
     if (!loadLastProgress(this->trainPrg, this->path2progress)) {
         // Preserve session and batch size set before calling train
         unsigned int sessionSizeBackup = this->trainPrg.sessionSize;
@@ -63,6 +64,7 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
         this->trainPrg.batchSize = 1;
         this->trainPrg.currentLearningRate = this->learningRate;
         this->trainPrg.sessionSize = sessionSizeBackup;
+        curPreds = 0;
     }
     else {
         std::cout << "Successfully loaded progress." << std::endl;
@@ -73,6 +75,7 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
         this->learningRate = this->trainPrg.currentLearningRate;
         previousTrainingTime = this->trainPrg.timeTakenForTraining;
         std::cout << "Found " << totalFiles << " files for training. Resuming from file index " << this->trainPrg.filesProcessed << "." << std::endl;
+        curPreds = this->trainPrg.trainingPredictions;
     }
 
     int fileCount = 0;
@@ -91,7 +94,7 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
         std::random_device rd;
         std::mt19937 g(rd());
         std::shuffle(filePaths.begin(), filePaths.end(), g);
-        unsigned int correctPredictions = 0;
+        unsigned int correctPredictions = curPreds;
         for(const auto& filePath : filePaths) {
             // Skip files that have already been processed in previous sessions
             if (fileCount < this->trainPrg.filesProcessed) {
@@ -151,6 +154,7 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
                 this->trainPrg.totalCycleCount += sessionFiles;
                 this->trainPrg.trainingPredictions = correctPredictions;
                 sessionEnd = 1;
+                startTime = std::chrono::high_resolution_clock::now();
                 std::cout << "Epoch: " << this->trainPrg.epoch << "\tFiles: " << fileCount << "/" << totalFiles << " \tPredictions: " << correctPredictions << " \tTraining Accuracy: " << this->trainPrg.trainAccuracy << "%" 
                           << " \tLoss: " << this->trainPrg.accLoss / static_cast<float>(this->trainPrg.filesProcessed)<< std::endl;
             }
@@ -238,6 +242,7 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
     // access training progress information from file address and use it to re-start training
     // from new session
     double previousTrainingTime = 0.0;
+    int curPreds = 0;
     if (!loadLastProgress(this->trainPrg, this->path2progress)) {
         // Preserve session and batch size set before calling train
         unsigned int sessionSizeBackup = this->trainPrg.sessionSize;
@@ -247,6 +252,7 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
         this->trainPrg.batchSize = 1;
         this->trainPrg.currentLearningRate = this->learningRate;
         this->trainPrg.sessionSize = sessionSizeBackup;
+        curPreds = 0;
     }
     else {
         std::cout << "Successfully loaded progress." << std::endl;
@@ -256,6 +262,7 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
             std::cout << "Starting from file index " << this->trainPrg.filesProcessed << " with epoch " << this->trainPrg.epoch << std::endl;
         this->learningRate = this->trainPrg.currentLearningRate;
         previousTrainingTime = this->trainPrg.timeTakenForTraining;
+        curPreds = this->trainPrg.trainingPredictions;
         std::cout << "Found " << totalFiles << " files for training. Resuming from file index " << this->trainPrg.filesProcessed << "." << std::endl;
     }
 
@@ -275,7 +282,7 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
         std::random_device rd;
         std::mt19937 g(rd());
         std::shuffle(filePaths.begin(), filePaths.end(), g);
-        unsigned int correctPredictions = 0;
+        unsigned int correctPredictions = curPreds;
         for(const auto& filePath : filePaths) {
             // Skip files that have already been processed in previous sessions
             if (fileCount < this->trainPrg.filesProcessed) {
@@ -341,6 +348,7 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
                 this->trainPrg.totalSessionsOfTraining++;
                 this->trainPrg.totalCycleCount += sessionFiles;
                 sessionEnd = 1;
+                startTime = std::chrono::high_resolution_clock::now();
                 std::cout << "Epoch: " << this->trainPrg.epoch << "\tFiles: " << fileCount << "/" << totalFiles << " \tPredictions: " << correctPredictions << " \tTraining Accuracy: " << this->trainPrg.trainAccuracy << "%" 
                           << " \tLoss: " << this->trainPrg.accLoss / static_cast<float>(this->trainPrg.filesProcessed)<< std::endl;
             }
