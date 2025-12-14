@@ -13,13 +13,14 @@ set(MNN_SOURCES
     mnn/mnn2d.cpp
     mnn/accessbin.cpp
     mnn/image.cpp
-    mnn/onlineTrain.cpp
-    mnn/batchTrain.cpp
-    mnn/fullsetTrain.cpp
+    mnn/train/onlineTrain.cpp
+    mnn/train/batchTrain.cpp
+    mnn/train/fullsetTrain.cpp
     mnn/test.cpp
-    mnn/stats.cpp
-    mnn/progress.cpp
-    mnn/confusion.cpp
+    mnn/evaluation/stats.cpp
+    mnn/evaluation/progress.cpp
+    mnn/evaluation/confusion.cpp
+    mnn/evaluation/epoch.cpp
 )
 
 if(USE_CPU)

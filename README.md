@@ -194,9 +194,9 @@ Gradients for Monomial neural nets are calculated in a similar manner to MLPs.
   - Mini-batch training
   - full dataset training over epochs
 - **0.0.3**: (in progress)
-  - Multi-threading for CPU
-  - Fast parallel executions for batch-based functions
-  - Complete buffer based training functions without use of standalone functions
+  - Buffer-based and thread-based stand alone training functions
+  - Thread-based C++ functions for forprop and backprop
+  - Evaluation Metrics
 
 ## Project Structure
 
