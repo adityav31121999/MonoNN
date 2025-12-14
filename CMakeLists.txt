@@ -6,8 +6,8 @@ message("> Experimental Implementation of Monomial Neural Network")
 
 # backend for computations
 set(USE_CL OFF)
-set(USE_CU OFF)
-set(USE_CPU ON)
+set(USE_CU ON)
+set(USE_CPU OFF)
 
 # binaries for debug and release
 set(OSbit 32)
@@ -68,7 +68,7 @@ elseif(USE_CL)
     find_package(OpenCL REQUIRED)
     message(STATUS "Found OpenCL version ${OpenCL_CL_VERSION}")
     message(STATUS "Using OpenCL for compilation.")
-    message(STATUS "Using OpenCL for better flexibility on non-Nvidia CL-conformant and Nvidia GPUs:)")
+    message(STATUS "Using OpenCL for better flexibility on GPUs:)")
     include_directories(${OpenCL_INCLUDE_DIRS})
     add_compile_definitions(USE_CL)
 else()

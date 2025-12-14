@@ -108,17 +108,7 @@ void mnn::trainBatch(const std::vector<std::vector<float>>& inputs, const std::v
         }
 
         if (correct_predictions == inputs.size()) {
-            std::cout << "Correct Predictions: ";
-            for (size_t i = 0; i < inputs.size(); ++i) {
-                std::cout << correct[i] << " ";
-            }
-            // loss calculation
-            for (size_t i = 0; i < inputs.size(); ++i) {
-                total_loss += crossEntropy(outputBatch[i], targets[i]);
-            }
-            currloss = static_cast<float>(total_loss / BATCH_SIZE);
-            std::cout << "All " << inputs.size() << " outputs in the batch are correct after " << totalEpochs 
-                      << " epochs. Training complete with error " << currloss << "." << std::endl;
+            std::cout << "All " << inputs.size() << " outputs in the batch are correct after " << totalEpochs << " epochs. training complete." << std::endl;
             break;
         }
         else {

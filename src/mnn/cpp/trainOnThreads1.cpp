@@ -41,12 +41,12 @@ void mnn::threadTrain(const std::vector<float> &input, const std::vector<float> 
         // Backpropagate the error
         for(int layer = layers - 1; layer >= 1; layer--) {
             std::vector<float> outgoing_gradient;
-            layerBackward(incoming_gradient, outgoing_gradient, activate[layer-1], cweights[layer], cgradients[layer],
+            layerBackwardThread(incoming_gradient, outgoing_gradient, activate[layer-1], cweights[layer], cgradients[layer],
                             bgradients[layer], order, ALPHA);
             incoming_gradient.clear();
             incoming_gradient = outgoing_gradient;
         }
-        layerBackward(incoming_gradient, input, cweights[0], cgradients[0], bgradients[0], order, ALPHA);
+        layerBackwardThread(incoming_gradient, input, cweights[0], cgradients[0], bgradients[0], order, ALPHA);
 
         // update weights
         for(int i = 0; i < layers; i++) {
@@ -112,12 +112,12 @@ void mnn2d::threadTrain(const std::vector<std::vector<float>> &input, const std:
 
         // Backpropagate the error
         for(int layer = layers - 1; layer >= 1; layer--) {
-            layerBackward(incoming_gradient, outgoing_gradient, dotProds[layer-1], activate[layer-1],
+            layerBackwardThread(incoming_gradient, outgoing_gradient, dotProds[layer-1], activate[layer-1],
                             cweights[layer], cgradients[layer], bgradients[layer], order, ALPHA);
             incoming_gradient.clear();
             incoming_gradient = outgoing_gradient;
         }
-        layerBackward(incoming_gradient, input, cweights[0], cgradients[0], bgradients[0], order, ALPHA);
+        layerBackwardThread(incoming_gradient, input, cweights[0], cgradients[0], bgradients[0], order, ALPHA);
 
         // update weights
         for(int i = 0; i < layers; i++) {

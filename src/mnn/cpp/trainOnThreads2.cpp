@@ -121,19 +121,19 @@ void mnn::threadTrainBatch(const std::vector<std::vector<float>> &inputs, const 
         std::vector<std::vector<float>> incoming_gradient = output_error;
         for(int layer = layers - 1; layer >= 1; layer--) {
             std::vector<std::vector<float>> outgoing_gradient;
-            layerBackwardBatch(incoming_gradient, outgoing_gradient, actBatch[layer-1],
+            layerBackwardBatchThread(incoming_gradient, outgoing_gradient, actBatch[layer-1],
                             cweights[layer], cgradients[layer], bgradients[layer], order, ALPHA);
             incoming_gradient = std::move(outgoing_gradient);
         }
         
-        layerBackwardBatch(incoming_gradient, inputBatch, cweights[0], cgradients[0], bgradients[0],
+        layerBackwardBatchThread(incoming_gradient, inputBatch, cweights[0], cgradients[0], bgradients[0],
                                 order, ALPHA);
     
-    // update weights
-    for(int i = 0; i < layers; i++) {
-        updateWeights(cweights[i], cgradients[i], learningRate, weightUpdateType);
-        updateWeights(bweights[i], bgradients[i], learningRate, weightUpdateType);
-    }
+        // update weights
+        for(int i = 0; i < layers; i++) {
+            updateWeights(cweights[i], cgradients[i], learningRate, weightUpdateType);
+            updateWeights(bweights[i], bgradients[i], learningRate, weightUpdateType);
+        }
     }
     this->learningRate = initialLR; // reset learning rate after training
 }
@@ -190,7 +190,7 @@ void mnn2d::threadTrainBatch(const std::vector<std::vector<std::vector<float>>> 
 
         // from 2nd to last
         for(int j = 1; j < layers; j++) {
-            layerForwardBatch(actBatch[j-1], dotBatch[j], cweights[j], bweights[j], order);
+            layerForwardBatchThread(actBatch[j-1], dotBatch[j], cweights[j], bweights[j], order);
             for(int i = 0; i < batchSize; i++) {
                 actBatch[j][i] = reshape(softmax(flatten(dotBatch[j][i])), dotBatch[j][i].size(), dotBatch[j][i][0].size());
             }
@@ -257,12 +257,12 @@ void mnn2d::threadTrainBatch(const std::vector<std::vector<std::vector<float>>> 
         // Backpropagate the error
         for(int layer = layers - 1; layer >= 1; layer--) {
             std::vector<std::vector<std::vector<float>>> outgoing_gradient;
-            layerBackwardBatch(incoming_gradient, outgoing_gradient, dotBatch[layer-1], actBatch[layer-1],
+            layerBackwardBatchThread(incoming_gradient, outgoing_gradient, dotBatch[layer-1], actBatch[layer-1],
                             cweights[layer], cgradients[layer], bgradients[layer], order, ALPHA);
             incoming_gradient.clear();
             incoming_gradient = outgoing_gradient;
         }
-        layerBackwardBatch(incoming_gradient, inputBatch, cweights[0], cgradients[0], bgradients[0], order, ALPHA);
+        layerBackwardBatchThread(incoming_gradient, inputBatch, cweights[0], cgradients[0], bgradients[0], order, ALPHA);
 
         // update weights
         for(int i = 0; i < layers; i++) {

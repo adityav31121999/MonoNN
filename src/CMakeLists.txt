@@ -31,6 +31,8 @@ if(USE_CPU)
         mnn/cpp/forprop.cpp
         mnn/cpp/backprop.cpp
         mnn/cpp/train.cpp
+        mnn/cpp/train1c.cpp
+        mnn/cpp/trainBatch1c.cpp
         mnn/cpp/trainOnThreads1.cpp
         mnn/cpp/trainOnThreads2.cpp
     )
@@ -45,6 +47,8 @@ elseif(USE_CU)
         mnn/cu/backprop.cu
         mnn/cu/backBatch.cu
         mnn/cu/train.cu
+        mnn/cu/train1c.cu
+        mnn/cu/trainBatch1c.cu
         mnn/cu/trainOnBuf1.cu
         mnn/cu/trainOnBuf2.cu
     )
@@ -59,6 +63,8 @@ elseif(USE_CL)
         mnn/cl/clbackprop.cpp
         mnn/cl/clBackBatch.cpp
         mnn/cl/cltrain.cpp
+        mnn/cl/clTrain1c.cpp
+        mnn/cl/clTrainBatch1c.cpp
         mnn/cl/trainOnBuf1.cpp
         mnn/cl/trainOnBuf2.cpp
     )

@@ -41,6 +41,7 @@ void mnn::cuForprop(const std::vector<float>& input)
             CU_CHECK(cudaMalloc(&d_activate[i], dotprod_size_bytes));
         }
 
+        // forprop on layers
         for(int i = 0; i < this->layers; i++) {
             if (i == 0) {
                 current_input_ptr = d_input;
@@ -131,6 +132,7 @@ void mnn2d::cuForprop(const std::vector<std::vector<float>>& input)
             CU_CHECK(cudaMalloc(&d_activate[i], dotprod_size_bytes));
         }
 
+        // forprop on layers
         for(int i = 0; i < this->layers; i++) {
             if (i == 0) {
                 current_input_ptr = d_input;

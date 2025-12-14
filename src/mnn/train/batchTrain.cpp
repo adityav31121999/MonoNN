@@ -147,14 +147,11 @@ void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuff
             targetBatch = expBatch;
             // backend selection
             #ifdef USE_CPU
-                forprop(inBatch);
-                backprop(expBatch);
+                trainBatch1c(inBatch, expBatch, useThreadOrBuffer);
             #elif USE_CU
-                cuForprop(inBatch);
-                cuBackprop(expBatch);
+                cuTrainBatch1c(inBatch, expBatch, useThreadOrBuffer);
             #elif USE_CL
-                clForprop(inBatch);
-                clBackprop(expBatch);
+                clTrainBtch1c(inBatch, expBatch, useThreadOrBuffer);
             #endif
 
             for (int j = 0; j < batchSize; j++) {
@@ -369,14 +366,11 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
             targetBatch = expBatch;
             // backend selection
             #ifdef USE_CPU
-                forprop(inBatch);
-                backprop(expBatch);
+                trainBatch1c(inBatch, expBatch, useThreadOrBuffer);
             #elif USE_CU
-                cuForprop(inBatch);
-                cuBackprop(expBatch);
+                cuTrainBatch1c(inBatch, expBatch, useThreadOrBuffer);
             #elif USE_CL
-                clForprop(inBatch);
-                clBackprop(expBatch);
+                clTrainBtch1c(inBatch, expBatch, useThreadOrBuffer);
             #endif
 
             for (int j = 0; j < batchSize; j++) {

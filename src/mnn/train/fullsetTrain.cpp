@@ -118,30 +118,18 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
             target = exp;
             // backend selection
             #ifdef USE_CPU
-                forprop(in);
+                train1c(in, target, useThreadOrBuffer);
             #elif USE_CU
-                cuForprop(in);
+                cuTrain1c(in, target, useThreadOrBuffer);
             #elif USE_CL
-                clForprop(in);
+                clTrain1c(in, target, useThreadOrBuffer);
             #endif
 
-            if(maxIndex(output) == maxIndex(target)){
-                correctPredictions++;
-            }
-            else {
-                this->trainPrg.accLoss += crossEntropy(output, target);
-                #ifdef USE_CPU
-                    backprop(exp);
-                #elif USE_CU
-                    cuBackprop(exp);
-                #elif USE_CL
-                    clBackprop(exp);
-                #endif
-            }
-            
             fileCount++;
             this->trainPrg.filesProcessed++;
             filesInCurrentSession++;
+            if(maxIndex(output) == maxIndex(target)) correctPredictions++;
+            this->trainPrg.accLoss += crossEntropy(output, target);
 
             bool sessionEnd = 0;
             if ((sessionFiles > 0 && filesInCurrentSession == this->trainPrg.sessionSize) || fileCount == totalFiles) {
@@ -308,29 +296,12 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
             target = exp;
             // backend selection
             #ifdef USE_CPU
-                forprop(in);
+                train1c(in, target, useThreadOrBuffer);
             #elif USE_CU
-                cuForprop(in);
+                cuTrain1c(in, target, useThreadOrBuffer);
             #elif USE_CL
-                clForprop(in);
+                clTrain1c(in, target, useThreadOrBuffer);
             #endif
-
-            fileCount++;
-            this->trainPrg.filesProcessed++;
-            filesInCurrentSession++;
-            if(maxIndex(output) == maxIndex(target)){
-                correctPredictions++;
-            }
-            else {
-                this->trainPrg.accLoss += crossEntropy(output, target);
-                #ifdef USE_CPU
-                    backprop(exp);
-                #elif USE_CU
-                    cuBackprop(exp);
-                #elif USE_CL
-                    clBackprop(exp);
-                #endif
-            }
 
             fileCount++;
             this->trainPrg.filesProcessed++;

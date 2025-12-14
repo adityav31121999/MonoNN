@@ -118,11 +118,11 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bool
             target = exp;
             // backend selection
             #ifdef USE_CPU
-                train(in, exp);
+                (useThreadOrBuffer == 0) ? train(in, exp) : trainThread(in, exp);
             #elif USE_CU
-                cuTrain(in, exp);
+                (useThreadOrBuffer == 0) ? cuTrain(in, exp) : cuBufTrain(in, exp);
             #elif USE_CL
-                clTrain(in, exp);
+                (useThreadOrBuffer == 0) ? clTrain(in, exp) : clBufTrain(in, exp);
             #endif
 
             // for progress tracking
@@ -208,11 +208,11 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bool
             }
             // backend selection
             #ifdef USE_CPU
-                trainBatch(inBatch, expBatch);
+                (useThreadOrBuffer == 0) ? trainBatch(inBatch, expBatch) : trainThreadBatch(inBatch, expBatch);
             #elif USE_CU
-                cuTrainBatch(inBatch, expBatch);
+                (useThreadOrBuffer == 0) ? cuTrainBatch(inBatch, expBatch) : cuBufTrainBatch(inBatch, expBatch);
             #elif USE_CL
-                clTrainBatch(inBatch, expBatch);
+                (useThreadOrBuffer == 0) ? clTrainBatch(inBatch, expBatch) : clBufTrainBatch(inBatch, expBatch);
             #endif
 
             // for progress tracking
@@ -372,11 +372,11 @@ void mnn2d::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bo
             }
             target = exp;
             #ifdef USE_CPU
-                train(in, exp);
+                (useThreadOrBuffer == 0) ? train(in, exp) : trainThread(in, exp);
             #elif USE_CU
-                cuTrain(in, exp);
+                (useThreadOrBuffer == 0) ? cuTrain(in, exp) : cuBufTrain(in, exp);
             #elif USE_CL
-                clTrain(in, exp);
+                (useThreadOrBuffer == 0) ? clTrain(in, exp) : clBufTrain(in, exp);
             #endif
 
             // for progress tracking

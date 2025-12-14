@@ -44,6 +44,7 @@ public:
     progress trainPrg;              // train progress
     test_progress testPrg;          // test progress
     confMat confData;               // precision and accuracy data
+    scores allScores;               // r^2
     std::vector<std::vector<int>> confusion;        // confusion matrix
 
 // weights and biases
@@ -83,6 +84,8 @@ public:
         void forprop(const std::vector<std::vector<std::vector<float>>>& input);
         void backprop(const std::vector<float>& target);
         void backprop(const std::vector<std::vector<float>>& target);
+        void train1c(const std::vector<std::vector<float>>& input, const std::vector<float>& target, bool useThreadOrBuffer);
+        void trainBatch1c(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets, bool useThreadOrBuffer);
         void train(const std::vector<std::vector<float>>& input, const std::vector<float>& target);
         void trainBatch(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets);
         void threadTrain(const std::vector<std::vector<float>>& input, const std::vector<float>& target);
@@ -95,6 +98,8 @@ public:
         void cuBackprop(const std::vector<float>& target);
         void cuBackprop(const std::vector<std::vector<float>>& target);
         void cuTrain(const std::vector<std::vector<float>>& input, const std::vector<float>& target);
+        void cuTrain1c(const std::vector<std::vector<float>>& input, const std::vector<float>& target, bool useThreadOrBuffer);
+        void cuTrainBatch1c(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets, bool useThreadOrBuffer);
         void cuTrainBatch(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets);
         void cuBufTrain(const std::vector<std::vector<float>>& input, const std::vector<float>& target);
         void cuBufTrainBatch(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets);
@@ -111,6 +116,8 @@ public:
         void clForprop(const std::vector<std::vector<std::vector<float>>>& input);
         void clBackprop(const std::vector<float>& target);
         void clBackprop(const std::vector<std::vector<float>>& target);
+        void clTrain1c(const std::vector<std::vector<float>>& input, const std::vector<float>& target, bool useThreadOrBuffer);
+        void clTrainBatch1c(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets, bool useThreadOrBuffer);
         void clTrain(const std::vector<std::vector<float>>& input, const std::vector<float>& target);
         void clTrainBatch(const std::vector<std::vector<std::vector<float>>>& inputs, const std::vector<std::vector<float>>& targets);
         void clBufTrain(const std::vector<std::vector<float>>& input, const std::vector<float>& target);
