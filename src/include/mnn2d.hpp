@@ -38,14 +38,15 @@ public:
 
     unsigned long long param;       // counter for iterations
     std::string binFileAddress;     // binary file address to save weights and biases
-    std::string path2progress;      // path to progress file
-    std::string path2test_progress; // path to test progress file
+    std::string path2progress;      // path to progress file for session-wise checks
+    std::string path2test_progress; // path to test progress file for session-wise checks
     std::string path2EpochDir;      // epoch-based data stored here
     progress trainPrg;              // train progress
     test_progress testPrg;          // test progress
     confMat confData;               // precision and accuracy data
     scores allScores;               // r^2
     std::vector<std::vector<int>> confusion;        // confusion matrix
+    std::vector<std::vector<float>> weightStats;    // weight statistics
 
 // weights and biases
 

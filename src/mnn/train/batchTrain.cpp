@@ -151,7 +151,7 @@ void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuff
             #elif USE_CU
                 cuTrainBatch1c(inBatch, expBatch, useThreadOrBuffer);
             #elif USE_CL
-                clTrainBtch1c(inBatch, expBatch, useThreadOrBuffer);
+                clTrainBatch1c(inBatch, expBatch, useThreadOrBuffer);
             #endif
 
             for (int j = 0; j < batchSize; j++) {
@@ -168,7 +168,7 @@ void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuff
             bool sessionEnd = 0;
             if ((sessionFiles > 0 && filesInCurrentSession >= sessionFiles) || fileCount == totalFiles) {
                 auto endTime = std::chrono::high_resolution_clock::now();
-                this->trainPrg.trainAccuracy = static_cast<float>(100 * correctPredictions) / fileCount;
+                this->trainPrg.correctPredPercent = static_cast<float>(100 * correctPredictions) / fileCount;
                 this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
                 this->trainPrg.trainingPredictions = correctPredictions;
                 this->trainPrg.timeTakenForTraining += this->trainPrg.timeForCurrentSession;
@@ -181,7 +181,7 @@ void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuff
                 std::cout << "Epoch: " << this->trainPrg.epoch 
                           << " \tFiles: " << fileCount << "/" << totalFiles
                           << " \tPredictions: " << correctPredictions
-                          << " \tTraining Accuracy: " << this->trainPrg.trainAccuracy << "%"
+                          << " \tTraining Accuracy: " << this->trainPrg.correctPredPercent << "%"
                           << " \tLoss: " << this->trainPrg.accLoss / static_cast<float>(this->trainPrg.filesProcessed)
                           << std::endl;
                 serializeWeights(cweights, bweights, binFileAddress);
@@ -200,14 +200,14 @@ void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuff
             }
         }
 
-        if(this->trainPrg.trainAccuracy >= 98.0f) {
+        if(this->trainPrg.correctPredPercent >= 98.0f) {
             std::cout << "Training completed using minibatch of size " << BATCH_SIZE 
-                      << "with accuracy of " << this->trainPrg.trainAccuracy << "%" << std::endl;
+                      << "with accuracy of " << this->trainPrg.correctPredPercent << "%" << std::endl;
             break;
         }
         this->trainPrg.epoch += 1;
         this->trainPrg.filesProcessed = 0;
-        this->trainPrg.trainAccuracy = 0;
+        this->trainPrg.correctPredPercent = 0;
         this->trainPrg.timeForCurrentSession = 0;
         this->trainPrg.trainingPredictions = 0;
         this->learningRate = this->trainPrg.currentLearningRate;
@@ -370,7 +370,7 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
             #elif USE_CU
                 cuTrainBatch1c(inBatch, expBatch, useThreadOrBuffer);
             #elif USE_CL
-                clTrainBtch1c(inBatch, expBatch, useThreadOrBuffer);
+                clTrainBatch1c(inBatch, expBatch, useThreadOrBuffer);
             #endif
 
             for (int j = 0; j < batchSize; j++) {
@@ -387,7 +387,7 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
             bool sessionEnd = 0;
             if (sessionFiles > 0 && filesInCurrentSession >= sessionFiles) {
                 auto endTime = std::chrono::high_resolution_clock::now();
-                this->trainPrg.trainAccuracy = static_cast<float>(100 * correctPredictions) / fileCount;
+                this->trainPrg.correctPredPercent = static_cast<float>(100 * correctPredictions) / fileCount;
                 this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
                 this->trainPrg.timeTakenForTraining += this->trainPrg.timeForCurrentSession;
                 this->learningRate = this->trainPrg.currentLearningRate;
@@ -396,7 +396,7 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
                 this->trainPrg.filesProcessed += sessionFiles;
                 sessionEnd = 1;
                 logProgressToCSV(this->trainPrg, this->path2progress);
-                std::cout << "Epoch: " << this->trainPrg.epoch << "\tFiles: " << fileCount << "/" << totalFiles << " \tPredictions: " << correctPredictions << " \tTraining Accuracy: " << this->trainPrg.trainAccuracy << "%" 
+                std::cout << "Epoch: " << this->trainPrg.epoch << "\tFiles: " << fileCount << "/" << totalFiles << " \tPredictions: " << correctPredictions << " \tTraining Accuracy: " << this->trainPrg.correctPredPercent << "%" 
                           << " \tLoss: " << this->trainPrg.accLoss / static_cast<float>(this->trainPrg.filesProcessed)<< std::endl;
             }
 
@@ -414,12 +414,12 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
         }
 
         this->trainPrg.epoch += 1;
-        if(this->trainPrg.trainAccuracy >= 97.0f) {
+        if(this->trainPrg.correctPredPercent >= 97.0f) {
             std::cout << "Training completed using minibatch of size " << BATCH_SIZE 
-                      << "with accuracy of " << this->trainPrg.trainAccuracy << "%" << std::endl;
+                      << "with accuracy of " << this->trainPrg.correctPredPercent << "%" << std::endl;
             break;
         }
-        this->trainPrg.trainAccuracy = 0;
+        this->trainPrg.correctPredPercent = 0;
         this->trainPrg.accLoss = 0;
         this->trainPrg.filesProcessed = 0;
         this->trainPrg.timeForCurrentSession = 0;

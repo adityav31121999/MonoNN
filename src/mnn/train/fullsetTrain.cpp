@@ -18,8 +18,10 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
 {
     // Access all image files from the dataset path
     std::vector<std::filesystem::path> filePaths;
+    std::string trainPath = dataSetPath + "/train";
+    
     try {
-        for (const auto& entry : std::filesystem::directory_iterator(dataSetPath)) {
+        for (const auto& entry : std::filesystem::directory_iterator(trainPath)) {
             if (entry.is_regular_file()) {
                 filePaths.push_back(entry.path());
             }
@@ -30,7 +32,7 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
     }
 
     if (filePaths.empty()) {
-        std::cout << "Warning: No files found in dataset directory: " << dataSetPath << std::endl;
+        std::cout << "Warning: No files found in dataset directory: " << trainPath << std::endl;
         return;
     }
 
@@ -76,6 +78,7 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
         previousTrainingTime = this->trainPrg.timeTakenForTraining;
         std::cout << "Found " << totalFiles << " files for training. Resuming from file index " << this->trainPrg.filesProcessed << "." << std::endl;
         curPreds = this->trainPrg.trainingPredictions;
+        epochs = this->trainPrg.epoch;
     }
 
     int fileCount = 0;
@@ -134,7 +137,7 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
             bool sessionEnd = 0;
             if ((sessionFiles > 0 && filesInCurrentSession == this->trainPrg.sessionSize) || fileCount == totalFiles) {
                 auto endTime = std::chrono::high_resolution_clock::now();
-                this->trainPrg.trainAccuracy = static_cast<float>(100 * correctPredictions) / fileCount;
+                this->trainPrg.correctPredPercent = static_cast<float>(100 * correctPredictions) / fileCount;
                 this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
                 this->trainPrg.timeTakenForTraining = previousTrainingTime + this->trainPrg.timeForCurrentSession;
                 this->learningRate = this->trainPrg.currentLearningRate;
@@ -143,8 +146,11 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
                 this->trainPrg.trainingPredictions = correctPredictions;
                 sessionEnd = 1;
                 startTime = std::chrono::high_resolution_clock::now();
-                std::cout << "Epoch: " << this->trainPrg.epoch << "\tFiles: " << fileCount << "/" << totalFiles << " \tPredictions: " << correctPredictions << " \tTraining Accuracy: " << this->trainPrg.trainAccuracy << "%" 
-                          << " \tLoss: " << this->trainPrg.accLoss / static_cast<float>(this->trainPrg.filesProcessed)<< std::endl;
+                std::cout << "Epoch: " << this->trainPrg.epoch << "\tFiles: " << fileCount << "/" << totalFiles
+                          << " \tPredictions: " << correctPredictions
+                          << " \tTraining Accuracy: " << this->trainPrg.correctPredPercent << "%"
+                          << " \tLoss: " << this->trainPrg.accLoss / static_cast<float>(this->trainPrg.filesProcessed)
+                          << std::endl;
             }
 
             // If a session size is defined and reached, stop training for this session
@@ -157,18 +163,23 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
                 if (fileCount == totalFiles) {
                     std::cout << "All files processed. Ending training." << std::endl;
                     this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(this->trainPrg.totalCycleCount);
+                    bool notBatch = 0;
+                    epochDataToCsv(dataSetPath + "/mnn1d", epochs, notBatch,
+                                    weightStats,
+                                    confusion,
+                                    confData, allScores, trainPrg);
                     break;
                 }
             }
         }
-        if(this->trainPrg.trainAccuracy >= 97.0f) {
+        if(this->trainPrg.correctPredPercent >= 97.0f) {
             std::cout << "Training completed using minibatch of size " << BATCH_SIZE 
-                      << "with accuracy of " << this->trainPrg.trainAccuracy << "%" << std::endl;
+                      << "with accuracy of " << this->trainPrg.correctPredPercent << "%" << std::endl;
             break;
         }
         std::cout << "Training for next epoch: " << this->trainPrg.epoch << std::endl;
         this->trainPrg.epoch++;
-        this->trainPrg.trainAccuracy = 0;
+        this->trainPrg.correctPredPercent = 0;
         this->trainPrg.accLoss = 0;
         this->trainPrg.filesProcessed = 0;
         this->trainPrg.timeForCurrentSession = 0;
@@ -177,10 +188,6 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
         logProgressToCSV(this->trainPrg, this->path2progress);
     }
 
-    auto endTime = std::chrono::high_resolution_clock::now();
-    this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
-    this->trainPrg.timeTakenForTraining = previousTrainingTime + this->trainPrg.timeForCurrentSession;
-    logProgressToCSV(this->trainPrg, this->path2progress);
     std::cout << "--- Training Finished (mnn) ---" << std::endl;
 }
 
@@ -194,6 +201,7 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
 {
     // Access all image files from the dataset path
     std::vector<std::filesystem::path> filePaths;
+    std::string trainPath = dataSetPath + "/train";
     try {
         for (const auto& entry : std::filesystem::directory_iterator(dataSetPath)) {
             if (entry.is_regular_file()) {
@@ -250,8 +258,9 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
             std::cout << "Starting from file index " << this->trainPrg.filesProcessed << " with epoch " << this->trainPrg.epoch << std::endl;
         this->learningRate = this->trainPrg.currentLearningRate;
         previousTrainingTime = this->trainPrg.timeTakenForTraining;
-        curPreds = this->trainPrg.trainingPredictions;
         std::cout << "Found " << totalFiles << " files for training. Resuming from file index " << this->trainPrg.filesProcessed << "." << std::endl;
+        curPreds = this->trainPrg.trainingPredictions;
+        epochs = this->trainPrg.epoch;
     }
 
     int fileCount = 0;
@@ -310,18 +319,22 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
             this->trainPrg.accLoss += crossEntropy(output, target);
 
             bool sessionEnd = 0;
-            if (sessionFiles > 0 && filesInCurrentSession == this->trainPrg.sessionSize) {
+            if ((sessionFiles > 0 && filesInCurrentSession == this->trainPrg.sessionSize) || fileCount == totalFiles) {
                 auto endTime = std::chrono::high_resolution_clock::now();
-                this->trainPrg.trainAccuracy = static_cast<float>(100 * correctPredictions) / fileCount;
+                this->trainPrg.correctPredPercent = static_cast<float>(100 * correctPredictions) / fileCount;
                 this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
                 this->trainPrg.timeTakenForTraining = previousTrainingTime + this->trainPrg.timeForCurrentSession;
                 this->learningRate = this->trainPrg.currentLearningRate;
                 this->trainPrg.totalSessionsOfTraining++;
                 this->trainPrg.totalCycleCount += sessionFiles;
+                this->trainPrg.trainingPredictions = correctPredictions;
                 sessionEnd = 1;
                 startTime = std::chrono::high_resolution_clock::now();
-                std::cout << "Epoch: " << this->trainPrg.epoch << "\tFiles: " << fileCount << "/" << totalFiles << " \tPredictions: " << correctPredictions << " \tTraining Accuracy: " << this->trainPrg.trainAccuracy << "%" 
-                          << " \tLoss: " << this->trainPrg.accLoss / static_cast<float>(this->trainPrg.filesProcessed)<< std::endl;
+                std::cout << "Epoch: " << this->trainPrg.epoch << "\tFiles: " << fileCount << "/" << totalFiles
+                          << " \tPredictions: " << correctPredictions
+                          << " \tTraining Accuracy: " << this->trainPrg.correctPredPercent << "%"
+                          << " \tLoss: " << this->trainPrg.accLoss / static_cast<float>(this->trainPrg.filesProcessed)
+                          << std::endl;
             }
 
             // If a session size is defined and reached, stop training for this session
@@ -334,18 +347,23 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
                 if (fileCount == totalFiles) {
                     std::cout << "All files processed. Ending training." << std::endl;
                     this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(this->trainPrg.totalCycleCount);
+                    bool notBatch = 0;
+                    epochDataToCsv(dataSetPath + "/mnn1d", epochs, notBatch,
+                                    weightStats,
+                                    confusion,
+                                    confData, allScores, trainPrg);
                     break;
                 }
             }
         }
-        if(this->trainPrg.trainAccuracy >= 97.0f) {
+        if(this->trainPrg.correctPredPercent >= 97.0f) {
             std::cout << "Training completed using minibatch of size " << BATCH_SIZE 
-                      << "with accuracy of " << this->trainPrg.trainAccuracy << "%" << std::endl;
+                      << "with accuracy of " << this->trainPrg.correctPredPercent << "%" << std::endl;
             break;
         }
         std::cout << "Training for next epoch: " << this->trainPrg.epoch << std::endl;
         this->trainPrg.epoch++;
-        this->trainPrg.trainAccuracy = 0;
+        this->trainPrg.correctPredPercent = 0;
         this->trainPrg.accLoss = 0;
         this->trainPrg.filesProcessed = 0;
         this->trainPrg.timeForCurrentSession = 0;
@@ -354,9 +372,5 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
         logProgressToCSV(this->trainPrg, this->path2progress);
     }
 
-    auto endTime = std::chrono::high_resolution_clock::now();
-    this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
-    this->trainPrg.timeTakenForTraining = previousTrainingTime + this->trainPrg.timeForCurrentSession;
-    logProgressToCSV(this->trainPrg, this->path2progress);
     std::cout << "--- Training Finished (mnn) ---" << std::endl;
 }

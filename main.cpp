@@ -16,34 +16,21 @@ int main() {
     }
 
     #ifdef __linux__
-        std::string path2Folder = "/home/adi23444/code/train";
+        std::string path2Folder = "/home/aditya/code/train";
     #else
         std::string path2Folder = "D:/train";
     #endif
 
-    std::string digitTrain      =   path2Folder + "/digits_mnist/train";
-    std::string digitTest       =   path2Folder + "/digits_mnist/test";
-    std::string fashionTrain    =   path2Folder + "/fashion_mnist/train";
-    std::string fashionTest     =   path2Folder + "/fashion_mnist/test";
-    std::string progressData1   =   path2Folder + "/progress/progress1.csv";   // mnn digits
-    std::string progressData2   =   path2Folder + "/progress/progress2.csv";   // mnn fashion
-    std::string progressData3   =   path2Folder + "/progress/progress3.csv";   // mnn2d digits
-    std::string progressData4   =   path2Folder + "/progress/progress4.csv";   // mnn2d fashion
-    std::string testProgress1   =   path2Folder + "/progress/test_progress1.csv"; // mnn digits test
-    std::string testProgress2   =   path2Folder + "/progress/test_progress2.csv"; // mnn fashion test
-    std::string testProgress3   =   path2Folder + "/progress/test_progress3.csv"; // mnn2d digits test
-    std::string testProgress4   =   path2Folder + "/progress/test_progress4.csv"; // mnn2d fashion test
-    std::string binFileAddress1 =   path2Folder + "/weightsMNNdigits.bin";
-    std::string binFileAddress2 =   path2Folder + "/weightsMNNfashion.bin";
-    std::string binFileAddress3 =   path2Folder + "/weightsMNN2Ddigits.bin";
-    std::string binFileAddress4 =   path2Folder + "/weightsMNN2Dfashion.bin";
+    std::string digit           =   path2Folder + "/digits_mnist";
+    std::string fashion         =   path2Folder + "/digits_mnist";
+    std::string cifar10         =   path2Folder + "/cifar10";
 
     int inSize = 784;
     int inh = 28, inw = 28;
     int outSize = 10;
     float order = 1.4f;
     bool batchMode = 0;
-    bool useThreadOrBuffer = 0;
+    bool useThreadOrBuffer = 1;
     std::vector<int> hidden_layers1 = { 784, 392, outSize };
     std::vector<int> hidden_layers2 = { 28, 56, 112, 112, 56, 28, outSize };
 
@@ -52,18 +39,16 @@ int main() {
 
 #if TRAIN_2D == 0
         std::cout << "----------------------MNN----------------------" << std::endl;
-        mnn network1(inSize, outSize, hidden_layers1, order, binFileAddress1);
+        mnn network1(inSize, outSize, hidden_layers1, order, digit);
         network1.weightUpdateType = 1;
-        network1.path2progress = progressData1;
-        network1.path2test_progress = testProgress1;
-        network1.trainPrg.sessionSize = 50;
-        // network1.onlineTraining(digitTrain, batchMode, useThreadOrBuffer);
-        // network1.miniBatchTraining(digitTrain, batchMode);
-        network1.fullDataSetTraining(digitTrain, useThreadOrBuffer);
-        // network1.test(digitTest, useThreadOrBuffer);
+        network1.trainPrg.sessionSize = 100;
+        // network1.onlineTraining(digit, batchMode, useThreadOrBuffer);
+        // network1.miniBatchTraining(digit, useThreadOrBuffer);
+        network1.fullDataSetTraining(digit, useThreadOrBuffer);
+        // network1.test(digit, useThreadOrBuffer);
 #else
         std::cout << "---------------------MNN2D---------------------" << std::endl;
-        mnn2d network2(inh, inw, outSize, hidden_layers2, order, binFileAddress3);
+        mnn2d network2(inh, inw, outSize, hidden_layers2, order, digit + "/mnn2d/weights.bin");
         network2.weightUpdateType = 3;
         network2.path2progress = progressData3;
         network2.path2test_progress = testProgress3;

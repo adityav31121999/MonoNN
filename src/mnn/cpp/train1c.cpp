@@ -24,11 +24,10 @@ void mnn::train1c(const std::vector<float>& input, const std::vector<float>& tar
         else {
             // check for error and break if acceptable
             currloss = crossEntropy(output, target);
-            std::cout << "Current CE Loss: " << currloss << std::endl;
+            // std::cout << "Current CE Loss: " << currloss << std::endl;
 
             // 2. Backward propagation
-            this->target = target;
-            backprop(this->target);
+            backprop(target);
             prevloss = currloss;
         }
     }
@@ -49,9 +48,7 @@ void mnn::train1c(const std::vector<float>& input, const std::vector<float>& tar
         else {
             // check for error and break if acceptable
             currloss = crossEntropy(output, target);
-            // if (i > 1) this->learningRate *= (currloss > prevloss) ? 0.95 : 1.01;
-            std::cout << "Current CE Loss: " << currloss << std::endl;
-                    // << "\nOpting for new learning rate: " << this->learningRate << std::endl;
+            // std::cout << "Current CE Loss: " << currloss << std::endl;
 
             // 2. Backward propagation
             this->target = target;
@@ -81,6 +78,7 @@ void mnn::train1c(const std::vector<float>& input, const std::vector<float>& tar
     }
 }
 
+
 /**
  * @brief trains the mnn2d network on a single input-target pair.
  * @param input The input matrix.
@@ -98,11 +96,10 @@ void mnn2d::train1c(const std::vector<std::vector<float>>& input, const std::vec
         else {
             // check for error and break if acceptable
             currloss = crossEntropy(output, target);
-            std::cout << "Current CE Loss: " << currloss << std::endl;
+            // std::cout << "Current CE Loss: " << currloss << std::endl;
 
             // 2. Backward propagation
-            this->target = target;
-            backprop(this->target);
+            backprop(target);
             prevloss = currloss;
         }
     }
@@ -126,8 +123,7 @@ void mnn2d::train1c(const std::vector<std::vector<float>>& input, const std::vec
         else {
             // check for error and break if acceptable
             currloss = crossEntropy(output, target);
-            // if (i > 1) this->learningRate *= (currloss > prevloss) ? 0.95 : 1.01;
-            std::cout << "Current CE Loss: " << currloss << std::endl;
+            // std::cout << "Current CE Loss: " << currloss << std::endl;
 
             // if (i == EPOCH) break;
             // 2. Backward propagation

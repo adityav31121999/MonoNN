@@ -45,6 +45,7 @@ void mnn::backprop(const std::vector<float>& expected) {
 void mnn::backprop(const std::vector<std::vector<float>>& expected)
 {    
     zeroGradients();
+    this->targetBatch = expected;
     std::vector<std::vector<float>> output_error(expected.size(), std::vector<float>(outSize, 0.0f));
     for(int i = 0; i < expected.size(); i++) {
         for(int j = 0; j < outSize; j++) {
@@ -117,6 +118,7 @@ void mnn2d::backprop(const std::vector<float>& expected) {
  */
 void mnn2d::backprop(const std::vector<std::vector<float>>& expected) {
     zeroGradients();
+    this->targetBatch = expected;
     std::vector<std::vector<float>> output_error(expected.size(), std::vector<float>(expected[0].size(), 0.0f));
     for(int i = 0; i < expected.size(); i++) {
         for(int j = 0; j < expected[i].size(); j++) {

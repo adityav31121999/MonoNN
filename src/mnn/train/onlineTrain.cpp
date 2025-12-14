@@ -118,7 +118,7 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bool
             target = exp;
             // backend selection
             #ifdef USE_CPU
-                (useThreadOrBuffer == 0) ? train(in, exp) : trainThread(in, exp);
+                (useThreadOrBuffer == 0) ? train(in, exp) : threadTrain(in, exp);
             #elif USE_CU
                 (useThreadOrBuffer == 0) ? cuTrain(in, exp) : cuBufTrain(in, exp);
             #elif USE_CL
@@ -208,7 +208,7 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bool
             }
             // backend selection
             #ifdef USE_CPU
-                (useThreadOrBuffer == 0) ? trainBatch(inBatch, expBatch) : trainThreadBatch(inBatch, expBatch);
+                (useThreadOrBuffer == 0) ? trainBatch(inBatch, expBatch) : threadTrainBatch(inBatch, expBatch);
             #elif USE_CU
                 (useThreadOrBuffer == 0) ? cuTrainBatch(inBatch, expBatch) : cuBufTrainBatch(inBatch, expBatch);
             #elif USE_CL
@@ -372,7 +372,7 @@ void mnn2d::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bo
             }
             target = exp;
             #ifdef USE_CPU
-                (useThreadOrBuffer == 0) ? train(in, exp) : trainThread(in, exp);
+                (useThreadOrBuffer == 0) ? train(in, exp) : threadTrain(in, exp);
             #elif USE_CU
                 (useThreadOrBuffer == 0) ? cuTrain(in, exp) : cuBufTrain(in, exp);
             #elif USE_CL
@@ -468,12 +468,13 @@ void mnn2d::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bo
 
             inputBatch = inBatch;
             targetBatch = expBatch;
+            // backend selection
             #ifdef USE_CPU
-                trainBatch(inputBatch, targetBatch);
+                (useThreadOrBuffer == 0) ? trainBatch(inBatch, expBatch) : threadTrainBatch(inBatch, expBatch);
             #elif USE_CU
-                cuTrainBatch(inputBatch, targetBatch);
+                (useThreadOrBuffer == 0) ? cuTrainBatch(inBatch, expBatch) : cuBufTrainBatch(inBatch, expBatch);
             #elif USE_CL
-                clTrainBatch(inputBatch, targetBatch);
+                (useThreadOrBuffer == 0) ? clTrainBatch(inBatch, expBatch) : clBufTrainBatch(inBatch, expBatch);
             #endif
 
             // for progress tracking

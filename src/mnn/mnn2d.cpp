@@ -13,9 +13,9 @@
  * @param layers Number of hidden layers.
  * @param order Order of the monomial.
  */
-mnn2d::mnn2d(int inw, int inh, int outw, int layers, float order, std::string binFileAddress) :
+mnn2d::mnn2d(int inw, int inh, int outw, int layers, float order, std::string datasetpath) :
     order(order), inWidth(inw), inHeight(inh), outWidth(outw), layers(layers),
-    batchSize(1), binFileAddress(binFileAddress), epochs(100), iterations(0), learningRate(0.01f)
+    batchSize(1), binFileAddress(datasetpath + "/mnn2d/weights.bin"), epochs(100), iterations(0), learningRate(0.01f)
 {
     this->trainPrg = {};
     // set hidden layers width and height
@@ -64,6 +64,8 @@ mnn2d::mnn2d(int inw, int inh, int outw, int layers, float order, std::string bi
         param += static_cast<unsigned long long>(cweights[i].size() * cweights[i][0].size());
     }
     param *= 2; // b-weights
+    path2test_progress = datasetpath + "/testProgress.csv";
+    path2progress = datasetpath + "/trainProgress.csv";
     makeBinFile(binFileAddress);
     std::cout << "Network initialized with " << param << " parameters." 
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
@@ -145,9 +147,9 @@ mnn2d::mnn2d(int inw, int inh, int outw, int layers, float order, std::string bi
  * @param layers Number of hidden layers.
  * @param order Order of the monomial.
  */
-mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::string binFileAddress) :
+mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::string datasetpath) :
     order(order), inWidth(inw), inHeight(inh), outWidth(outw), layers(layers),
-    batchSize(1), binFileAddress(binFileAddress), epochs(100), iterations(0), learningRate(0.01f)
+    batchSize(1), binFileAddress(datasetpath + "/mnn2d/weights.bin"), epochs(100), iterations(0), learningRate(0.01f)
 {
     this->trainPrg = {};
     // set hidden layers width and height
@@ -195,6 +197,8 @@ mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::
         param += static_cast<unsigned long long>(cweights[i].size() * cweights[i][0].size());
     }
     param *= 2; // b-weights
+    path2test_progress = datasetpath + "/testProgress.csv";
+    path2progress = datasetpath + "/trainProgress.csv";
     makeBinFile(binFileAddress);
     std::cout << "Network initialized with " << param << " parameters." 
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
@@ -268,9 +272,9 @@ mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::
  * @param outh Output height.
  * @param dim Dimension of hidden layers.
  */
-mnn2d::mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, std::string binFileAddress) :
+mnn2d::mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, std::string datasetpath) :
     order(order), inWidth(inw), inHeight(inh), outWidth(outw), layers(width.size()),
-    width(width), batchSize(1), binFileAddress(binFileAddress), epochs(100), iterations(0), learningRate(0.01f)
+    width(width), batchSize(1), binFileAddress(datasetpath + "/mnn2d/weights.bin"), epochs(100), iterations(0), learningRate(0.01f)
 {
     this->trainPrg = {};
     input.resize(inh, std::vector<float>(inw, 0.0f));
@@ -317,6 +321,8 @@ mnn2d::mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, st
         param += static_cast<unsigned long long>(cweights[i].size() * cweights[i][0].size());
     }
     param *= 2; // b-weights
+    path2test_progress = datasetpath + "/testProgress.csv";
+    path2progress = datasetpath + "/trainProgress.csv";
     makeBinFile(binFileAddress);
     std::cout << "Network initialized with " << param << " parameters." 
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;

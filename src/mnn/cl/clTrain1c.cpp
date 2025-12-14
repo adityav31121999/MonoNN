@@ -150,7 +150,7 @@ void mnn::clTrain1c(const std::vector<float>& input, const std::vector<float>& t
             this->target = target;
             // check for error and break if acceptable
             currloss = crossEntropy(output, target);
-            std::cout << "Current CE Loss: " << currloss << std::endl;
+            // std::cout << "Current CE Loss: " << currloss << std::endl;
 
             // 2. Backward propagation
             cl::Kernel kernelSub = kernels.at("subtract");
@@ -480,7 +480,7 @@ void mnn2d::clTrain1c(const std::vector<std::vector<float>>& input, const std::v
         else {
             // check for error and break if acceptable
             currloss = crossEntropy(output, target);
-            std::cout << "Current CE Loss: " << currloss << std::endl;
+            // std::cout << "Current CE Loss: " << currloss << std::endl;
 
             // 2. Backward propagation
             this->target = target; // Set target for backprop

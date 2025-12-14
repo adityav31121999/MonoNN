@@ -26,7 +26,7 @@ void mnn::cuTrain1c(const std::vector<float>& input, const std::vector<float>& t
         else {
             // check for error and break if acceptable
             currloss = crossEntropy(output, target);
-            std::cout << "Current CE Loss: " << currloss << std::endl;
+            // std::cout << "Current CE Loss: " << currloss << std::endl;
 
             // 2. Backward propagation
             this->target = target;
@@ -105,7 +105,7 @@ void mnn::cuTrain1c(const std::vector<float>& input, const std::vector<float>& t
         }
         else {
             currloss = crossEntropy(output, target);
-            std::cout << "Current CE Loss: " << currloss << std::endl;
+            // std::cout << "Current CE Loss: " << currloss << std::endl;
 
             // 2. Backward propagation
             this->target = target;
@@ -156,7 +156,7 @@ void mnn2d::cuTrain1c(const std::vector<std::vector<float>>& input, const std::v
         else {
             // check for error and break if acceptable
             currloss = crossEntropy(output, target);
-            std::cout << "Current CE Loss: " << currloss << std::endl;
+            // std::cout << "Current CE Loss: " << currloss << std::endl;
 
             // 2. Backward propagation
             this->target = target;
@@ -235,7 +235,7 @@ void mnn2d::cuTrain1c(const std::vector<std::vector<float>>& input, const std::v
         }
         else {
             currloss = crossEntropy(output, target);
-            std::cout << "Current CE Loss: " << currloss << std::endl;
+            // std::cout << "Current CE Loss: " << currloss << std::endl;
 
             // 2. Backward propagation
             this->target = target;
