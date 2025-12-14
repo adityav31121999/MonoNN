@@ -27,16 +27,12 @@ struct confMat {
     std::vector<float> recall;          // per class
     std::vector<float> f1;              // per class f1-score
     std::vector<int> support;           // number of true instances per class
-
 };
 
 confMat confusionMatrixFunc(const std::vector<std::vector<int>>& confusionMatrix);
 void printConfusionMatrix(const std::vector<std::vector<int>>& confusionMatrix);
 void printClassificationReport(const confMat& cm, const std::vector<std::string>& classNames = {});
 struct scores {
-    float mse;          // mean squared error
-    float mae;          // mean absolute error
-    float rmse;         // root mean squared error
     float r2;           // coefficient of determination
     float sst;          // total sum of squares
     float ssr;          // regression sum of squares
