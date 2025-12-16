@@ -13,7 +13,7 @@
 #define SOFTMAX_TEMP 1.05f          // softmax temperature
 #define EPOCH 50                    // epochs for single set training
 #define SESSION_SIZE 50             // number of batches in single session
-#define BATCH_SIZE 50               // number of inputs in single batch
+#define BATCH_SIZE 8                // number of inputs in single batch
 #define ALPHA 0.80f                 // gradient splitting factor
 
 // struct to hold statistical information about data
@@ -24,29 +24,7 @@ struct Statistics {
     float max;      // maximum value from the set
 };
 
-Statistics computeStats(const std::vector<float>& data);
-Statistics computeStats(const std::vector<std::vector<float>>& data);
-Statistics computeStats(const std::vector<std::vector<std::vector<float>>>& data);
-void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights,
-        const std::vector<std::vector<std::vector<float>>>& cgrad, const std::vector<std::vector<std::vector<float>>>& bgrad,
-        const std::vector<std::vector<float>>& act);
-void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights,
-        const std::vector<std::vector<std::vector<float>>>& cgrad, const std::vector<std::vector<std::vector<float>>>& bgrad,
-        const std::vector<std::vector<std::vector<float>>>& act);
-void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights,
-        const std::vector<std::vector<std::vector<float>>>& cgrad, const std::vector<std::vector<std::vector<float>>>& bgrad,
-        const std::vector<std::vector<std::vector<std::vector<float>>>>& act);
-void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights,
-        const std::vector<std::vector<std::vector<float>>>& cgrad, const std::vector<std::vector<std::vector<float>>>& bgrad,
-        const std::vector<std::vector<float>>& act, const std::vector<std::vector<float>>& stats);
-void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights,
-        const std::vector<std::vector<std::vector<float>>>& cgrad, const std::vector<std::vector<std::vector<float>>>& bgrad,
-        const std::vector<std::vector<std::vector<float>>>& act, const std::vector<std::vector<float>>& stats);
-void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights,
-        const std::vector<std::vector<std::vector<float>>>& cgrad, const std::vector<std::vector<std::vector<float>>>& bgrad,
-        const std::vector<std::vector<std::vector<std::vector<float>>>>& act, const std::vector<std::vector<float>>& stats);
-
-// evaluation of network
+// evaluation of network with confusion matrix
 struct confMat {
     double avgAccuracy;
     double macro_f1Score;
@@ -59,11 +37,12 @@ struct confMat {
     std::vector<int> support;           // number of true instances per class
 };
 
-confMat confusionMatrixFunc(const std::vector<std::vector<int>>& confusionMatrix);
-void printConfusionMatrix(const std::vector<std::vector<int>>& confusionMatrix);
-void printClassificationReport(const confMat& cm, const std::vector<std::string>& classNames = {});
-
+// r-squared coefficient scores
 struct scores {
+    double totalSumOfSquares;       // total sum of squares of single epoch
+    double totalSumOfRegression;    // total sum of regression of single epoch
+    double totalSumOfError;         // total sum of error of single epoch
+
     float r2;           // coefficient of determination
     float sst;          // total sum of squares
     float ssr;          // regression sum of squares
@@ -101,6 +80,26 @@ struct test_progress {
     unsigned int correctPredictions;    // correct predictions done in testing
 };
 
+
+Statistics computeStats(const std::vector<float>& data);
+Statistics computeStats(const std::vector<std::vector<float>>& data);
+Statistics computeStats(const std::vector<std::vector<std::vector<float>>>& data);
+void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights,
+        const std::vector<std::vector<std::vector<float>>>& cgrad, const std::vector<std::vector<std::vector<float>>>& bgrad,
+        const std::vector<std::vector<float>>& act);
+void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights,
+        const std::vector<std::vector<std::vector<float>>>& cgrad, const std::vector<std::vector<std::vector<float>>>& bgrad,
+        const std::vector<std::vector<std::vector<float>>>& act);
+void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights,
+        const std::vector<std::vector<std::vector<float>>>& cgrad, const std::vector<std::vector<std::vector<float>>>& bgrad,
+        const std::vector<std::vector<std::vector<std::vector<float>>>>& act);
+void computeStatsForCsv(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights,
+        const std::vector<std::vector<std::vector<float>>>& cgrad, const std::vector<std::vector<std::vector<float>>>& bgrad,
+        std::vector<std::vector<float>>& stats);
+confMat confusionMatrixFunc(const std::vector<std::vector<int>>& confusionMatrix);
+void printConfusionMatrix(const std::vector<std::vector<int>>& confusionMatrix);
+void printClassificationReport(const confMat& cm, const std::vector<std::string>& classNames = {});
+void getScore(const std::vector<float>& actual, const std::vector<float>& pred, double SST, double SSR, double SSE);
 bool logProgressToCSV(const progress& p, const std::string& filePath);
 bool loadLastProgress(progress& p, const std::string& filePath);
 bool logTestProgressToCSV(const test_progress& p, const std::string& filePath);

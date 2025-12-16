@@ -127,7 +127,8 @@ public:
     #endif
 
     void zeroGradients();
-    void onlineTraining(const std::string& dataSetPath, bool useBatchTrain, bool useThreadOrBuffer);
+    void preTrainRun(const std::string& dataSetPath);
+    void onlineTraining(const std::string& dataSetPath, bool useThreadOrBuffer);
     void miniBatchTraining(const std::string& dataSetPath, bool useThreadOrBuffer);
     void fullDataSetTraining(const std::string& dataSetPath, bool useThreadOrBuffer);
     void test(const std::string& dataSetPath, bool useThreadOrBuffer);

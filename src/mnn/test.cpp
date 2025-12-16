@@ -80,7 +80,7 @@ void mnn::test(const std::string &dataSetPath, bool useThreadOrBuffer)
         if(maxIndex(this->output) == static_cast<size_t>(label)) {
             correctPredictions++;
         }
-
+        // accumulate loss
         accLoss += crossEntropy(this->output, target);
 
         if((i + 1) % 100 == 0 || (i + 1) == totalInputs) {
@@ -96,6 +96,8 @@ void mnn::test(const std::string &dataSetPath, bool useThreadOrBuffer)
         }
     }
 
+    this->confData = {};
+    this->confData = confusionMatrixFunc(this->confusion);
     this->testPrg.testError = (totalInputs > 0) ? (accLoss / totalInputs) : 0.0f;
     std::cout << "--- Test Finished (mnn) ---" << std::endl;
     std::cout << "Final Accuracy: " << ((float)correctPredictions / totalInputs) * 100.0f << "%" << std::endl;

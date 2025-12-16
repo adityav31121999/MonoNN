@@ -1,8 +1,63 @@
 #include "operators.hpp"
 #include <stdexcept>
 #include <numeric>
+#include <algorithm>
 #include <cmath>
 
+/**
+ * @brief Calculates the mean of a vector of floats.
+ * @param in The input vector.
+ * @return The mean value of the elements in the vector.
+ */
+float mean(const std::vector<float>& in) {
+    float sum = 0.0f;
+    std::accumulate(in.begin(), in.end(), sum);
+    return sum / in.size();
+}
+
+
+/**
+ * @brief Calculates the sum of the squared differences between two vectors.
+ * @param a The first vector.
+ * @param b The second vector.
+ * @return The sum of squared differences.
+ */
+float sumOfSquareOfDiff(const std::vector<float>& a, const std::vector<float> b) {
+    if (a.size() != b.size()) {
+        throw std::runtime_error("sumOfSquareOfDiff: Sizes of vector should be same: "
+                                 + std::to_string(a.size()) + " vs " + std::to_string(b.size()));
+    }
+
+    float sum = 0.0f;
+    for(int i = 0; i < a.size(); i++) {
+        sum += (a[i] - b[i]) * (a[i] - b[i]);
+    }
+    return sum;
+}
+
+
+/**
+ * @brief Calculates the sum of the squared differences between a vector and a scalar.
+ * @param a The input vector.
+ * @param b The scalar value.
+ * @return The sum of squared differences.
+ */
+float sumOfSquareOfDiff(const std::vector<float>& a, const float b) {
+    float sum = 0.0f;
+
+    for(int i = 0; i < a.size(); i++) {
+        sum += (a[i] - b) * (a[i] - b);
+    }
+    return sum;
+}
+
+
+/**
+ * @brief Calculates the Mean Squared Error (MSE) between output and target vectors.
+ * @param output The predicted output vector from the network.
+ * @param target The ground truth vector.
+ * @return The mean squared error.
+ */
 float mse(const std::vector<float>& output, const std::vector<float>& target) {
     if (output.size() != target.size() || output.empty()) {
         throw std::invalid_argument("Output and target vectors must have the same, non-zero size for MSE.");
@@ -16,6 +71,13 @@ float mse(const std::vector<float>& output, const std::vector<float>& target) {
     return sum_sq_err / output.size();
 }
 
+
+/**
+ * @brief Calculates the derivative of the Mean Squared Error (MSE) loss.
+ * @param output The predicted output vector from the network.
+ * @param target The ground truth vector.
+ * @return A vector representing the gradient of the MSE loss.
+ */
 std::vector<float> mseDer(const std::vector<float>& output, const std::vector<float>& target) {
     if (output.size() != target.size()) {
         throw std::invalid_argument("Output and target vectors must have the same size for MSE derivative.");
@@ -28,6 +90,13 @@ std::vector<float> mseDer(const std::vector<float>& output, const std::vector<fl
     return derivative;
 }
 
+
+/**
+ * @brief Calculates the Cross-Entropy loss for a single-label classification task.
+ * @param output The predicted probability distribution from the network (after softmax).
+ * @param target The one-hot encoded ground truth vector.
+ * @return The cross-entropy loss.
+ */
 float crossEntropy(const std::vector<float>& output, const std::vector<float>& target) {
     if (output.size() != target.size() || output.empty()) {
         throw std::invalid_argument("Output and target vectors must have the same, non-zero size for Cross-Entropy.");
@@ -43,6 +112,13 @@ float crossEntropy(const std::vector<float>& output, const std::vector<float>& t
     return -loss;
 }
 
+
+/**
+ * @brief Calculates the derivative of the Cross-Entropy loss.
+ * @param output The predicted probability distribution from the network.
+ * @param target The one-hot encoded ground truth vector.
+ * @return A vector representing the gradient of the cross-entropy loss.
+ */
 std::vector<float> crossEntropyDer(const std::vector<float>& output, const std::vector<float>& target) {
     if (output.size() != target.size()) {
         throw std::invalid_argument("Output and target vectors must have the same size for Cross-Entropy derivative.");
@@ -55,6 +131,13 @@ std::vector<float> crossEntropyDer(const std::vector<float>& output, const std::
     return derivative;
 }
 
+
+/**
+ * @brief Calculates the Binary Cross-Entropy loss, typically used for binary classification.
+ * @param output The predicted output vector (probabilities, usually after a sigmoid).
+ * @param target The binary ground truth vector (0s and 1s).
+ * @return The binary cross-entropy loss.
+ */
 float binaryCrossEntropy(const std::vector<float>& output, const std::vector<float>& target) {
     if (output.size() != target.size() || output.empty()) {
         throw std::invalid_argument("Output and target vectors must have the same, non-zero size for Binary Cross-Entropy.");
@@ -68,6 +151,13 @@ float binaryCrossEntropy(const std::vector<float>& output, const std::vector<flo
     return -loss / output.size();
 }
 
+
+/**
+ * @brief Calculates the derivative of the Binary Cross-Entropy loss.
+ * @param output The predicted output vector.
+ * @param target The binary ground truth vector.
+ * @return A vector representing the gradient of the binary cross-entropy loss.
+ */
 std::vector<float> binaryCrossEntropyDer(const std::vector<float>& output, const std::vector<float>& target) {
     if (output.size() != target.size()) {
         throw std::invalid_argument("Output and target vectors must have the same size for Binary Cross-Entropy derivative.");
@@ -81,6 +171,13 @@ std::vector<float> binaryCrossEntropyDer(const std::vector<float>& output, const
     return derivative;
 }
 
+
+/**
+ * @brief Calculates the Categorical Cross-Entropy loss for a batch of outputs.
+ * @param output A 2D vector of predicted probability distributions for a batch.
+ * @param target A 2D vector of one-hot encoded ground truth vectors for the batch.
+ * @return The average categorical cross-entropy loss over the batch.
+ */
 float categoricalCrossEntropy(const std::vector<std::vector<float>>& output, const std::vector<std::vector<float>>& target) {
     if (output.size() != target.size() || output[0].size() != target[0].size()) {
         throw std::runtime_error("Dimension mismatch: " + std::to_string(output.size()) + "x" + std::to_string(output[0].size()) 
@@ -96,6 +193,13 @@ float categoricalCrossEntropy(const std::vector<std::vector<float>>& output, con
     return -loss / output.size();
 }
 
+
+/**
+ * @brief Calculates the derivative of the Categorical Cross-Entropy loss for a batch.
+ * @param output A 2D vector of predicted probability distributions for a batch.
+ * @param target A 2D vector of one-hot encoded ground truth vectors for the batch.
+ * @return A 2D vector representing the gradient of the loss for the batch.
+ */
 std::vector<std::vector<float>> categoricalCrossEntropyDer(const std::vector<std::vector<float>>& output, const std::vector<std::vector<float>>& target) {
     if (output.size() != target.size() || output[0].size() != target[0].size()) {
         throw std::runtime_error("Dimension mismatch: " + std::to_string(output.size()) + "x" + std::to_string(output[0].size()) 

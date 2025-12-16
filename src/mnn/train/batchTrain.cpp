@@ -120,6 +120,9 @@ void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuff
         std::random_device rd;
         std::mt19937 g(rd());
         std::shuffle(filePaths.begin(), filePaths.end(), g);
+        // Resize confusion matrix before use
+        confusion.assign(outSize, std::vector<int>(outSize, 0));
+
         unsigned int correctPredictions = curPreds;
         for(int i = startFileIndex; i < totalFiles; i += batchSize) {
             std::vector<std::vector<float>> inBatch;
@@ -158,7 +161,15 @@ void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuff
                 if(maxIndex(outputBatch[j]) == maxIndex(expBatch[j])) {
                     correctPredictions++;
                 }
+                // Update confusion matrix
+                int label = maxIndex(expBatch[j]);
+                if (label < confusion.size() && maxIndex(outputBatch[j]) < confusion[0].size()) {
+                    confusion[label][maxIndex(outputBatch[j])]++;
+                }
                 this->trainPrg.accLoss += crossEntropy(outputBatch[j], expBatch[j]);
+                this->allScores.totalSumOfError += static_cast<double>(sumOfSquareOfDiff(outputBatch[j], expBatch[j]));
+                this->allScores.totalSumOfRegression += static_cast<double>(sumOfSquareOfDiff(expBatch[j], mean(outputBatch[j])));
+                this->allScores.totalSumOfSquares += static_cast<double>(sumOfSquareOfDiff(expBatch[j], mean(expBatch[j])));
             }
 
             // for progress tracking
@@ -194,7 +205,18 @@ void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuff
                 // computeStats(cweights, bweights, cgradients, bgradients, activate);
                 if (fileCount == totalFiles) {
                     std::cout << "All files processed. Next Epoch." << std::endl;
-                    this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(this->trainPrg.totalCycleCount);
+                    this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(fileCount);
+                    bool notBatch = 1; // It is batch training
+                    confData = {};
+                    confData = confusionMatrixFunc(confusion);
+                    allScores.sse = allScores.totalSumOfError / totalFiles;
+                    allScores.ssr = allScores.totalSumOfRegression / totalFiles;
+                    allScores.sst = allScores.totalSumOfSquares / totalFiles;
+                    allScores.r2 = allScores.ssr / allScores.sst;
+                    epochDataToCsv(dataSetPath + "/mnn1d", this->trainPrg.epoch, notBatch,
+                                    weightStats,
+                                    confusion,
+                                    confData, allScores, trainPrg);
                     break;
                 }
             }
@@ -210,6 +232,9 @@ void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuff
         this->trainPrg.correctPredPercent = 0;
         this->trainPrg.timeForCurrentSession = 0;
         this->trainPrg.trainingPredictions = 0;
+        curPreds = 0;
+        allScores = {};
+        confusion.assign(outSize, std::vector<int>(outSize, 0));
         this->learningRate = this->trainPrg.currentLearningRate;
         this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(this->trainPrg.filesProcessed);
         logProgressToCSV(this->trainPrg, this->path2progress);
@@ -337,6 +362,9 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
         std::random_device rd;
         std::mt19937 g(rd());
         std::shuffle(filePaths.begin(), filePaths.end(), g);
+        // Resize confusion matrix before use
+        confusion.assign(outWidth, std::vector<int>(outWidth, 0));
+
         unsigned int correctPredictions = curPreds;
         for(int i = startFileIndex; i < totalFiles; i += batchSize) {
             std::vector<std::vector<std::vector<float>>> inBatch;
@@ -377,7 +405,15 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
                 if(maxIndex(outputBatch[j]) == maxIndex(expBatch[j])) {
                     correctPredictions++;
                 }
+                // Update confusion matrix
+                int label = maxIndex(expBatch[j]);
+                if (label < confusion.size() && maxIndex(outputBatch[j]) < confusion[0].size()) {
+                    confusion[label][maxIndex(outputBatch[j])]++;
+                }
                 this->trainPrg.accLoss += crossEntropy(outputBatch[j], expBatch[j]);
+                this->allScores.totalSumOfError += static_cast<double>(sumOfSquareOfDiff(outputBatch[j], expBatch[j]));
+                this->allScores.totalSumOfRegression += static_cast<double>(sumOfSquareOfDiff(expBatch[j], mean(outputBatch[j])));
+                this->allScores.totalSumOfSquares += static_cast<double>(sumOfSquareOfDiff(expBatch[j], mean(expBatch[j])));
             }
 
             // for progress tracking
@@ -407,7 +443,17 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
                 filesInCurrentSession = 0;
                 if (fileCount == totalFiles) {
                     std::cout << "All files processed. Ending training." << std::endl;
-                    this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(this->trainPrg.totalCycleCount);
+                    this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(fileCount);
+                    bool notBatch = 1; // It is batch training
+                    confData = {};
+                    confData = confusionMatrixFunc(confusion);
+                    allScores.sse = allScores.totalSumOfError / totalFiles;
+                    allScores.ssr = allScores.totalSumOfRegression / totalFiles;
+                    allScores.sst = allScores.totalSumOfSquares / totalFiles;
+                    allScores.r2 = allScores.ssr / allScores.sst;
+                    epochDataToCsv(dataSetPath + "/mnn2d", this->trainPrg.epoch, notBatch,
+                                    weightStats,
+                                    confusion, confData, allScores, trainPrg);
                     break;
                 }
             }
@@ -424,6 +470,9 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
         this->trainPrg.filesProcessed = 0;
         this->trainPrg.timeForCurrentSession = 0;
         this->trainPrg.loss = 0;
+        curPreds = 0;
+        allScores = {};
+        confusion.assign(outWidth, std::vector<int>(outWidth, 0));
         this->trainPrg.timeForCurrentSession = 0;
         logProgressToCSV(this->trainPrg, this->path2progress);
     }

@@ -13,7 +13,7 @@
  * @return A confMat struct containing accuracy, precision, recall, F1-score, and 
  *      support for each class.
  */
-confMat confusionMatrixFunc(std::vector<std::vector<int>>& confusionMatrix) {
+confMat confusionMatrixFunc(const std::vector<std::vector<int>>& confusionMatrix) {
     confMat result;
     size_t n = confusionMatrix.size(); // number of classes
     if (n == 0) return result;
@@ -164,23 +164,4 @@ void printClassificationReport(const confMat& cm, const std::vector<std::string>
     std::cout << std::setw(36) << "Avg. Accuracy" << std::setw(24) << cm.avgAccuracy << "\n";
     std::cout << std::setw(36) << "Macro Avg F1" << std::setw(24) << cm.macro_f1Score << "\n";
     std::cout << std::setw(36) << "Weighted Avg F1" << std::setw(24) << cm.weighted_f1Score << "\n\n";
-}
-
-#include <fstream>
-#include <filesystem>
-
-/**
- * @brief log confusion matrix and scores to csv file for each epoch
- * @param consfusionMatrix confusion matrix to be logged
- * @param cm scores of accuracy and precision
- * @param toCsv address of csv file
- */
-void logConfusionStatsToCsv(const std::vector<std::vector<int>> &confusionMatrix, const confMat &cm, const std::string &toCsv)
-{
-    // create new csv file
-    FILE* newCSV = nullptr;
-
-    // add "confusion matrix" to the file
-    // log confusion matrix row by row
-    // add cm scores
 }

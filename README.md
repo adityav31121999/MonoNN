@@ -312,14 +312,20 @@ For this project, training and testing are performed, but validation is ignored.
 
 ### Evaluation Metrics
 Following are the metrics employed to evaludate performance of Networks in training and testing:
-- **Training**:
-  - Confusion Matrix
-    - Accuracy
-    - Precision
-    - Recall
-    - F1 scores, weighted F1 score and macro F1 score
-    - Average Accuracy
-  - $r^2$ coefficient of determination, sst, ssr, sse
-  - cross entropy loss
-- **Testing**:
-  - Prediction error and Accuracy
+- Confusion Matrix
+  - Accuracy
+  - Precision
+  - Recall
+  - F1 scores, weighted F1 score and macro F1 score
+  - Average Accuracy
+- $r^2$ coefficient of determination, sst, ssr, sse
+  - $T$: target/actual values
+  - $P$: predicted values
+  - $T_{mean} = \sum_{i}T_i$
+  - $sst = \sum_{i}\left({T_i - T_{mean}}\right)^2$
+  - $sse = \sum_{i}\left({T_i - P_i}\right)^2$
+  - $ssr = \sum_{i}\left({P_i - T_{mean}}\right)^2$
+  - $sst = ssr + sse$
+  - $R^2 = 1 - \frac{SSE}{SST} = \frac{SSR}{SST}$
+- cross entropy loss
+- Prediction error and Accuracy

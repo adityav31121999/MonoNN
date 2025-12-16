@@ -26,7 +26,7 @@ void mnn::clTrain1c(const std::vector<float>& input, const std::vector<float>& t
         else {
             // check for error and break if acceptable
             currloss = crossEntropy(output, target);
-            std::cout << "Current CE Loss: " << currloss << std::endl;
+            // std::cout << "Current CE Loss: " << currloss << std::endl;
 
             // 2. Backward propagation
             this->target = target;
@@ -344,7 +344,7 @@ void mnn2d::clTrain1c(const std::vector<std::vector<float>>& input, const std::v
         else {
             // check for error and break if acceptable
             currloss = crossEntropy(output, target);
-            std::cout << "Current CE Loss: " << currloss << std::endl;
+            // std::cout << "Current CE Loss: " << currloss << std::endl;
 
             // 2. Backward propagation
             this->target = target;
@@ -664,6 +664,9 @@ void mnn2d::clTrain1c(const std::vector<std::vector<float>>& input, const std::v
                 kernelUpdateWeights.setArg(0, d_bweights[i]);
                 kernelUpdateWeights.setArg(1, d_gradB[i]);
                 kernelUpdateWeights.setArg(2, (int)b_size);
+                kernelUpdateWeights.setArg(3, learningRate);
+                kernelUpdateWeights.setArg(4, LAMBDA_L1);
+                kernelUpdateWeights.setArg(5, LAMBDA_L2);
                 CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelUpdateWeights, cl::NullRange, globalUpdate, local_1d));
 
                 std::vector<float> c_upd(c_size), b_upd(b_size);

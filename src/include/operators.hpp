@@ -65,6 +65,9 @@ std::vector<std::vector<float>> softmaxDer(const std::vector<std::vector<float>>
 
 // errors
 
+float mean(const std::vector<float>&);
+float sumOfSquareOfDiff(const std::vector<float>& a, const std::vector<float> b);
+float sumOfSquareOfDiff(const std::vector<float>& a, const float b);
 float mse(const std::vector<float>& output, const std::vector<float>& target);
 float crossEntropy(const std::vector<float>& output, const std::vector<float>& target);
 float binaryCrossEntropy(const std::vector<float>& output, const std::vector<float>& target);

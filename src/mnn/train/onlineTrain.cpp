@@ -10,12 +10,16 @@
 #include "mnn2d.hpp"
 
 /**
+ * IMP: Online training with batches fails drastically and is not good.
+ * Hence, removed those parts from the online training definition.
+ */
+
+/**
  * @brief train network online on given dataset
  * @param dataSetPath path to dataset folder
- * @param isBatchTrain whether to use mini-batch online or online training
  * @param useThreadOrBuffer use threads in CPU and full buffer-based operation in CUDA and OpenCL
  */
-void mnn::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bool useThreadOrBuffer)
+void mnn::onlineTraining(const std::string &dataSetPath, bool useThreadOrBuffer)
 {
     // Access all image files from the dataset path
     std::vector<std::filesystem::path> filePaths;
@@ -80,175 +84,97 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bool
     this->trainPrg.totalTrainFiles = totalFiles;
     this->trainPrg.batchSize = batchSize;
     int sessionFiles = this->trainPrg.sessionSize * this->trainPrg.batchSize;
-    if(isBatchTrain == false)
-        std::cout << "Online Training For single file-2-file" << std::endl;
-    else
-        std::cout << "Online Training Batches of size : " << BATCH_SIZE << std::endl;
     std::cout << "Session Size (in batches/session): " << this->trainPrg.sessionSize << std::endl;
     std::cout << "Files in Single Session: " << sessionFiles << std::endl;
 
     // start time count
     auto startTime = std::chrono::high_resolution_clock::now();
 
-    // Train based on batch size
-    if (isBatchTrain == false) {
-        batchSize = 1;
-        learningRate = 0.001f;
-        std::cout << "learning rate: " << learningRate << std::endl;
-        for(const auto& filePath : filePaths) {
-            // Skip files that have already been processed in previous sessions
-            if (fileCount < this->trainPrg.filesProcessed) {
-                fileCount++;
-                continue;
-            }
-
-            // Convert image to a flat 1D vector
-            std::vector<float> in = flatten(cvMat2vec(image2grey(filePath.string())));
-            // Extract label from filename (e.g., "image_7.png" -> 7)
-            std::string filename = filePath.stem().string();
-            int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
-            // Create one-hot encoded target vector
-            std::vector<float> exp(this->outSize, 0.0f);
-            if (label < this->outSize) {
-                exp[label] = 1.0f;
-            }
-            for(int i = 0; i < in.size(); i++) {
-                in[i] /= 255;
-            }
-            target = exp;
-            // backend selection
-            #ifdef USE_CPU
-                (useThreadOrBuffer == 0) ? train(in, exp) : threadTrain(in, exp);
-            #elif USE_CU
-                (useThreadOrBuffer == 0) ? cuTrain(in, exp) : cuBufTrain(in, exp);
-            #elif USE_CL
-                (useThreadOrBuffer == 0) ? clTrain(in, exp) : clBufTrain(in, exp);
-            #endif
-
-            // for progress tracking
+    batchSize = 1;
+    learningRate = 0.001f;
+    std::cout << "learning rate: " << learningRate << std::endl;
+    for(const auto& filePath : filePaths) {
+        // Skip files that have already been processed in previous sessions
+        if (fileCount < this->trainPrg.filesProcessed) {
             fileCount++;
-            this->trainPrg.filesProcessed++;
-            filesInCurrentSession++;
-            bool sessionEnd = 0;
-            if (sessionFiles > 0 && filesInCurrentSession == this->trainPrg.sessionSize) {
-                std::cout << "Session file limit (" << this->trainPrg.sessionSize << ") reached." << std::endl;
-                auto endTime = std::chrono::high_resolution_clock::now();
-                this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
-                this->trainPrg.timeTakenForTraining = previousTrainingTime + this->trainPrg.timeForCurrentSession;
-                this->learningRate = this->trainPrg.currentLearningRate;
-                this->trainPrg.totalSessionsOfTraining++;
-                sessionEnd = 1;
-            }
-            std::cout<< "File count: " << fileCount << std::endl;
-
-            // If a session size is defined and reached, stop training for this session
-            if (sessionEnd == 1 || fileCount == totalFiles) {
-                std::cout << "Processed " << fileCount << "/" << totalFiles << " files..." << std::endl;
-                std::cout << "====== Diagnostics For Current Session ======" << std::endl;
-                computeStats(cweights, bweights, cgradients, bgradients, activate);
-                if (logProgressToCSV(this->trainPrg, this->path2progress) == 1)
-                    std::cout << "Progress logged successfully." << std::endl;
-                else 
-                    throw std::runtime_error("Failed to log progress to CSV: " + this->path2progress);
-                serializeWeights(cweights, bweights, binFileAddress);
-                std::cout << "============== To Next Session ==============" << std::endl;
-                filesInCurrentSession = 0; // Reset for the next session
-                if (fileCount == totalFiles) {
-                    std::cout << "All files processed. Ending training." << std::endl;
-                    this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(this->trainPrg.totalCycleCount);
-                    break;
-                }
-                startTime = std::chrono::high_resolution_clock::now();
-            }
+            continue;
         }
-    }
-    else {
-        batchSize = BATCH_SIZE;
-        this->learningRate = 0.01f;
-        std::cout << "learning rate: " << this->learningRate << std::endl;
-        this->inputBatch.resize(batchSize);
-        this->outputBatch.resize(batchSize);
-        this->targetBatch.resize(batchSize);
-        this->dotBatch.resize(layers, std::vector<std::vector<float>>(batchSize));
-        this->actBatch.resize(layers, std::vector<std::vector<float>>(batchSize));
-        for(int j = 0; j < batchSize; j++) {
-            this->inputBatch[j].resize(inSize, 0.0f);
-            this->outputBatch[j].resize(outSize, 0.0f);
-            this->targetBatch[j].resize(outSize, 0.0f);
+
+        // Convert image to a flat 1D vector
+        std::vector<float> in = flatten(cvMat2vec(image2grey(filePath.string())));
+        // Extract label from filename (e.g., "image_7.png" -> 7)
+        std::string filename = filePath.stem().string();
+        int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
+        // Create one-hot encoded target vector
+        std::vector<float> exp(this->outSize, 0.0f);
+        if (label < this->outSize) {
+            exp[label] = 1.0f;
         }
-        for(int i = 0; i < layers; i++) {
-            for(int j = 0; j < batchSize; j++) {
-                this->dotBatch[i][j].resize(width[i]);
-                this->actBatch[i][j].resize(width[i]);
-            }
+        for(int i = 0; i < in.size(); i++) {
+            in[i] /= 255;
         }
-        unsigned int batchesProcessed = 0;
-        int totalBatches = (totalFiles + batchSize - 1) / batchSize;
-        std::cout << "Training with batch size: " << batchSize << " (" << totalBatches << " batches)" << std::endl;
 
-        // Start iterating from the beginning of the batch where the last processed file was
-        int startFileIndex = (this->trainPrg.filesProcessed / batchSize) * batchSize;
-        std::cout << "Starting from file index " << startFileIndex << " to align with batches." << std::endl;
+        if (maxIndex(output) == maxIndex(exp)) this->trainPrg.trainingPredictions++;
+        if (label < confusion.size() && maxIndex(output) < confusion[0].size()) {
+            confusion[label][maxIndex(output)]++;
+        }
+        this->trainPrg.accLoss += crossEntropy(output, exp);
+        this->allScores.totalSumOfError += static_cast<double>(sumOfSquareOfDiff(output, exp));
+        this->allScores.totalSumOfRegression += static_cast<double>(sumOfSquareOfDiff(exp, mean(output)));
+        this->allScores.totalSumOfSquares += static_cast<double>(sumOfSquareOfDiff(exp, mean(exp)));
+        target = exp;
+        // backend selection
+        #ifdef USE_CPU
+            (useThreadOrBuffer == 0) ? train(in, exp) : threadTrain(in, exp);
+        #elif USE_CU
+            (useThreadOrBuffer == 0) ? cuTrain(in, exp) : cuBufTrain(in, exp);
+        #elif USE_CL
+            (useThreadOrBuffer == 0) ? clTrain(in, exp) : clBufTrain(in, exp);
+        #endif
 
-        for(int i = startFileIndex; i < totalFiles; i += batchSize) {
-            std::vector<std::vector<float>> inBatch;
-            std::vector<std::vector<float>> expBatch;
-            int currentBatchEnd = std::min<int>(i + batchSize, totalFiles);
-            // get image 
-            for(int j = i; j < currentBatchEnd; ++j) {
-                const auto& filePath = filePaths[j];
-                inBatch.push_back(flatten(cvMat2vec(image2grey(filePath.string()))));
-                std::string filename = filePath.stem().string();
-                int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
-                std::vector<float> exp(this->outSize, 0.0f);
-                if (label < this->outSize) {
-                    exp[label] = 1.0f;
-                }
-                expBatch.push_back(exp);
+        // for progress tracking
+        fileCount++;
+        this->trainPrg.filesProcessed++;
+        filesInCurrentSession++;
+        bool sessionEnd = 0;
+        if (sessionFiles > 0 && filesInCurrentSession == this->trainPrg.sessionSize) {
+            std::cout << "Session file limit (" << this->trainPrg.sessionSize << ") reached." << std::endl;
+            auto endTime = std::chrono::high_resolution_clock::now();
+            this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
+            this->trainPrg.timeTakenForTraining = previousTrainingTime + this->trainPrg.timeForCurrentSession;
+            this->learningRate = this->trainPrg.currentLearningRate;
+            this->trainPrg.totalSessionsOfTraining++;
+            sessionEnd = 1;
+        }
+        std::cout<< "File count: " << fileCount << std::endl;
+
+        // If a session size is defined and reached, stop training for this session
+        if (sessionEnd == 1 || fileCount == totalFiles) {
+            std::cout << "Processed " << fileCount << "/" << totalFiles << " files..." << std::endl;
+            std::cout << "====== Diagnostics For Current Session ======" << std::endl;
+            computeStats(cweights, bweights, cgradients, bgradients, activate);
+            if (logProgressToCSV(this->trainPrg, this->path2progress) == 1)
+                std::cout << "Progress logged successfully." << std::endl;
+            else 
+                throw std::runtime_error("Failed to log progress to CSV: " + this->path2progress);
+            serializeWeights(cweights, bweights, binFileAddress);
+            std::cout << "============== To Next Session ==============" << std::endl;
+            filesInCurrentSession = 0; // Reset for the next session
+            if (fileCount == totalFiles) {
+                std::cout << "All files processed. Ending training." << std::endl;
+                this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(fileCount);
+                bool notBatch = 0;
+                confData = {};
+                confData = confusionMatrixFunc(confusion);
+                allScores.sse = allScores.totalSumOfError / this->trainPrg.totalCycleCount;
+                allScores.ssr = allScores.totalSumOfRegression / this->trainPrg.totalCycleCount;
+                allScores.sst = allScores.totalSumOfSquares / this->trainPrg.totalCycleCount;
+                allScores.r2 = allScores.ssr / allScores.sst;
+                epochDataToCsv(dataSetPath + "/mnn1d", this->trainPrg.epoch, notBatch,
+                                weightStats, confusion, confData, allScores, trainPrg);
+                break;
             }
-            // backend selection
-            #ifdef USE_CPU
-                (useThreadOrBuffer == 0) ? trainBatch(inBatch, expBatch) : threadTrainBatch(inBatch, expBatch);
-            #elif USE_CU
-                (useThreadOrBuffer == 0) ? cuTrainBatch(inBatch, expBatch) : cuBufTrainBatch(inBatch, expBatch);
-            #elif USE_CL
-                (useThreadOrBuffer == 0) ? clTrainBatch(inBatch, expBatch) : clBufTrainBatch(inBatch, expBatch);
-            #endif
-
-            // for progress tracking
-            fileCount += batchSize;
-            this->trainPrg.filesProcessed += batchSize;
-            filesInCurrentSession += batchSize;
-            bool sessionEnd = 0;
-            if (sessionFiles > 0 && filesInCurrentSession == this->trainPrg.sessionSize) {
-                std::cout << "Session file limit (" << this->trainPrg.sessionSize << ") reached." << std::endl;
-                auto endTime = std::chrono::high_resolution_clock::now();
-                this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
-                this->trainPrg.timeTakenForTraining = previousTrainingTime + this->trainPrg.timeForCurrentSession;
-                this->trainPrg.currentLearningRate = learningRate;
-                this->trainPrg.totalSessionsOfTraining++;
-                sessionEnd = 1;
-            }
-            std::cout<< "File count: " << fileCount << std::endl;
-
-            // If a session size is defined and reached, stop training for this session
-            if (sessionEnd == 1 || fileCount == totalFiles) {
-                std::cout << "Processed " << fileCount << "/" << totalFiles << " files..." << std::endl;
-                std::cout << "====== Diagnostics For Current Session ======" << std::endl;
-                if (logProgressToCSV(this->trainPrg, this->path2progress) == 1)
-                    std::cout << "Progress logged successfully." << std::endl;
-                else 
-                    throw std::runtime_error("Failed to log progress to CSV: " + this->path2progress);
-                serializeWeights(cweights, bweights, binFileAddress);
-                std::cout << "============== To Next Session ==============" << std::endl;
-                filesInCurrentSession = 0; // Reset for the next session
-                if (fileCount == totalFiles) {
-                    std::cout << "All files processed. Ending training." << std::endl;
-                    this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(this->trainPrg.totalCycleCount);
-                    break;
-                }
-                startTime = std::chrono::high_resolution_clock::now();
-            }
+            startTime = std::chrono::high_resolution_clock::now();
         }
     }
 
@@ -264,10 +190,9 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bool
 /**
  * @brief train network online on given dataset
  * @param dataSetPath path to dataset folder.
- * @param isBatchTrain whether to use mini-batch online or online training
  * @param useThreadOrBuffer use threads in CPU and full buffer-based operation in CUDA and OpenCL
  */
-void mnn2d::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bool useThreadOrBuffer)
+void mnn2d::onlineTraining(const std::string &dataSetPath, bool useThreadOrBuffer)
 {
     // Access all image files from the dataset path
     std::vector<std::filesystem::path> filePaths;
@@ -332,186 +257,98 @@ void mnn2d::onlineTraining(const std::string &dataSetPath, bool isBatchTrain, bo
     this->trainPrg.totalTrainFiles = totalFiles;
     this->trainPrg.batchSize = batchSize;
     int sessionFiles = this->trainPrg.sessionSize * this->trainPrg.batchSize;
-    if(isBatchTrain == false)
-        std::cout << "Online Training For single file-2-file" << std::endl;
-    else
-        std::cout << "Online Training Batches of size : " << BATCH_SIZE << std::endl;
     std::cout << "Session Size (in batches/session): " << this->trainPrg.sessionSize << std::endl;
     std::cout << "Files in Single Session: " << sessionFiles << std::endl;
 
     // start time count
     auto startTime = std::chrono::high_resolution_clock::now();
 
-    // 3. Train based on batch size
-    if (isBatchTrain == false) {
-        batchSize = 1;
-        learningRate = 0.001f;
-        std::cout << "learning rate: " << learningRate << std::endl;
-        int fileCount = 0;
-        for(const auto& filePath : filePaths) {
-            // Skip files that have already been processed in previous sessions
-            if (fileCount < this->trainPrg.filesProcessed) {
-                fileCount++;
-                continue;
-            }
-
-            // Convert image to a 2D vector
-            std::vector<std::vector<float>> in = cvMat2vec(image2grey(filePath.string()));
-
-            // Extract label and create one-hot target vector
-            std::string filename = filePath.stem().string();
-            int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
-            std::vector<float> exp(this->outWidth, 0.0f);
-            if (label < this->outWidth) {
-                exp[label] = 1.0f;
-            }
-            for(int i = 0; i < in.size(); i++) {
-                for(int j = 0; j < in[i].size(); j++) {
-                    in[i][j] /= 255;
-                }
-            }
-            target = exp;
-            #ifdef USE_CPU
-                (useThreadOrBuffer == 0) ? train(in, exp) : threadTrain(in, exp);
-            #elif USE_CU
-                (useThreadOrBuffer == 0) ? cuTrain(in, exp) : cuBufTrain(in, exp);
-            #elif USE_CL
-                (useThreadOrBuffer == 0) ? clTrain(in, exp) : clBufTrain(in, exp);
-            #endif
-
-            // for progress tracking
+    batchSize = 1;
+    learningRate = 0.001f;
+    std::cout << "learning rate: " << learningRate << std::endl;
+    for(const auto& filePath : filePaths) {
+        // Skip files that have already been processed in previous sessions
+        if (fileCount < this->trainPrg.filesProcessed) {
             fileCount++;
-            this->trainPrg.filesProcessed++;
-            filesInCurrentSession++;
-            bool sessionEnd = 0;
-            if (sessionFiles > 0 && filesInCurrentSession == this->trainPrg.sessionSize) {
-                std::cout << "Session file limit (" << this->trainPrg.sessionSize << ") reached." << std::endl;
-                auto endTime = std::chrono::high_resolution_clock::now();
-                this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
-                this->trainPrg.timeTakenForTraining = previousTrainingTime + this->trainPrg.timeForCurrentSession;
-                this->learningRate = this->trainPrg.currentLearningRate;
-                this->trainPrg.totalSessionsOfTraining++;
-                sessionEnd = 1;
-            }
-            std::cout<< "File count: " << fileCount << std::endl;
+            continue;
+        }
 
-            // If a session size is defined and reached, stop training for this session
-            if (sessionEnd == 1 || fileCount == totalFiles) {
-                std::cout << "Processed " << fileCount << "/" << totalFiles << " files..." << std::endl;
-                std::cout << "====== Diagnostics For Current Session ======" << std::endl;
-                computeStats(cweights, bweights, cgradients, bgradients, activate);
-                if (logProgressToCSV(this->trainPrg, this->path2progress) == 1)
-                    std::cout << "Progress logged successfully." << std::endl;
-                else 
-                    throw std::runtime_error("Failed to log progress to CSV: " + this->path2progress);
-                serializeWeights(cweights, bweights, binFileAddress);
-                std::cout << "============== To Next Session ==============" << std::endl;
-                filesInCurrentSession = 0; // Reset for the next session
-                if (fileCount == totalFiles) {
-                    std::cout << "All files processed. Ending training." << std::endl;
-                    this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(this->trainPrg.totalCycleCount);
-                    break;
-                }
-                startTime = std::chrono::high_resolution_clock::now();
+        // Convert image to a 2D vector
+        std::vector<std::vector<float>> in = cvMat2vec(image2grey(filePath.string()));
+
+        // Extract label and create one-hot target vector
+        std::string filename = filePath.stem().string();
+        int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
+        std::vector<float> exp(this->outWidth, 0.0f);
+        if (label < this->outWidth) {
+            exp[label] = 1.0f;
+        }
+        for(int i = 0; i < in.size(); i++) {
+            for(int j = 0; j < in[i].size(); j++) {
+                in[i][j] /= 255;
             }
         }
-    }
-    else {
-        batchSize = BATCH_SIZE;
-        learningRate = 0.001f;
-        std::cout << "learning rate: " << learningRate << std::endl;
-        this->inputBatch.resize(batchSize);
-        this->outputBatch.resize(batchSize);
-        this->targetBatch.resize(batchSize);
-        this->dotBatch.resize(layers);
-        this->actBatch.resize(layers);
-        for(int j = 0; j < batchSize; j++) {
-            this->inputBatch[j].resize(inHeight, std::vector<float>(inWidth, 0.0f));
-            this->outputBatch[j].resize(outWidth, 0.0f);
-            this->targetBatch[j].resize(outWidth, 0.0f);
+
+        if (maxIndex(output) == maxIndex(exp)) this->trainPrg.trainingPredictions++;
+        if (label < confusion.size() && maxIndex(output) < confusion[0].size()) {
+            confusion[label][maxIndex(output)]++;
         }
-        for(int i = 0; i < layers; i++) {
-            this->dotBatch[i].resize(batchSize);
-            this->actBatch[i].resize(batchSize);
-            for(int j = 0; j < batchSize; j++) {
-                this->dotBatch[i][j].resize(inHeight, std::vector<float>(width[i], 0.0f));
-                this->actBatch[i][j].resize(inHeight, std::vector<float>(width[i], 0.0f));
-            }
+        this->trainPrg.accLoss += crossEntropy(output, exp);
+        this->allScores.totalSumOfError += static_cast<double>(sumOfSquareOfDiff(output, exp));
+        this->allScores.totalSumOfRegression += static_cast<double>(sumOfSquareOfDiff(exp, mean(output)));
+        this->allScores.totalSumOfSquares += static_cast<double>(sumOfSquareOfDiff(exp, mean(exp)));
+        target = exp;
+        #ifdef USE_CPU
+            (useThreadOrBuffer == 0) ? train(in, exp) : threadTrain(in, exp);
+        #elif USE_CU
+            (useThreadOrBuffer == 0) ? cuTrain(in, exp) : cuBufTrain(in, exp);
+        #elif USE_CL
+            (useThreadOrBuffer == 0) ? clTrain(in, exp) : clBufTrain(in, exp);
+        #endif
+
+        // for progress tracking
+        fileCount++;
+        this->trainPrg.filesProcessed++;
+        filesInCurrentSession++;
+        bool sessionEnd = 0;
+        if (sessionFiles > 0 && filesInCurrentSession == this->trainPrg.sessionSize) {
+            std::cout << "Session file limit (" << this->trainPrg.sessionSize << ") reached." << std::endl;
+            auto endTime = std::chrono::high_resolution_clock::now();
+            this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
+            this->trainPrg.timeTakenForTraining = previousTrainingTime + this->trainPrg.timeForCurrentSession;
+            this->learningRate = this->trainPrg.currentLearningRate;
+            this->trainPrg.totalSessionsOfTraining++;
+            sessionEnd = 1;
         }
-        unsigned int batchesProcessed = 0;
-        int totalBatches = (totalFiles + batchSize - 1) / batchSize;
-        std::cout << "Training with batch size: " << batchSize << " (" << totalBatches << " batches)" << std::endl;
+        std::cout<< "File count: " << fileCount << std::endl;
 
-        // Start iterating from the beginning of the batch where the last processed file was
-        int startFileIndex = (this->trainPrg.filesProcessed / batchSize) * batchSize;
-        std::cout << "Starting from file index " << startFileIndex << " to align with batches." << std::endl;
-
-        for(int i = startFileIndex; i < totalFiles; i += batchSize) {
-            std::cout << "Processing from file index: " << i << " to " << i + batchSize << std::endl;
-            std::vector<std::vector<std::vector<float>>> inBatch;
-            std::vector<std::vector<float>> expBatch;
-            int currentBatchEnd = std::min<int>(i + batchSize, totalFiles);
-
-            for(int j = i; j < currentBatchEnd; ++j) {
-                const auto& filePath = filePaths[j];
-                inBatch.push_back(cvMat2vec(image2grey(filePath.string())));
-
-                std::string filename = filePath.stem().string();
-                int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
-
-                std::vector<float> exp(this->outWidth, 0.0f);
-                if (label < this->outWidth) {
-                    exp[label] = 1.0f;
-                }
-                expBatch.push_back(exp);
+        // If a session size is defined and reached, stop training for this session
+        if (sessionEnd == 1 || fileCount == totalFiles) {
+            std::cout << "Processed " << fileCount << "/" << totalFiles << " files..." << std::endl;
+            std::cout << "====== Diagnostics For Current Session ======" << std::endl;
+            computeStats(cweights, bweights, cgradients, bgradients, activate);
+            if (logProgressToCSV(this->trainPrg, this->path2progress) == 1)
+                std::cout << "Progress logged successfully." << std::endl;
+            else 
+                throw std::runtime_error("Failed to log progress to CSV: " + this->path2progress);
+            serializeWeights(cweights, bweights, binFileAddress);
+            std::cout << "============== To Next Session ==============" << std::endl;
+            filesInCurrentSession = 0; // Reset for the next session
+            if (fileCount == totalFiles) {
+                std::cout << "All files processed. Ending training." << std::endl;
+                this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(fileCount);
+                bool notBatch = 0;
+                confData = {};
+                confData = confusionMatrixFunc(confusion);
+                allScores.sse = allScores.totalSumOfError / this->trainPrg.totalCycleCount;
+                allScores.ssr = allScores.totalSumOfRegression / this->trainPrg.totalCycleCount;
+                allScores.sst = allScores.totalSumOfSquares / this->trainPrg.totalCycleCount;
+                allScores.r2 = allScores.ssr / allScores.sst;
+                epochDataToCsv(dataSetPath + "/mnn2d", this->trainPrg.epoch, notBatch,
+                                weightStats, confusion, confData, allScores, trainPrg);
+                break;
             }
-
-            inputBatch = inBatch;
-            targetBatch = expBatch;
-            // backend selection
-            #ifdef USE_CPU
-                (useThreadOrBuffer == 0) ? trainBatch(inBatch, expBatch) : threadTrainBatch(inBatch, expBatch);
-            #elif USE_CU
-                (useThreadOrBuffer == 0) ? cuTrainBatch(inBatch, expBatch) : cuBufTrainBatch(inBatch, expBatch);
-            #elif USE_CL
-                (useThreadOrBuffer == 0) ? clTrainBatch(inBatch, expBatch) : clBufTrainBatch(inBatch, expBatch);
-            #endif
-
-            // for progress tracking
-            fileCount += batchSize;
-            this->trainPrg.filesProcessed += batchSize;
-            filesInCurrentSession += batchSize;
-            bool sessionEnd = 0;
-            if (sessionFiles > 0 && filesInCurrentSession == this->trainPrg.sessionSize) {
-                std::cout << "Session file limit (" << this->trainPrg.sessionSize << ") reached." << std::endl;
-                auto endTime = std::chrono::high_resolution_clock::now();
-                this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
-                this->trainPrg.timeTakenForTraining = previousTrainingTime + this->trainPrg.timeForCurrentSession;
-                this->learningRate = this->trainPrg.currentLearningRate;
-                this->trainPrg.totalSessionsOfTraining++;
-                sessionEnd = 1;
-            }
-            std::cout<< "File count: " << fileCount << std::endl;
-
-            // If a session size is defined and reached, stop training for this session
-            if (sessionEnd == 1 || fileCount == totalFiles) {
-                std::cout << "Processed " << fileCount << "/" << totalFiles << " files..." << std::endl;
-                std::cout << "====== Diagnostics For Current Session ======" << std::endl;
-                computeStats(cweights, bweights, cgradients, bgradients, activate);
-                if (logProgressToCSV(this->trainPrg, this->path2progress) == 1)
-                    std::cout << "Progress logged successfully." << std::endl;
-                else 
-                    throw std::runtime_error("Failed to log progress to CSV: " + this->path2progress);
-                serializeWeights(cweights, bweights, binFileAddress);
-                std::cout << "============== To Next Session ==============" << std::endl;
-                filesInCurrentSession = 0; // Reset for the next session
-                if (fileCount == totalFiles) {
-                    std::cout << "All files processed. Ending training." << std::endl;
-                    this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(this->trainPrg.totalCycleCount);
-                    break;
-                }
-                startTime = std::chrono::high_resolution_clock::now();
-            }
+            startTime = std::chrono::high_resolution_clock::now();
         }
     }
 

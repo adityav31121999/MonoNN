@@ -17,6 +17,7 @@ set(MNN_SOURCES
     mnn/train/batchTrain.cpp
     mnn/train/fullsetTrain.cpp
     mnn/test.cpp
+    mnn/preTrain.cpp
     mnn/evaluation/stats.cpp
     mnn/evaluation/progress.cpp
     mnn/evaluation/confusion.cpp
