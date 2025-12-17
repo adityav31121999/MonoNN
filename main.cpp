@@ -29,7 +29,6 @@ int main() {
     int inh = 28, inw = 28;
     int outSize = 10;
     float order = 1.4f;
-    bool batchMode = 0;
     bool useThreadOrBuffer = 0;
     std::vector<int> hidden_layers1 = { 784, 392, outSize };
     std::vector<int> hidden_layers2 = { 28, 56, 112, 112, 56, 28, outSize };

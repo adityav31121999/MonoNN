@@ -15,7 +15,7 @@ void mnn::cuTrain(const std::vector<float>& input, const std::vector<float>& tar
     float initialLR = this->learningRate;
     while (1) {
         // 1. Forward propagation
-        this->input = softmax(input);
+        this->input = input;
         cuForprop(this->input);
 
         if(maxIndex(output) == maxIndex(target)) {
@@ -88,7 +88,7 @@ void mnn::cuTrainBatch(const std::vector<std::vector<float>>& inputs, const std:
     
     float initialLR = this->learningRate;
     for (size_t i = 0; i < inputs.size(); ++i) {
-        this->inputBatch[i] = softmax(inputs[i]);
+        this->inputBatch[i] = inputs[i];
     }
 
     while (true) {
@@ -156,7 +156,7 @@ void mnn2d::cuTrain(const std::vector<std::vector<float>>& input, const std::vec
     float initialLR = this->learningRate;
     while (1) {
         // 1. Forward propagation
-        this->input = softmax(input);
+        this->input = input;
         cuForprop(this->input);
 
         if(maxIndex(output) == maxIndex(target)) {

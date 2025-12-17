@@ -20,6 +20,10 @@ void mnn::cuBufTrain(const std::vector<float>& input, const std::vector<float>& 
 
     try {
         // Allocate input/output/target buffers
+        CU_CHECK(cudaMalloc(&d_in, input.size() * sizeof(float)));
+        CU_CHECK(cudaMalloc(&d_exp, target.size() * sizeof(float)));
+        CU_CHECK(cudaMalloc(&d_out, output.size() * sizeof(float)));
+        CU_CHECK(cudaMalloc(&d_err, output.size() * sizeof(float)));
         CU_CHECK(cudaMemcpy(d_in, input.data(), input.size() * sizeof(float), cudaMemcpyHostToDevice));
         CU_CHECK(cudaMemcpy(d_exp, target.data(), target.size() * sizeof(float), cudaMemcpyHostToDevice));
 
@@ -106,6 +110,7 @@ void mnn::cuBufTrain(const std::vector<float>& input, const std::vector<float>& 
             CU_CHECK(cudaDeviceSynchronize());
 
             // Copy output D2H to check for correctness and loss
+            CU_CHECK(cudaMemcpy(output.data(), d_out, output.size() * sizeof(float), cudaMemcpyDeviceToHost));
 
             if (maxIndex(output) == maxIndex(target)) {
                 std::cout << "Correct output predicted at epoch " << epoch << " with loss " << crossEntropy(output, target) << "." << std::endl;
@@ -113,7 +118,7 @@ void mnn::cuBufTrain(const std::vector<float>& input, const std::vector<float>& 
             }
             epoch++;
             currloss = crossEntropy(output, target);
-            std::cout << "Current CE Loss at epoch " << epoch << " : " << currloss << std::endl;
+            // std::cout << "Current CE Loss at epoch " << epoch << " : " << currloss << std::endl;
 
             // --- Backward Propagation ---
             dim3 block_1d(WORKSIZE_1D);
@@ -322,7 +327,7 @@ void mnn2d::cuBufTrain(const std::vector<std::vector<float>>& input, const std::
             }
             epoch++;
             currloss = crossEntropy(output, target);
-            std::cout << "Current CE Loss at epoch " << epoch << " : " << currloss << std::endl;
+            // std::cout << "Current CE Loss at epoch " << epoch << " : " << currloss << std::endl;
 
             // --- Backward Propagation ---
             subtract<<<calculate_grid_1d(outWidth, WORKSIZE_1D), block_1d>>>(d_out, d_exp, d_err, (int)outWidth);

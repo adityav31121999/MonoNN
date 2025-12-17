@@ -147,6 +147,7 @@ void mnn::clTrain1c(const std::vector<float>& input, const std::vector<float>& t
             std::cout << "Correct output predicted with loss " << crossEntropy(output, target) << "." << std::endl;
         }
         else {
+            zeroGradients();
             this->target = target;
             // check for error and break if acceptable
             currloss = crossEntropy(output, target);
@@ -322,6 +323,16 @@ void mnn::clTrain1c(const std::vector<float>& input, const std::vector<float>& t
                 cweights[i] = reshape(c_upd, cweights[i].size(), cweights[i][0].size());
                 bweights[i] = reshape(b_upd, bweights[i].size(), bweights[i][0].size());
             }
+        }
+        // release all buffers
+        for (int i = 0; i < layers; ++i) {
+            d_cweights[i] = cl::Buffer();
+            d_bweights[i] = cl::Buffer();
+            d_gradC[i] = cl::Buffer();
+            d_gradB[i] = cl::Buffer();
+            d_dotProds[i] = cl::Buffer();
+            d_activate[i] = cl::Buffer();
+            d_incoming[i] = cl::Buffer();
         }
     }
 }
@@ -675,6 +686,15 @@ void mnn2d::clTrain1c(const std::vector<std::vector<float>>& input, const std::v
                 cweights[i] = reshape(c_upd, cweights[i].size(), cweights[i][0].size());
                 bweights[i] = reshape(b_upd, bweights[i].size(), bweights[i][0].size());
             }
+        }
+        // release the buffers
+        for (int i = 0; i < layers; ++i) {
+            d_cweights[i] = cl::Buffer();
+            d_bweights[i] = cl::Buffer();
+            d_gradC[i] = cl::Buffer();
+            d_gradB[i] = cl::Buffer();
+            d_dotProds[i] = cl::Buffer();
+            d_activate[i] = cl::Buffer();
         }
     }
 }

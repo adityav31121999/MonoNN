@@ -113,7 +113,7 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool useThreadOrBuffer)
         for(int i = 0; i < in.size(); i++) {
             in[i] /= 255;
         }
-
+        this->input = in;
         if (maxIndex(output) == maxIndex(exp)) this->trainPrg.trainingPredictions++;
         if (label < confusion.size() && maxIndex(output) < confusion[0].size()) {
             confusion[label][maxIndex(output)]++;
@@ -122,7 +122,7 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool useThreadOrBuffer)
         this->allScores.totalSumOfError += static_cast<double>(sumOfSquareOfDiff(output, exp));
         this->allScores.totalSumOfRegression += static_cast<double>(sumOfSquareOfDiff(exp, mean(output)));
         this->allScores.totalSumOfSquares += static_cast<double>(sumOfSquareOfDiff(exp, mean(exp)));
-        target = exp;
+        this->target = exp;
         // backend selection
         #ifdef USE_CPU
             (useThreadOrBuffer == 0) ? train(in, exp) : threadTrain(in, exp);

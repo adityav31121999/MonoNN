@@ -120,6 +120,7 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
             for(int i = 0; i < in.size(); i++) {
                 in[i] /= 255;
             }
+            input = in;
             target = exp;
             // backend selection
             #ifdef USE_CPU

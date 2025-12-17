@@ -32,6 +32,7 @@ void mnn::clTrain(const std::vector<float>& input, const std::vector<float>& tar
 
         // 2. Backward propagation
         this->target = target;
+        zeroGradients();
         clBackprop(this->target);
         prevloss = currloss;
         // if (i == EPOCH) break;
@@ -85,11 +86,6 @@ void mnn::clTrainBatch(const std::vector<std::vector<float>>& inputs, const std:
     int totalEpochs = 0;
     if (this->epochs < 1) this->epochs = 100;
     std::vector<int> correct(input.size(), -1);
-    
-    float initialLR = this->learningRate;
-    for (size_t i = 0; i < inputs.size(); ++i) {
-        this->inputBatch[i] = softmax(inputs[i]);
-    }
 
     while (true) {
         float total_loss = 0.0f;
@@ -108,15 +104,6 @@ void mnn::clTrainBatch(const std::vector<std::vector<float>>& inputs, const std:
         }
 
         if (correct_predictions == inputs.size()) {
-            std::cout << "Correct Predictions: ";
-            for (size_t i = 0; i < inputs.size(); ++i) {
-                std::cout << correct[i] << " ";
-            }
-            // loss calculation
-            for (size_t i = 0; i < inputs.size(); ++i) {
-                total_loss += crossEntropy(outputBatch[i], targets[i]);
-            }
-            currloss = static_cast<float>(total_loss / BATCH_SIZE);
             std::cout << "All " << inputs.size() << " outputs in the batch are correct after " << totalEpochs 
                       << " epochs. Training complete with error " << currloss << "." << std::endl;
             break;
@@ -140,9 +127,9 @@ void mnn::clTrainBatch(const std::vector<std::vector<float>>& inputs, const std:
             this->epochs += 50;
         }
         // targetBatch = targets;
+        zeroGradients();
         clBackprop(targets);
     }
-    this->learningRate = initialLR; // reset learning rate after clTraining
 }
 
 
@@ -174,6 +161,7 @@ void mnn2d::clTrain(const std::vector<std::vector<float>>& input, const std::vec
         // if (i == EPOCH) break;
         // 2. Backward propagation
         this->target = target;
+        zeroGradients();
         clBackprop(this->target);
     }
 
@@ -218,14 +206,14 @@ void mnn2d::clTrainBatch(const std::vector<std::vector<std::vector<float>>>& inp
     }
     if (outputBatch.size() != batchSize) {
         outputBatch.resize(batchSize);
+        targetBatch.resize(batchSize);
         for(int i=0; i<batchSize; ++i) outputBatch[i].resize(outWidth);
+        for(int i=0; i<batchSize; ++i) targetBatch[i].resize(outWidth);
     }
 
     int totalEpochs = 0;
     if (this->epochs < 1) this->epochs = 100;
     std::vector<int> correct(input.size(), -1);
-
-    float initialLR = this->learningRate;
 
     while (true) {
         float total_loss = 0.0f;
@@ -244,7 +232,8 @@ void mnn2d::clTrainBatch(const std::vector<std::vector<std::vector<float>>>& inp
         }
 
         if (correct_predictions == inputs.size()) {
-            std::cout << "All " << inputs.size() << " outputs in the batch are correct after " << totalEpochs << " epochs. clTraining complete." << std::endl;
+            std::cout << "All " << inputs.size() << " outputs in the batch are correct after " << totalEpochs 
+                      << " epochs. Training complete with error " << currloss << "." << std::endl;
             break;
         }
         else {
@@ -256,8 +245,8 @@ void mnn2d::clTrainBatch(const std::vector<std::vector<std::vector<float>>>& inp
             for (size_t i = 0; i < inputs.size(); ++i) {
                 total_loss += crossEntropy(outputBatch[i], targets[i]);
             }
-            currloss = static_cast<float>(total_loss / batchSize);
-            std::cout << " | Epoch: " << totalEpochs << "\tPredictions: " << correct_predictions << "/" << inputs.size() 
+            currloss = static_cast<float>(total_loss / BATCH_SIZE);
+            std::cout << "-> Epoch: " << totalEpochs << "\tPredictions: " << correct_predictions << "/" << inputs.size() 
                       << "\tAvg. CE Loss: " << currloss << std::endl;
         }
 
@@ -265,9 +254,9 @@ void mnn2d::clTrainBatch(const std::vector<std::vector<std::vector<float>>>& inp
             std::cout << correct_predictions << "/" << inputs.size() << " correct. Increasing epochs by 10 and continuing clTraining." << std::endl;
             this->epochs += 10;
         }
+        zeroGradients();
         clBackprop(targets);
     }
-    this->learningRate = initialLR; // reset learning rate after clTraining
 }
 
 #endif
