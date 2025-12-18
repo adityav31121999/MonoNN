@@ -29,7 +29,7 @@ void mnn::forprop(const std::vector<float>& input)
 
 /**
  * @brief batch forprop for monomial neural network with vector input
- * @param input input batch of vectors
+ * @param input batch input vectors
  */
 void mnn::forprop(const std::vector<std::vector<float>>& input)
 {

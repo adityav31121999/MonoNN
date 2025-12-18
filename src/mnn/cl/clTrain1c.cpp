@@ -17,8 +17,7 @@
 void mnn::clTrain1c(const std::vector<float>& input, const std::vector<float>& target, bool useBuffer) {
     if (useBuffer == 0) {
         // 1. Forward propagation
-        this->input = softmax(input);
-        clForprop(this->input);
+        clForprop(input);
 
         if(maxIndex(output) == maxIndex(target)) {
             std::cout << "Correct output predicted with loss " << crossEntropy(output, target) << "." << std::endl;
@@ -29,14 +28,12 @@ void mnn::clTrain1c(const std::vector<float>& input, const std::vector<float>& t
             // std::cout << "Current CE Loss: " << currloss << std::endl;
 
             // 2. Backward propagation
-            this->target = target;
-            clBackprop(this->target);
+            clBackprop(target);
             prevloss = currloss;
         }
     }
     else {
         // 1. Forward propagation
-        this->input = softmax(input);
         cl_int err;
         cl::NDRange local_1d(WORKSIZE_1D);
         cl::NDRange local_2d(WORKSIZE_2DX, WORKSIZE_2DY);
@@ -83,72 +80,70 @@ void mnn::clTrain1c(const std::vector<float>& input, const std::vector<float>& t
         }
 
         int epoch = 0;
-        float initialLR = this->learningRate;
 
-            // Copy weights H2D for current iteration
-            for (int i = 0; i < layers; ++i) {
-                std::vector<float> flat_c = flatten(cweights[i]);
-                std::vector<float> flat_b = flatten(bweights[i]);
-                CL_CHECK(clCommandQueue.enqueueWriteBuffer(d_cweights[i], CL_TRUE, 0, flat_c.size() * sizeof(float), flat_c.data()));
-                CL_CHECK(clCommandQueue.enqueueWriteBuffer(d_bweights[i], CL_TRUE, 0, flat_b.size() * sizeof(float), flat_b.data()));
-            }
+        // Copy weights H2D for current iteration
+        for (int i = 0; i < layers; ++i) {
+            std::vector<float> flat_c = flatten(cweights[i]);
+            std::vector<float> flat_b = flatten(bweights[i]);
+            CL_CHECK(clCommandQueue.enqueueWriteBuffer(d_cweights[i], CL_TRUE, 0, flat_c.size() * sizeof(float), flat_c.data()));
+            CL_CHECK(clCommandQueue.enqueueWriteBuffer(d_bweights[i], CL_TRUE, 0, flat_b.size() * sizeof(float), flat_b.data()));
+        }
 
-            // --- Forward Propagation (adapted from mnn::clForprop) ---
-            cl::Buffer d_current_act = d_in;
-            cl::Kernel kernelForward = kernels.at("kernelLayerForward2");
-            cl::Kernel kernelSigmoid = kernels.at("sigmoid");
+        // --- Forward Propagation (adapted from mnn::clForprop) ---
+        cl::Buffer d_current_act = d_in;
+        cl::Kernel kernelForward = kernels.at("kernelLayerForward2");
+        cl::Kernel kernelSigmoid = kernels.at("sigmoid");
 
-            // First layer
-            int current_in_size = input.size();
-            int current_out_size = width[0];
+        // First layer
+        int current_in_size = input.size();
+        int current_out_size = width[0];
+        kernelForward.setArg(0, d_current_act);
+        kernelForward.setArg(1, d_dotProds[0]);
+        kernelForward.setArg(2, d_cweights[0]);
+        kernelForward.setArg(3, d_bweights[0]);
+        kernelForward.setArg(4, current_in_size);
+        kernelForward.setArg(5, current_out_size);
+        kernelForward.setArg(6, order);
+        cl::NDRange globalForward = calculate_global_1d(WORKSIZE_1D, current_out_size);
+        CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelForward, cl::NullRange, globalForward, local_1d));
+
+        kernelSigmoid.setArg(0, d_dotProds[0]);
+        kernelSigmoid.setArg(1, d_activate[0]);
+        kernelSigmoid.setArg(2, current_out_size);
+        cl::NDRange globalSig = calculate_global_1d(WORKSIZE_1D, current_out_size);
+        CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSigmoid, cl::NullRange, globalSig, local_1d));
+
+        // Subsequent layers
+        for (int i = 1; i < layers; ++i) {
+            d_current_act = d_activate[i - 1];
+            current_in_size = width[i - 1];
+            current_out_size = width[i];
             kernelForward.setArg(0, d_current_act);
-            kernelForward.setArg(1, d_dotProds[0]);
-            kernelForward.setArg(2, d_cweights[0]);
-            kernelForward.setArg(3, d_bweights[0]);
+            kernelForward.setArg(1, d_dotProds[i]);
+            kernelForward.setArg(2, d_cweights[i]);
+            kernelForward.setArg(3, d_bweights[i]);
             kernelForward.setArg(4, current_in_size);
             kernelForward.setArg(5, current_out_size);
             kernelForward.setArg(6, order);
-            cl::NDRange globalForward = calculate_global_1d(WORKSIZE_1D, current_out_size);
+            globalForward = calculate_global_1d(WORKSIZE_1D, current_out_size);
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelForward, cl::NullRange, globalForward, local_1d));
 
-            kernelSigmoid.setArg(0, d_dotProds[0]);
-            kernelSigmoid.setArg(1, d_activate[0]);
+            kernelSigmoid.setArg(0, d_dotProds[i]);
+            kernelSigmoid.setArg(1, d_activate[i]);
             kernelSigmoid.setArg(2, current_out_size);
-            cl::NDRange globalSig = calculate_global_1d(WORKSIZE_1D, current_out_size);
+            globalSig = calculate_global_1d(WORKSIZE_1D, current_out_size);
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSigmoid, cl::NullRange, globalSig, local_1d));
+        }
+        CL_CHECK(clCommandQueue.finish());
 
-            // Subsequent layers
-            for (int i = 1; i < layers; ++i) {
-                d_current_act = d_activate[i - 1];
-                current_in_size = width[i - 1];
-                current_out_size = width[i];
-                kernelForward.setArg(0, d_current_act);
-                kernelForward.setArg(1, d_dotProds[i]);
-                kernelForward.setArg(2, d_cweights[i]);
-                kernelForward.setArg(3, d_bweights[i]);
-                kernelForward.setArg(4, current_in_size);
-                kernelForward.setArg(5, current_out_size);
-                kernelForward.setArg(6, order);
-                globalForward = calculate_global_1d(WORKSIZE_1D, current_out_size);
-                CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelForward, cl::NullRange, globalForward, local_1d));
-
-                kernelSigmoid.setArg(0, d_dotProds[i]);
-                kernelSigmoid.setArg(1, d_activate[i]);
-                kernelSigmoid.setArg(2, current_out_size);
-                globalSig = calculate_global_1d(WORKSIZE_1D, current_out_size);
-                CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSigmoid, cl::NullRange, globalSig, local_1d));
-            }
-            CL_CHECK(clCommandQueue.finish());
-
-            // Copy output D2H to check for correctness and loss
-            CL_CHECK(clCommandQueue.enqueueReadBuffer(d_activate[layers - 1], CL_TRUE, 0, output.size() * sizeof(float), output.data()));
+        // Copy output D2H to check for correctness and loss
+        CL_CHECK(clCommandQueue.enqueueReadBuffer(d_activate[layers - 1], CL_TRUE, 0, output.size() * sizeof(float), output.data()));
 
         if(maxIndex(output) == maxIndex(target)) {
             std::cout << "Correct output predicted with loss " << crossEntropy(output, target) << "." << std::endl;
         }
         else {
             zeroGradients();
-            this->target = target;
             // check for error and break if acceptable
             currloss = crossEntropy(output, target);
             // std::cout << "Current CE Loss: " << currloss << std::endl;
@@ -337,6 +332,7 @@ void mnn::clTrain1c(const std::vector<float>& input, const std::vector<float>& t
     }
 }
 
+
 /**
  * @brief trains the mnn2d network on a single input-target pair using OpenCL.
  * @param input The input matrix.
@@ -346,8 +342,7 @@ void mnn::clTrain1c(const std::vector<float>& input, const std::vector<float>& t
 void mnn2d::clTrain1c(const std::vector<std::vector<float>>& input, const std::vector<float>& target, bool useBuffer) {
     if (useBuffer == 0) {
         // 1. Forward propagation
-        this->input = softmax(input);
-        clForprop(this->input);
+        clForprop(input);
 
         if(maxIndex(output) == maxIndex(target)) {
             std::cout << "Correct output predicted with loss " << crossEntropy(output, target) << "." << std::endl;
@@ -358,14 +353,12 @@ void mnn2d::clTrain1c(const std::vector<std::vector<float>>& input, const std::v
             // std::cout << "Current CE Loss: " << currloss << std::endl;
 
             // 2. Backward propagation
-            this->target = target;
-            clBackprop(this->target);
+            clBackprop(target);
             prevloss = currloss;
         }
     }
     else {
         // 1. Forward propagation
-        this->input = softmax(input);
         cl_int err;
         cl::NDRange local_1d(WORKSIZE_1D);
         cl::NDRange local_2d(WORKSIZE_2DX, WORKSIZE_2DY);
@@ -409,7 +402,6 @@ void mnn2d::clTrain1c(const std::vector<std::vector<float>>& input, const std::v
         }
 
         int epoch = 0;
-        float initialLR = this->learningRate;
 
         for (int i = 0; i < layers; ++i) {
             std::vector<float> flat_c = flatten(cweights[i]);
@@ -494,7 +486,6 @@ void mnn2d::clTrain1c(const std::vector<std::vector<float>>& input, const std::v
             // std::cout << "Current CE Loss: " << currloss << std::endl;
 
             // 2. Backward propagation
-            this->target = target; // Set target for backprop
             cl::Kernel kernelSub = kernels.at("subtract");
             cl::Kernel kernelSoftmaxDer = kernels.at("softmaxDer");
             cl::Kernel kernelHadamard2 = kernels.at("hadamard2");

@@ -15,8 +15,7 @@ void mnn::train1c(const std::vector<float>& input, const std::vector<float>& tar
     // single cycle training
     if (useThread == 0) {
         // 1. Forward propagation
-        this->input = softmax(input);
-        forprop(this->input);
+        forprop(input);
 
         if(maxIndex(output) == maxIndex(target)) {
             std::cout << "Correct output predicted with loss " << crossEntropy(output, target) << "." << std::endl;
@@ -32,7 +31,6 @@ void mnn::train1c(const std::vector<float>& input, const std::vector<float>& tar
         }
     }
     else {
-        this->input = softmax(input);
         layerForwardThread(input, dotProds[0], cweights[0], bweights[0], order);
         activate[0] = sigmoid(dotProds[0]);
         // from 2nd to last
@@ -51,11 +49,10 @@ void mnn::train1c(const std::vector<float>& input, const std::vector<float>& tar
             // std::cout << "Current CE Loss: " << currloss << std::endl;
 
             // 2. Backward propagation
-            this->target = target;
             zeroGradients();
             std::vector<float> output_error(outSize, 0.0f);
             for(int i = 0; i < outSize; i++) {
-                output_error[i] = activate[layers-1][i] - target[i];
+                output_error[i] = output[i] - target[i];
             }
             std::vector<float> incoming_gradient = output_error;
             // Backpropagate the error
@@ -87,8 +84,7 @@ void mnn::train1c(const std::vector<float>& input, const std::vector<float>& tar
 void mnn2d::train1c(const std::vector<std::vector<float>>& input, const std::vector<float>& target, bool useThread) {
     if (useThread == 0) {
         // 1. Forward propagation
-        this->input = softmax(input);
-        forprop(this->input);
+        forprop(input);
 
         if(maxIndex(output) == maxIndex(target)) {
             std::cout << "Correct output predicted with loss " << crossEntropy(output, target) << "." << std::endl;
@@ -105,7 +101,6 @@ void mnn2d::train1c(const std::vector<std::vector<float>>& input, const std::vec
     }
     else {
         // 1. Forward propagation
-        this->input = softmax(input);
         // first layer
         layerForward(input, dotProds[0], cweights[0], bweights[0], order);
         activate[0] = reshape(softmax(flatten(dotProds[0])), dotProds[0].size(), dotProds[0][0].size());
@@ -127,7 +122,6 @@ void mnn2d::train1c(const std::vector<std::vector<float>>& input, const std::vec
 
             // if (i == EPOCH) break;
             // 2. Backward propagation
-            this->target = target;
             zeroGradients();
             std::vector<float> output_error(target.size(), 0.0f);
             for(int i = 0; i < outWidth; i++) {

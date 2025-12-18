@@ -13,10 +13,9 @@
  */
 void mnn::backprop(const std::vector<float>& expected) {
     zeroGradients();
-    this->target = expected;
     std::vector<float> output_error(outSize, 0.0f);
     for(int i = 0; i < outSize; i++) {
-        output_error[i] = activate[layers-1][i] - expected[i];
+        output_error[i] = output[i] - expected[i];
     }
     std::vector<float> incoming_gradient = output_error;
     // Backpropagate the error
@@ -45,7 +44,6 @@ void mnn::backprop(const std::vector<float>& expected) {
 void mnn::backprop(const std::vector<std::vector<float>>& expected)
 {    
     zeroGradients();
-    this->targetBatch = expected;
     std::vector<std::vector<float>> output_error(expected.size(), std::vector<float>(outSize, 0.0f));
     for(int i = 0; i < expected.size(); i++) {
         for(int j = 0; j < outSize; j++) {
@@ -80,7 +78,6 @@ void mnn::backprop(const std::vector<std::vector<float>>& expected)
  */
 void mnn2d::backprop(const std::vector<float>& expected) {
     zeroGradients();
-    this->target = expected;
     std::vector<float> output_error(target.size(), 0.0f);
     for(int i = 0; i < outWidth; i++) {
         output_error[i] = output[i] - expected[i];
@@ -118,7 +115,6 @@ void mnn2d::backprop(const std::vector<float>& expected) {
  */
 void mnn2d::backprop(const std::vector<std::vector<float>>& expected) {
     zeroGradients();
-    this->targetBatch = expected;
     std::vector<std::vector<float>> output_error(expected.size(), std::vector<float>(expected[0].size(), 0.0f));
     for(int i = 0; i < expected.size(); i++) {
         for(int j = 0; j < expected[i].size(); j++) {

@@ -12,11 +12,9 @@
  */
 void mnn::train(const std::vector<float>& input, const std::vector<float>& target) {
     int i = 0;
-    float initialLR = this->learningRate;
     while (1) {
         // 1. Forward propagation
-        this->input = softmax(input);
-        forprop(this->input);
+        forprop(input);
 
         if(maxIndex(output) == maxIndex(target)) {
             std::cout << "Correct output predicted :) at epoch " << i << " with loss " << crossEntropy(output, target) << "." << std::endl;
@@ -31,13 +29,11 @@ void mnn::train(const std::vector<float>& input, const std::vector<float>& targe
                   // << "\nOpting for new learning rate: " << this->learningRate << std::endl;
 
         // 2. Backward propagation
-        this->target = target;
-        backprop(this->target);
+        backprop(target);
         prevloss = currloss;
         // if (i == EPOCH) break;
     }
 
-    this->learningRate = initialLR; // reset learning rate after training
     std::cout << "Training complete for this input-target pair." << std::endl;
 }
 
@@ -85,15 +81,10 @@ void mnn::trainBatch(const std::vector<std::vector<float>>& inputs, const std::v
     int totalEpochs = 0;
     if (this->epochs < 1) this->epochs = 100;
     std::vector<int> correct(input.size(), -1);
-    
-    float initialLR = this->learningRate;
-    for (size_t i = 0; i < inputs.size(); ++i) {
-        this->inputBatch[i] = softmax(inputs[i]);
-    }
 
     while (true) {
         float total_loss = 0.0f;
-        forprop(inputBatch);       
+        forprop(inputs);       
         totalEpochs++;
 
         int correct_predictions = 0;
@@ -132,7 +123,7 @@ void mnn::trainBatch(const std::vector<std::vector<float>>& inputs, const std::v
         // targetBatch = targets;
         backprop(targets);
     }
-    this->learningRate = initialLR; // reset learning rate after training
+    std::cout << "Training for batch completed." << std::endl;
 }
 
 
@@ -143,11 +134,8 @@ void mnn::trainBatch(const std::vector<std::vector<float>>& inputs, const std::v
  */
 void mnn2d::train(const std::vector<std::vector<float>>& input, const std::vector<float>& target) {
     int i = 0;
-    float initialLR = this->learningRate;
     while (1) {
-        // 1. Forward propagation
-        this->input = softmax(input);
-        forprop(this->input);
+        forprop(input);
 
         if(maxIndex(output) == maxIndex(target)) {
             std::cout << "Correct output predicted :) at epoch " << i << "." << std::endl;
@@ -163,11 +151,9 @@ void mnn2d::train(const std::vector<std::vector<float>>& input, const std::vecto
 
         // if (i == EPOCH) break;
         // 2. Backward propagation
-        this->target = target;
-        backprop(this->target);
+        backprop(target);
     }
 
-    this->learningRate = initialLR; // reset learning rate after training
     std::cout << "Training complete for this input-target pair." << std::endl;
 }
 
@@ -215,11 +201,9 @@ void mnn2d::trainBatch(const std::vector<std::vector<std::vector<float>>>& input
     if (this->epochs < 1) this->epochs = 100;
     std::vector<int> correct(input.size(), -1);
 
-    float initialLR = this->learningRate;
-
     while (true) {
         float total_loss = 0.0f;
-        forprop(inputBatch); // Batch forprop
+        forprop(inputs); // Batch forprop
         totalEpochs++;
 
         int correct_predictions = 0;
@@ -257,7 +241,7 @@ void mnn2d::trainBatch(const std::vector<std::vector<std::vector<float>>>& input
         }
         backprop(targets);
     }
-    this->learningRate = initialLR; // reset learning rate after training
+    std::cout << "Training for batch completed." << std::endl;
 }
 
 #endif

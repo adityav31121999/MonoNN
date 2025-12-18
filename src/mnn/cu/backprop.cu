@@ -4,8 +4,8 @@
 #include <cuda_runtime.h>
 #include <vector>
 #include <stdexcept>
-#include <algorithm> // For std::copy
-#include <cmath> // For std::ceil
+#include <algorithm>
+#include <cmath>
 #include <iostream>
 
 /**

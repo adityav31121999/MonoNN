@@ -17,7 +17,6 @@
 void mnn::cuTrain1c(const std::vector<float>& input, const std::vector<float>& target, bool useBuffer) {
     if (useBuffer == 0) {
         // 1. Forward propagation
-        this->input = softmax(input);
         cuForprop(input);
 
         if(maxIndex(output) == maxIndex(target)) {
@@ -29,14 +28,12 @@ void mnn::cuTrain1c(const std::vector<float>& input, const std::vector<float>& t
             // std::cout << "Current CE Loss: " << currloss << std::endl;
 
             // 2. Backward propagation
-            this->target = target;
             cuBackprop(target);
             prevloss = currloss;
         }
     }
     else {
         // 1. Forward propagation
-        this->input = softmax(input);
         dim3 local_1d(WORKSIZE_1D);
         dim3 local_2d(WORKSIZE_2D_X, WORKSIZE_2D_Y);
 
@@ -134,7 +131,6 @@ void mnn::cuTrain1c(const std::vector<float>& input, const std::vector<float>& t
             // std::cout << "Current CE Loss: " << currloss << std::endl;
 
             // 2. Backward propagation
-            this->target = target;
             zeroGradients();
 
             CU_CHECK(cudaMemcpy(d_out, d_activate[layers-1], output.size() * sizeof(float), cudaMemcpyDeviceToDevice));
@@ -265,11 +261,9 @@ void mnn::cuTrain1c(const std::vector<float>& input, const std::vector<float>& t
  * @param useBuffer 0 for stand alone functions or 1 for all-buffers-in-single function 
  */
 void mnn2d::cuTrain1c(const std::vector<std::vector<float>>& input, const std::vector<float>& target, bool useBuffer) {
-    this->target = target;
     if (useBuffer == 0) {
         // 1. Forward propagation
-        this->input = softmax(input);
-        cuForprop(this->input);
+        cuForprop(input);
 
         if(maxIndex(output) == maxIndex(target)) {
             std::cout << "Correct output predicted with loss " << crossEntropy(output, target) << "." << std::endl;
@@ -280,8 +274,7 @@ void mnn2d::cuTrain1c(const std::vector<std::vector<float>>& input, const std::v
             // std::cout << "Current CE Loss: " << currloss << std::endl;
 
             // 2. Backward propagation
-            this->target = target;
-            cuBackprop(this->target);
+            cuBackprop(target);
             prevloss = currloss;
         }
     }
@@ -383,7 +376,6 @@ void mnn2d::cuTrain1c(const std::vector<std::vector<float>>& input, const std::v
             currloss = crossEntropy(output, target);
 
             // 2. Backward propagation
-            this->target = target;
             zeroGradients();
 
             // Initial error (output - expected)

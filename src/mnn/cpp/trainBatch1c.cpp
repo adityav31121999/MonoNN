@@ -47,13 +47,10 @@ void mnn::trainBatch1c(const std::vector<std::vector<float>>& inputs, const std:
     }
 
     std::vector<int> correct(input.size(), -1);
-    for (size_t i = 0; i < inputs.size(); ++i) {
-        this->inputBatch[i] = softmax(inputs[i]);
-    }
 
     float total_loss = 0.0f;
     if (useThread == 0) {
-        forprop(inputBatch);
+        forprop(inputs);
 
         int correct_predictions = 0;
         for (size_t i = 0; i < inputs.size(); ++i) {
@@ -203,7 +200,7 @@ void mnn2d::trainBatch1c(const std::vector<std::vector<std::vector<float>>>& inp
     float total_loss = 0.0f;
 
     if (useThread == 0) {
-        forprop(inputBatch); // Batch forprop
+        forprop(inputs); // Batch forprop
 
         int correct_predictions = 0;
         for (size_t i = 0; i < inputs.size(); ++i) {

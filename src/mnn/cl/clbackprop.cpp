@@ -280,7 +280,7 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
         d_out = cl::Buffer(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * output.size(), output.data(), &err); CL_CHECK(err);
         d_exp = cl::Buffer(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * expected.size(), (void*)expected.data(), &err); CL_CHECK(err);
         d_err = cl::Buffer(clContext, CL_MEM_READ_WRITE, sizeof(float) * expected.size()); CL_CHECK(err);
-        
+
         // Kernels
         auto kernelSub = kernels.at("subtract");
         auto kernelSoftmaxDer = kernels.at("softmaxDer");
