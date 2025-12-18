@@ -9,6 +9,8 @@
 #include "mnn.hpp"
 #include "mnn2d.hpp"
 
+// for MNN
+
 /**
  * @brief train network with full dataset passed every epoch
  * @param dataSetPath path to dataset folder
@@ -155,7 +157,7 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
                 this->trainPrg.trainingPredictions = correctPredictions;
                 sessionEnd = 1;
                 startTime = std::chrono::high_resolution_clock::now();
-                std::cout << "Epoch: " << this->trainPrg.epoch << "\tFiles: " << fileCount << "/" << totalFiles
+                std::cout << "Epoch: " << this->trainPrg.epoch << "\tFiles Processed: " << fileCount << "/" << totalFiles
                           << " \tPredictions: " << correctPredictions
                           << " \tTraining Accuracy: " << this->trainPrg.correctPredPercent << "%"
                           << " \tLoss: " << this->trainPrg.accLoss / static_cast<float>(this->trainPrg.filesProcessed)
@@ -165,8 +167,9 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
             // If a session size is defined and reached, stop training for this session
             if (sessionEnd == 1 || fileCount == totalFiles) {
                 // computeStats(cweights, bweights, cgradients, bgradients, activate);
-                if (logProgressToCSV(this->trainPrg, this->path2progress) != 1)
+                if (logProgressToCSV(this->trainPrg, this->path2progress) != 1) {
                     throw std::runtime_error("Failed to log progress to CSV: " + this->path2progress);
+                }
                 serializeWeights(cweights, bweights, binFileAddress);
                 filesInCurrentSession = 0; // Reset for the next session
                 if (fileCount == totalFiles) {
@@ -202,11 +205,16 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
         this->trainPrg.loss = 0;
         this->trainPrg.timeForCurrentSession = 0;
         logProgressToCSV(this->trainPrg, this->path2progress);
+        allScores = {};
+        confData = {};
+        confusion.clear();
+        confusion.assign(outSize, std::vector<int>(outSize, 0));
     }
 
     std::cout << "--- Training Finished (mnn) ---" << std::endl;
 }
 
+// for MNN2D
 
 /**
  * @brief train network with full dataset passed every epoch
@@ -356,7 +364,7 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
                 this->trainPrg.trainingPredictions = correctPredictions;
                 sessionEnd = 1;
                 startTime = std::chrono::high_resolution_clock::now();
-                std::cout << "Epoch: " << this->trainPrg.epoch << "\tFiles: " << fileCount << "/" << totalFiles
+                std::cout << "Epoch: " << this->trainPrg.epoch << "\tFiles Processed: " << fileCount << "/" << totalFiles
                           << " \tPredictions: " << correctPredictions
                           << " \tTraining Accuracy: " << this->trainPrg.correctPredPercent << "%"
                           << " \tLoss: " << this->trainPrg.accLoss / static_cast<float>(this->trainPrg.filesProcessed)
@@ -366,8 +374,9 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
             // If a session size is defined and reached, stop training for this session
             if (sessionEnd == 1 || fileCount == totalFiles) {
                 // computeStats(cweights, bweights, cgradients, bgradients, activate);
-                if (logProgressToCSV(this->trainPrg, this->path2progress) != 1)
+                if (logProgressToCSV(this->trainPrg, this->path2progress) != 1) {
                     throw std::runtime_error("Failed to log progress to CSV: " + this->path2progress);
+                }
                 serializeWeights(cweights, bweights, binFileAddress);
                 filesInCurrentSession = 0; // Reset for the next session
                 if (fileCount == totalFiles) {
@@ -403,6 +412,10 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
         this->trainPrg.loss = 0;
         this->trainPrg.timeForCurrentSession = 0;
         logProgressToCSV(this->trainPrg, this->path2progress);
+        allScores = {};
+        confData = {};
+        confusion.clear();
+        confusion.assign(outWidth, std::vector<int>(outWidth, 0));
     }
 
     std::cout << "--- Training Finished (mnn) ---" << std::endl;

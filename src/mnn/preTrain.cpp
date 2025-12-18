@@ -8,10 +8,12 @@
 #include "mnn.hpp"
 #include "mnn2d.hpp"
 
+// for MNN
+
 /**
- * @brief pre-training results for weights, gradients (0 all) and prediction, perform with 
- *  both train + test files. This will be used in analysis of training and testing.
- * @param dataSetPath path to data set
+ * @brief pre-training results for weights(stats),set gradients (0 in stats) and prediction, perform with 
+ *  both train + test files. This will be used in analysis of training and testing (epoch-wise).
+ * @param dataSetPath path to complete data 
  */
 void mnn::preTrainRun(const std::string &dataSetPath)
 {
@@ -32,7 +34,8 @@ void mnn::preTrainRun(const std::string &dataSetPath)
 
     if (trainFilePaths.empty()) {
         std::cout << "Warning: No files found in train dataset directory: " << trainPath << std::endl;
-    } else {
+    }
+    else {
         std::cout << "\n--- Starting Pre-Train Run on Training Set (mnn) ---" << std::endl;
         std::sort(trainFilePaths.begin(), trainFilePaths.end());
         int totalTrainFiles = trainFilePaths.size();
@@ -81,7 +84,7 @@ void mnn::preTrainRun(const std::string &dataSetPath)
         std::cout << "Pre-Train on Training Set Finished." << std::endl;
         std::cout << "Total Files: " << totalTrainFiles << std::endl;
         std::cout << "Correct Predictions: " << correctPredictions << std::endl;
-        std::cout << "Accuracy: " << accuracy << "%" << std::endl;
+        std::cout << "Correct Predictions Percentage: " << accuracy << "%" << std::endl;
         std::cout << "Average Loss: " << averageLoss << std::endl;
 
         // Log results
@@ -89,11 +92,11 @@ void mnn::preTrainRun(const std::string &dataSetPath)
         preTrainProgress.totalTrainFiles = totalTrainFiles;
         preTrainProgress.correctPredPercent = accuracy;
         preTrainProgress.loss = averageLoss;
-        preTrainProgress.epoch = 0; // Pre-training is epoch 0
+        preTrainProgress.epoch = 0;
 
         confData = confusionMatrixFunc(confusion);
         computeStatsForCsv(cweights, bweights, cgradients, bgradients, weightStats);
-        epochDataToCsv(dataSetPath + "/mnn1d_pretrain_train", 0, false, weightStats, confusion, confData, allScores, preTrainProgress);
+        epochDataToCsv(dataSetPath + "/mnn1d_pretrain", 0, false, weightStats, confusion, confData, allScores, preTrainProgress);
     }
 
     /*----------------------
@@ -126,29 +129,29 @@ void mnn::preTrainRun(const std::string &dataSetPath)
 
     for (const auto& filePath : testFilePaths) {
         
-            // Convert image to a flat 1D vector
-            std::vector<float> in = flatten(cvMat2vec(image2grey(filePath.string())));
+        // Convert image to a flat 1D vector
+        std::vector<float> in = flatten(cvMat2vec(image2grey(filePath.string())));
         for(auto& val : in) {
             val /= 255.0f;
         }
 
-            // Extract label from filename (e.g., "image_7.png" -> 7)
-            std::string filename = filePath.stem().string();
-            int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
+        // Extract label from filename (e.g., "image_7.png" -> 7)
+        std::string filename = filePath.stem().string();
+        int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
 
-            // Create one-hot encoded target vector
-            std::vector<float> exp(this->outSize, 0.0f);
-            if (label < this->outSize) {
-                exp[label] = 1.0f;
-            }
+        // Create one-hot encoded target vector
+        std::vector<float> exp(this->outSize, 0.0f);
+        if (label < this->outSize) {
+            exp[label] = 1.0f;
+        }
 
-            #ifdef USE_CPU
-                forprop(in);
-            #elif USE_CU
-                cuForprop(in);
-            #elif USE_CL
-                clForprop(in);
-            #endif
+        #ifdef USE_CPU
+            forprop(in);
+        #elif USE_CU
+            cuForprop(in);
+        #elif USE_CL
+            clForprop(in);
+        #endif
 
         if (maxIndex(output) == maxIndex(exp)) {
             correctPredictions++;
@@ -183,11 +186,12 @@ void mnn::preTrainRun(const std::string &dataSetPath)
     std::cout << "--- Pre-Training Run Finished (mnn) ---" << std::endl;
 }
 
+// for MNN2D
 
 /**
- * @brief pre-training results for weights, gradients (0 all) and prediction, perform with 
- *  both train + test files. This will be used in analysis of training and testing.
- * @param dataSetPath path to data set
+ * @brief pre-training results for weights(stats),set gradients (0 in stats) and prediction, perform with 
+ *  both train + test files. This will be used in analysis of training and testing (epoch-wise).
+ * @param dataSetPath path to complete data 
  */
 void mnn2d::preTrainRun(const std::string &dataSetPath)
 {
@@ -255,7 +259,7 @@ void mnn2d::preTrainRun(const std::string &dataSetPath)
         std::cout << "Pre-Train on Training Set Finished." << std::endl;
         std::cout << "Total Files: " << totalTrainFiles << std::endl;
         std::cout << "Correct Predictions: " << correctPredictions << std::endl;
-        std::cout << "Accuracy: " << accuracy << "%" << std::endl;
+        std::cout << "Correct Predictions Percentage: " << accuracy << "%" << std::endl;
         std::cout << "Average Loss: " << averageLoss << std::endl;
 
         // Log results
@@ -263,11 +267,11 @@ void mnn2d::preTrainRun(const std::string &dataSetPath)
         preTrainProgress.totalTrainFiles = totalTrainFiles;
         preTrainProgress.correctPredPercent = accuracy;
         preTrainProgress.loss = averageLoss;
-        preTrainProgress.epoch = 0; // Pre-training is epoch 0
+        preTrainProgress.epoch = 0;
 
         confData = confusionMatrixFunc(confusion);
         computeStatsForCsv(cweights, bweights, cgradients, bgradients, weightStats);
-        epochDataToCsv(dataSetPath + "/mnn2d_pretrain_train", 0, false, weightStats, confusion, confData, allScores, preTrainProgress);
+        epochDataToCsv(dataSetPath + "/mnn2d_pretrain", 0, false, weightStats, confusion, confData, allScores, preTrainProgress);
     }
 
     /*----------------------

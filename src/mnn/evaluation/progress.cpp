@@ -126,11 +126,10 @@ bool logTestProgressToCSV(const test_progress& p, const std::string& filePath) {
     }
 
     if (fileIsEmpty) {
-        file << "totalTestFiles,testFilesProcessed,testError,testAccuracy,correctPredictions\n";
+        file << "totalTestFiles,testError,testAccuracy,correctPredictions\n";
     }
 
     file << p.totalTestFiles << "," 
-         << p.testFilesProcessed << "," 
          << p.testError << ","
          << p.testAccuracy << "," 
          << p.correctPredictions << "\n";
@@ -171,7 +170,6 @@ bool loadLastTestProgress(test_progress& p, const std::string& filePath) {
 
     try {
         std::getline(ss, token, ','); p.totalTestFiles = std::stoul(token);
-        std::getline(ss, token, ','); p.testFilesProcessed = std::stoul(token);
         std::getline(ss, token, ','); p.testError = std::stof(token);
         std::getline(ss, token, ','); p.testAccuracy = std::stof(token);
         std::getline(ss, token, ','); p.correctPredictions = std::stoul(token);

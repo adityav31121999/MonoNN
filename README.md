@@ -96,6 +96,7 @@ Gradients for Monomial neural nets are calculated in a similar manner to MLPs.
       :                                                                  :
     I(N)                                                                O(N)
 ```
+
 - Notation:
   - $N$: Batch size.
   - $I^{(i)}$: $i$-th input.
@@ -249,7 +250,7 @@ The library is built with a modular approach, separating functionalities into di
   - `updateWeightsElastic`: Gradient descent with Elastic Net (L1 & L2) regularization.
   - `updateWeightsWeightDecay`: Gradient descent with weight decay.
   - `updateWeightsDropout`: Applies dropout during weight updates.
-- Similar to C++ operators, **OpenCL** and **CUDA** kernels are provided for fast training of MonoNNs.
+- Similar to **C++** operators, **OpenCL** and **CUDA** kernels are provided for fast training of MonoNNs.
 - **Batch Training**: Support for training on batches of data.
 - **Discrete File Training**: Support for training on discrete files.
 
@@ -310,6 +311,12 @@ For this project, training and testing are performed, but validation is ignored.
   - CIFAR-10
 - Two networks are trained per dataset (one for MNN and MNN2D each).
 
+### Pre-Training
+- Pre-training evaluation will be performed on the initialised weights on both train and test files.
+- This will be used as reference for evalutation with itself.
+- An analysis will be performed for training files between pre-train run and epoch-wise learning of network till a planned accuracy percent ($\geq 98\%$) is reached.
+- Similar analysis will be made for test files, for pre-train and post-train, this will show gain in performance after training.
+
 ### Evaluation Metrics
 Following are the metrics employed to evaludate performance of Networks in training and testing:
 - Confusion Matrix
@@ -328,4 +335,16 @@ Following are the metrics employed to evaludate performance of Networks in train
   - $sst = ssr + sse$
   - $R^2 = 1 - \frac{SSE}{SST} = \frac{SSR}{SST}$
 - cross entropy loss
-- Prediction error and Accuracy
+- Prediction error and Correct Prediction Percentage (for testing specifically)
+
+### Data collection for analysis
+- For training, collection of data for each networks learning will be session-wise and epoch-wise.
+  - The session-wise collection will give deeper understanding in changes of weights and gradients and gain/loss of learning.
+  - While epoch-wise will provide final epoch to epoch performance of trainig process.
+- For testing, this will be only for full dataset. And will be used in reference with pre-train run of test files.
+  - This will show how impact of training of network.
+
+## IMPORTANT
+- Weight initialisation for both Coefficients and Biases will be **He(mean = 0.0, std. deviation)**.
+- In trianing, weight update will be done by **Elastic Net Regularisation**.
+- All networks will be trained with **fullSetTraining**.

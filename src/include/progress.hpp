@@ -16,6 +16,7 @@
 #define BATCH_SIZE 8                // number of inputs in single batch
 #define ALPHA 0.80f                 // gradient splitting factor
 
+
 // struct to hold statistical information about data
 struct Statistics {
     float mean;     // mean value
@@ -23,6 +24,7 @@ struct Statistics {
     float min;      // minimum value from the set
     float max;      // maximum value from the set
 };
+
 
 // evaluation of network with confusion matrix
 struct confMat {
@@ -37,6 +39,7 @@ struct confMat {
     std::vector<int> support;           // number of true instances per class
 };
 
+
 // r-squared coefficient scores
 struct scores {
     double totalSumOfSquares;       // total sum of squares of single epoch
@@ -48,6 +51,7 @@ struct scores {
     float ssr;          // regression sum of squares
     float sse;          // error sum of squares
 };
+
 
 // struct to save and access information on training of neural network
 // single session will have fixed number of batches or files to be trained on
@@ -68,13 +72,10 @@ struct progress {
     double timeTakenForTraining;                // total time taken throughout sessions
 };
 
+
 // struct to save testing data
 struct test_progress {
-    // files
     unsigned int totalTestFiles;        // total test files
-    unsigned int testFilesProcessed;    // number of files processed in testing so far
-
-    // testing
     float testError;                    // error recorded during testing
     float testAccuracy;                 // accuracy recorded during testing
     unsigned int correctPredictions;    // correct predictions done in testing

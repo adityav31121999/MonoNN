@@ -2,6 +2,31 @@
 #include <iostream>
 #include <limits>
 #include <cmath>
+#include <stdexcept>
+#include <numeric>
+#include <algorithm>
+
+
+/**
+ * @brief get regression scores
+ */
+void getScore(const std::vector<float>& actual, const std::vector<float>& pred, double SST, double SSR, double SSE) {
+    if (actual.size() != pred.size()) {
+        throw std::runtime_error("getScore: Sizes of vector must match: " + std::to_string(actual.size()) + " vs. " + std::to_string(pred.size()));
+    }
+
+    float m1 = 0.0f;
+    float m2 = 0.0f;
+    std::accumulate(actual.begin(), actual.end(), m1);
+    std::accumulate(pred.begin(), pred.end(), m2);
+
+    for(int i = 0; i < actual.size(); i++) {
+        SSE += static_cast<double>((actual[i] - pred[i]) * (actual[i] - pred[i]));
+        SSR += static_cast<double>((actual[i] - m2) * (actual[i] - m2));
+        SST += static_cast<double>((actual[i] - m1) * (actual[i] - m1));
+    }
+}
+
 
 /**
  * @brief Compute statistics (mean, std, min, max) for a 2D vector.

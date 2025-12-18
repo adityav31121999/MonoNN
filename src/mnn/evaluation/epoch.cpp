@@ -111,7 +111,6 @@ void epochDataToCsv(const std::string& dataSetAddress,
     // --- Test Progress ---
     file << "TestProgress\n";
     file << "totalTestFiles," << p.totalTestFiles << "\n";
-    file << "testFilesProcessed," << p.testFilesProcessed << "\n";
     file << "testError," << p.testError << "\n";
     file << "testAccuracy," << p.testAccuracy << "\n";
     file << "correctPredictions," << p.correctPredictions << "\n";

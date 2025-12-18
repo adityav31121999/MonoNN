@@ -8,6 +8,8 @@
 #include "mnn.hpp"
 #include "mnn2d.hpp"
 
+// for MNN
+
 /**
  * @brief test network on given dataset
  * @param dataSetPath path to test data set folder.
@@ -38,23 +40,9 @@ void mnn::test(const std::string &dataSetPath, bool useThreadOrBuffer)
 
     std::cout << "\n--- Starting Test (mnn) ---" << std::endl;
     std::cout << "Found " << totalInputs << " files for testing." << std::endl;
-
-    // Load previous progress to resume testing if applicable
-    if (loadLastTestProgress(this->testPrg, this->path2test_progress)) {
-        std::cout << "Successfully loaded test progress. Resuming testing." << std::endl;
-        correctPredictions = this->testPrg.correctPredictions;
-        accLoss = this->testPrg.testError * this->testPrg.testFilesProcessed; // Recalculate accumulated loss
-    } else {
-        std::cout << "No test progress file found or file is empty. Starting fresh test." << std::endl;
-        this->testPrg = {}; // Reset test progress
-    }
-    std::cout << "Found " << totalInputs << " files for testing. Resuming from file index " << this->testPrg.testFilesProcessed << "." << std::endl;
     this->testPrg.totalTestFiles = totalInputs;
 
     for(size_t i = 0; i < totalInputs; ++i) {
-        if (i < this->testPrg.testFilesProcessed) {
-            continue; // Skip already processed files
-        }
         const auto& filePath = filePaths[i];
         // Prepare input
         std::vector<float> input = flatten(cvMat2vec(image2grey(filePath.string())));
@@ -88,23 +76,23 @@ void mnn::test(const std::string &dataSetPath, bool useThreadOrBuffer)
             std::cout << "Processed " << i + 1 << "/" << totalInputs
                       << " \t Accuracy: " << currentAccuracy * 100.0f << "%\t"
                       << " | Avg Loss: " << accLoss / (i + 1.0f) << std::endl;
-            this->testPrg.testAccuracy = currentAccuracy;
-            this->testPrg.testError = accLoss / (i + 1.0f);
-            this->testPrg.testFilesProcessed = i + 1;
-            this->testPrg.correctPredictions = correctPredictions;
-            logTestProgressToCSV(this->testPrg, this->path2test_progress);
         }
     }
 
-    this->confData = {};
-    this->confData = confusionMatrixFunc(this->confusion);
     this->testPrg.testError = (totalInputs > 0) ? (accLoss / totalInputs) : 0.0f;
+    this->testPrg.correctPredictions = correctPredictions;
+    this->testPrg.testAccuracy = static_cast<float>(correctPredictions * 100) / totalInputs;
+    this->testPrg.totalTestFiles = totalInputs;
+    this->path2test_progress = dataSetPath + "/mnn1d_test.csv";
+    logTestProgressToCSV(this->testPrg, this->path2test_progress);
     std::cout << "--- Test Finished (mnn) ---" << std::endl;
     std::cout << "Final Accuracy: " << ((float)correctPredictions / totalInputs) * 100.0f << "%" << std::endl;
     std::cout << "Final Average Loss: " << this->testPrg.testError << std::endl;
     std::cout << "Correct Predictions: " << correctPredictions << std::endl;
     std::cout << "Total Inputs: " << totalInputs << std::endl;
 }
+
+// for MNN2D
 
 /**
  * @brief test network on given dataset
@@ -135,23 +123,9 @@ void mnn2d::test(const std::string &dataSetPath, bool useThreadOrBuffer)
 
     std::cout << "\n--- Starting Test (mnn2d) ---" << std::endl;
     std::cout << "Found " << totalInputs << " files for testing." << std::endl;
-
-    // Load previous progress to resume testing if applicable
-    if (loadLastTestProgress(this->testPrg, this->path2test_progress)) {
-        std::cout << "Successfully loaded test progress. Resuming testing." << std::endl;
-        correctPredictions = this->testPrg.correctPredictions;
-        accLoss = this->testPrg.testError * this->testPrg.testFilesProcessed; // Recalculate accumulated loss
-    } else {
-        std::cout << "No test progress file found or file is empty. Starting fresh test." << std::endl;
-        this->testPrg = {}; // Reset test progress
-    }
-    std::cout << "Found " << totalInputs << " files for testing. Resuming from file index " << this->testPrg.testFilesProcessed << "." << std::endl;
     this->testPrg.totalTestFiles = totalInputs;
     
     for(size_t i = 0; i < totalInputs; ++i) {
-        if (i < this->testPrg.testFilesProcessed) {
-            continue; // Skip already processed files
-        }
         const auto& filePath = filePaths[i];
         std::vector<std::vector<float>> input = cvMat2vec(image2grey(filePath.string()));
         std::string filename = filePath.stem().string();
@@ -161,6 +135,7 @@ void mnn2d::test(const std::string &dataSetPath, bool useThreadOrBuffer)
             target[label] = 1.0f;
         }
 
+        // Perform forward propagation
         #ifdef USE_CPU
             forprop(input);
         #elif USE_CU
@@ -169,26 +144,30 @@ void mnn2d::test(const std::string &dataSetPath, bool useThreadOrBuffer)
             clForprop(input);
         #endif
 
+        // Check prediction
         if(maxIndex(this->output) == static_cast<size_t>(label)) {
             correctPredictions++;
         }
-
+        // accumulate loss
         accLoss += crossEntropy(this->output, target);
 
         if((i + 1) % 100 == 0 || (i + 1) == totalInputs) {
             float currentAccuracy = (float)correctPredictions / (i + 1);
             std::cout << "Processed " << i + 1 << "/" << totalInputs
-                      << " | Accuracy: " << currentAccuracy * 100.0f << "%"
+                      << " \t Accuracy: " << currentAccuracy * 100.0f << "%\t"
                       << " | Avg Loss: " << accLoss / (i + 1.0f) << std::endl;
-            this->testPrg.testAccuracy = currentAccuracy;
-            this->testPrg.testError = accLoss / (i + 1.0f);
-            this->testPrg.testFilesProcessed = i + 1;
-            this->testPrg.correctPredictions = correctPredictions;
-            logTestProgressToCSV(this->testPrg, this->path2test_progress);
         }
     }
 
     this->testPrg.testError = (totalInputs > 0) ? (accLoss / totalInputs) : 0.0f;
-    std::cout << "--- Test Finished (mnn2d) ---" << std::endl;
+    this->testPrg.correctPredictions = correctPredictions;
+    this->testPrg.testAccuracy = static_cast<float>(correctPredictions * 100) / totalInputs;
+    this->testPrg.totalTestFiles = totalInputs;
+    this->path2test_progress = dataSetPath + "/mnn1d_test.csv";
+    logTestProgressToCSV(this->testPrg, this->path2test_progress);
+    std::cout << "--- Test Finished (mnn) ---" << std::endl;
     std::cout << "Final Accuracy: " << ((float)correctPredictions / totalInputs) * 100.0f << "%" << std::endl;
+    std::cout << "Final Average Loss: " << this->testPrg.testError << std::endl;
+    std::cout << "Correct Predictions: " << correctPredictions << std::endl;
+    std::cout << "Total Inputs: " << totalInputs << std::endl;
 }
