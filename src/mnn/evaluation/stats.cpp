@@ -17,8 +17,8 @@ void getScore(const std::vector<float>& actual, const std::vector<float>& pred, 
 
     float m1 = 0.0f;
     float m2 = 0.0f;
-    std::accumulate(actual.begin(), actual.end(), m1);
-    std::accumulate(pred.begin(), pred.end(), m2);
+    m1 = std::accumulate(actual.begin(), actual.end(), 0.0f);
+    m2 = std::accumulate(pred.begin(), pred.end(), 0.0f);
 
     for(int i = 0; i < actual.size(); i++) {
         SSE += static_cast<double>((actual[i] - pred[i]) * (actual[i] - pred[i]));

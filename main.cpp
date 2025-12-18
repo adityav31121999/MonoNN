@@ -5,7 +5,7 @@
 #include <fstream>
 #include "mononn.h"
 
-#define TRAIN_2D 0
+#define TRAIN_2D 1
 
 int main() {
     try {
@@ -22,14 +22,17 @@ int main() {
     #endif
 
     std::string digit       =   path2Folder + "/digits_mnist";
-    std::string fashion     =   path2Folder + "/digits_mnist";
+    std::string fashion     =   path2Folder + "/fashion_mnist";
+    std::string indic       =   path2Folder + "/indic_mnist";
+    std::string kannada     =   path2Folder + "/kannada_mnist";
+    std::string kmnist      =   path2Folder + "/kmnist";
     std::string cifar10     =   path2Folder + "/cifar10";
 
     int inSize = 784;
     int inh = 28, inw = 28;
     int outSize = 10;
     float order = 1.4f;
-    bool useThreadOrBuffer = 1;
+    bool useThreadOrBuffer = 0;
     std::vector<int> hidden_layers1 = { 784, 392, outSize };
     std::vector<int> hidden_layers2 = { 28, 56, 112, 112, 56, 28, outSize };
     std::vector<int> hidden_layers3 = { 1024, 512, 256, outSize };
@@ -49,7 +52,7 @@ int main() {
         std::cout << "---------------------MNN2D---------------------" << std::endl;
         mnn2d network2(inh, inw, outSize, hidden_layers2, order, digit + "/mnn2d/weights.bin");
         network2.weightUpdateType = 3;
-        network2.trainPrg.sessionSize = 50;
+        network2.trainPrg.sessionSize = 150;
         network2.fullDataSetTraining(digit, useThreadOrBuffer);
         // network2.test(digit, useThreadOrBuffer);
 #endif

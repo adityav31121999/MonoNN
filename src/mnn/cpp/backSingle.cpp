@@ -311,8 +311,17 @@ void layerBackwardThread(const std::vector<float>& incoming,
 
 
 /**
- * @brief Threaded single layer backprop for mnn2d for first layer
- * Parallelizes gradient calculation over input features.
+ * @brief MULTITHREADED layer backprop for mnn2d for first layer
+ * Parallelizes gradient computation across input features using thread pool
+ * @param[in] incoming incoming gradient (dL/dz_l) matrix [batch × out_features]
+ * @param[in] input input to mnn2d [batch × in_features]
+ * @param[in] C current layers coefficients weights matrix [in_features × out_features]
+ * @param[out] gradc gradients for C matrix [in_features × out_features]
+ * @param[out] gradb gradients for B matrix [in_features × out_features]
+ * @param[in] m order of monomial
+ * @param[in] alpha gradient splitting factor
+ * 
+ * Thread Strategy: Splits in_features rows across worker threads for parallel gradient accumulation
  */
 void layerBackwardThread(const std::vector<std::vector<float>>& incoming,
                          const std::vector<std::vector<float>>& input,
@@ -322,60 +331,133 @@ void layerBackwardThread(const std::vector<std::vector<float>>& incoming,
                          float m,
                          float alpha)
 {
-    // input: [Batch x InFeatures]
-    // incoming: [Batch x OutFeatures]
-    // gradc, gradb: [InFeatures x OutFeatures]
-
-    if (input.empty()) return;
+    // CRITICAL: Validate dimensions FIRST
+    if (input.empty() || incoming.empty()) {
+        std::cerr << "ERROR: Empty input or incoming matrix" << std::endl;
+        return;
+    }
 
     size_t batch_size = input.size();
     size_t in_features = input[0].size();
     size_t out_features = incoming[0].size();
 
-    // Pre-calculate power (Data parallel on batch)
-    // We do this first because random access to prev_p in the next step is heavy
-    std::vector<std::vector<float>> prev_p = power(input, m);
+    // Validate all input rows have same size
+    for (size_t i = 0; i < input.size(); ++i) {
+        if (input[i].size() != in_features) {
+            std::cerr << "ERROR: Inconsistent input row sizes at row " << i << std::endl;
+            return;
+        }
+    }
+    
+    // Validate all incoming rows have same size
+    for (size_t i = 0; i < incoming.size(); ++i) {
+        if (incoming[i].size() != out_features) {
+            std::cerr << "ERROR: Inconsistent incoming row sizes at row " << i << std::endl;
+            return;
+        }
+    }
 
+    // Validate gradient matrix dimensions
+    if (gradc.size() != in_features || gradc[0].size() != out_features) {
+        std::cerr << "ERROR: gradc dimension mismatch. Expected [" 
+                  << in_features << "x" << out_features << "], got ["
+                  << gradc.size() << "x" << gradc[0].size() << "]" << std::endl;
+        return;
+    }
+    
+    if (gradb.size() != in_features || gradb[0].size() != out_features) {
+        std::cerr << "ERROR: gradb dimension mismatch" << std::endl;
+        return;
+    }
+
+    // Pre-calculate power with error checking
+    std::vector<std::vector<float>> prev_p;
+    try {
+        prev_p = power(input, m);
+        
+        // Validate prev_p dimensions
+        if (prev_p.size() != batch_size || prev_p[0].size() != in_features) {
+            std::cerr << "ERROR: power() returned wrong dimensions" << std::endl;
+            return;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "ERROR in power() calculation: " << e.what() << std::endl;
+        return;
+    }
+
+    // Determine thread count
     unsigned int num_threads = get_thread_count(in_features);
+    if (num_threads == 0) num_threads = 1;
+    
     std::vector<std::thread> threads;
     size_t chunk_size = in_features / num_threads;
 
     // Worker computes specific rows of GradC/GradB
     auto worker = [&](size_t start_row, size_t end_row) {
-        for(size_t i = start_row; i < end_row; ++i) { // i = in_feature index
-            for(size_t j = 0; j < out_features; ++j) { // j = out_feature index
+        try {
+            for(size_t i = start_row; i < end_row; ++i) { // i = in_feature index
+                // Bounds check
+                if (i >= in_features) continue;
                 
-                float sum_c = 0.0f;
-                float sum_b = 0.0f;
+                for(size_t j = 0; j < out_features; ++j) { // j = out_feature index
+                    float sum_c = 0.0f;
+                    float sum_b = 0.0f;
 
-                // Sum over Batch (k)
-                // gradc = prev_p^T * incoming -> dot(col i of prev_p, col j of incoming)
-                // gradb = v1T * incoming -> sum(col j of incoming)
-                for(size_t k = 0; k < batch_size; ++k) {
-                    sum_c += prev_p[k][i] * incoming[k][j];
-                    sum_b += incoming[k][j]; // v1 is all 1s
+                    // Sum over Batch (k)
+                    for(size_t k = 0; k < batch_size; ++k) {
+                        // Bounds check before access
+                        if (k >= prev_p.size() || i >= prev_p[k].size()) {
+                            std::cerr << "ERROR: prev_p out of bounds [" << k << "][" << i << "]" << std::endl;
+                            continue;
+                        }
+                        if (k >= incoming.size() || j >= incoming[k].size()) {
+                            std::cerr << "ERROR: incoming out of bounds [" << k << "][" << j << "]" << std::endl;
+                            continue;
+                        }
+                        
+                        sum_c += prev_p[k][i] * incoming[k][j];
+                        sum_b += incoming[k][j];
+                    }
+
+                    gradc[i][j] = sum_c * alpha;
+                    gradb[i][j] = sum_b * (1.0f - alpha);
                 }
-
-                gradc[i][j] = sum_c * alpha;
-                gradb[i][j] = sum_b * (1.0f - alpha);
             }
+        } catch (const std::exception& e) {
+            std::cerr << "Thread exception in worker: " << e.what() << std::endl;
         }
     };
 
+    // Launch threads
     for(unsigned int t = 0; t < num_threads; ++t) {
         size_t start = t * chunk_size;
         size_t end = (t == num_threads - 1) ? in_features : start + chunk_size;
         threads.emplace_back(worker, start, end);
     }
 
+    // Join all threads
     for(auto& t : threads) {
         if(t.joinable()) t.join();
     }
 }
 
 /**
- * @brief Threaded single layer backprop for mnn2d (Hidden Layer)
- * Splits task into two parallel sections: 1. Gradient Calculation, 2. Outgoing Calculation.
+ * @brief MULTITHREADED layer backprop for mnn2d (Hidden Layer)
+ * Parallelizes both gradient computation and outgoing error propagation
+ * @param[in] incoming incoming gradient (dL/dz_l) matrix [batch × out_features]
+ * @param[out] outgoing outgoing gradient (dL/dz_(l-1)) matrix [batch × in_features]
+ * @param[in] dotProds previous layers dot product [batch × in_features]
+ * @param[in] prevAct activation of previous layer [batch × in_features]
+ * @param[in] C current layers coefficients weights matrix [in_features × out_features]
+ * @param[out] gradc gradients for C matrix [in_features × out_features]
+ * @param[out] gradb gradients for B matrix [in_features × out_features]
+ * @param[in] m order of monomial
+ * @param[in] alpha gradient splitting factor
+ * 
+ * Thread Strategy: 
+ * - Phase 1: Parallel derivative computation across batch samples
+ * - Phase 2: Parallel gradient accumulation across in_features
+ * - Phase 3: Parallel outgoing gradient computation across batch samples
  */
 void layerBackwardThread(const std::vector<std::vector<float>>& incoming,
                          std::vector<std::vector<float>>& outgoing,
@@ -387,61 +469,99 @@ void layerBackwardThread(const std::vector<std::vector<float>>& incoming,
                          float m,
                          float alpha)
 {
-    if (prevAct.empty()) return;
+    // CRITICAL: Validate dimensions FIRST
+    if (prevAct.empty() || incoming.empty()) {
+        std::cerr << "ERROR: Empty prevAct or incoming matrix" << std::endl;
+        return;
+    }
 
     size_t batch_size = prevAct.size();
     size_t in_features = prevAct[0].size();
     size_t out_features = incoming[0].size();
 
+    // Validate dimensions
+    if (C.size() != in_features || C[0].size() != out_features) {
+        std::cerr << "ERROR: C dimension mismatch. Expected [" 
+                  << in_features << "x" << out_features << "], got ["
+                  << C.size() << "x" << (C.empty() ? 0 : C[0].size()) << "]" << std::endl;
+        return;
+    }
+
     // --- Preparation ---
-    // Calculate derivatives. Using main thread/single threaded for these helpers 
-    // to ensure correctness with existing MNN logic (flatten/softmaxDer), 
-    // unless those are explicitly thread-safe.
-    std::vector<std::vector<float>> prev_p = power(prevAct, m);
+    std::vector<std::vector<float>> prev_p;
+    try {
+        prev_p = power(prevAct, m);
+        if (prev_p.size() != batch_size || prev_p[0].size() != in_features) {
+            std::cerr << "ERROR: prev_p dimension mismatch after power()" << std::endl;
+            return;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "ERROR in power(prevAct, m): " << e.what() << std::endl;
+        return;
+    }
     
     // dprev_p calculation (parallelizable element-wise)
     std::vector<std::vector<float>> dprev_p(batch_size, std::vector<float>(in_features));
     {
         unsigned int nt = get_thread_count(batch_size);
+        if (nt == 0) nt = 1;
         std::vector<std::thread> pool;
         size_t cs = batch_size / nt;
+        
         auto deriv_worker = [&](size_t s, size_t e) {
-            for(size_t i=s; i<e; ++i) {
+            for(size_t i=s; i<e && i<batch_size; ++i) {
                 for(size_t j=0; j<in_features; ++j) {
-                    float val = prev_p[i][j]; // This is actually prevAct[i][j]^m, logic check:
-                    // Code says: d/dx(x^m) = m * x^(m-1). 
-                    // To avoid pow again, if m != 0, x^(m-1) = x^m / x. 
-                    // But using pow is safer for stability.
-                    float res = m * std::pow(prevAct[i][j], m - 1.0f);
+                    // Safe bounds check
+                    if (i >= prevAct.size() || j >= prevAct[i].size()) continue;
+                    
+                    float val = prevAct[i][j];
+                    float res = m * std::pow(val, m - 1.0f);
+                    
+                    // Clamp to prevent overflow
                     dprev_p[i][j] = std::max(-1e5f, std::min(1e5f, res));
                 }
             }
         };
-        for(unsigned t=0; t<nt; ++t) pool.emplace_back(deriv_worker, t*cs, (t==nt-1)?batch_size:(t+1)*cs);
-        for(auto& th : pool) th.join();
+        
+        for(unsigned t=0; t<nt; ++t) {
+            size_t start = t*cs;
+            size_t end = (t==nt-1) ? batch_size : (t+1)*cs;
+            pool.emplace_back(deriv_worker, start, end);
+        }
+        for(auto& th : pool) if(th.joinable()) th.join();
     }
 
     // dprevAct: (softmaxDer(flatten(dotProds))) -> reshape
-    // We keep this sequential as it involves global reshape/flatten logic from helper lib
-    std::vector<std::vector<float>> dprevAct = reshape(softmaxDer(flatten(dotProds)), batch_size, in_features);
-
+    std::vector<std::vector<float>> dprevAct;
+    try {
+        dprevAct = reshape(softmaxDer(flatten(dotProds)), batch_size, in_features);
+    } catch (const std::exception& e) {
+        std::cerr << "ERROR in softmaxDer/reshape: " << e.what() << std::endl;
+        return;
+    }
 
     // --- Parallel Section 1: Gradients (GradC, GradB) ---
-    // Parallelize over In-Features (Rows of Grad matrices)
     {
         unsigned int nt = get_thread_count(in_features);
+        if (nt == 0) nt = 1;
         std::vector<std::thread> grad_threads;
         size_t cs = in_features / nt;
 
         auto grad_worker = [&](size_t start_row, size_t end_row) {
-            for(size_t i = start_row; i < end_row; ++i) {
+            for(size_t i = start_row; i < end_row && i < in_features; ++i) {
                 for(size_t j = 0; j < out_features; ++j) {
                     float sum_c = 0.0f;
                     float sum_b = 0.0f;
+                    
                     for(size_t k = 0; k < batch_size; ++k) {
+                        // Bounds checks
+                        if (k >= prev_p.size() || i >= prev_p[k].size()) continue;
+                        if (k >= incoming.size() || j >= incoming[k].size()) continue;
+                        
                         sum_c += prev_p[k][i] * incoming[k][j];
                         sum_b += incoming[k][j];
                     }
+                    
                     gradc[i][j] = sum_c * alpha;
                     gradb[i][j] = sum_b * (1.0f - alpha);
                 }
@@ -456,27 +576,32 @@ void layerBackwardThread(const std::vector<std::vector<float>>& incoming,
         for(auto& th : grad_threads) if(th.joinable()) th.join();
     }
 
-
     // --- Parallel Section 2: Outgoing Gradients ---
-    // Parallelize over Batch Size (Rows of Outgoing)
-    // outgoing = (incoming x C^T) . dprev_p . dprevAct
-    outgoing.resize(batch_size, std::vector<float>(in_features));
+    outgoing.clear();
+    outgoing.resize(batch_size, std::vector<float>(in_features, 0.0f));
     
     {
         unsigned int nt = get_thread_count(batch_size);
+        if (nt == 0) nt = 1;
         std::vector<std::thread> out_threads;
         size_t cs = batch_size / nt;
 
         auto out_worker = [&](size_t start_b, size_t end_b) {
-            for(size_t i = start_b; i < end_b; ++i) { // i = batch index
-                for(size_t j = 0; j < in_features; ++j) { // j = in feature index
-                    
-                    // Dot product: row i of incoming * col j of C^T
-                    // col j of C^T is row j of C.
+            for(size_t i = start_b; i < end_b && i < batch_size; ++i) {
+                for(size_t j = 0; j < in_features; ++j) {
                     float dot = 0.0f;
+                    
                     for(size_t k = 0; k < out_features; ++k) {
+                        // Bounds checks
+                        if (i >= incoming.size() || k >= incoming[i].size()) continue;
+                        if (j >= C.size() || k >= C[j].size()) continue;
+                        
                         dot += incoming[i][k] * C[j][k];
                     }
+                    
+                    // Additional bounds checks for dprev_p and dprevAct
+                    if (i >= dprev_p.size() || j >= dprev_p[i].size()) continue;
+                    if (i >= dprevAct.size() || j >= dprevAct[i].size()) continue;
                     
                     outgoing[i][j] = dot * dprev_p[i][j] * dprevAct[i][j];
                 }

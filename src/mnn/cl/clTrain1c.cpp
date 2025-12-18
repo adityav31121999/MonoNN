@@ -20,7 +20,7 @@ void mnn::clTrain1c(const std::vector<float>& input, const std::vector<float>& t
         clForprop(input);
 
         if(maxIndex(output) == maxIndex(target)) {
-            std::cout << "Correct output predicted with loss " << crossEntropy(output, target) << "." << std::endl;
+            // std::cout << "Correct output predicted with loss " << crossEntropy(output, target) << "." << std::endl;
         }
         else {
             // check for error and break if acceptable
@@ -142,7 +142,7 @@ void mnn::clTrain1c(const std::vector<float>& input, const std::vector<float>& t
         if(maxIndex(output) == maxIndex(target)) {
             float loss = crossEntropy(output, target);
             if (loss < 0) loss = 0;
-            std::cout << "Correct output predicted with loss " << loss << "." << std::endl;
+            // std::cout << "Correct output predicted with loss " << loss << "." << std::endl;
         }
         else {
             zeroGradients();
@@ -162,6 +162,10 @@ void mnn::clTrain1c(const std::vector<float>& input, const std::vector<float>& t
             cl::Kernel kernelUpdateWeights = kernels.at("kernelUpdateWeightsElasticNet");
 
             // Calculate initial error (output - expected)
+            CL_CHECK(clCommandQueue.enqueueReadBuffer(d_activate[layers - 1], CL_TRUE, 0, output.size() * sizeof(float), output.data()));
+            CL_CHECK(clCommandQueue.enqueueWriteBuffer(d_out, CL_TRUE, 0, output.size() * sizeof(float), output.data()));
+
+
             kernelSub.setArg(0, d_out);
             kernelSub.setArg(1, d_exp);
             kernelSub.setArg(2, d_err);
@@ -169,6 +173,10 @@ void mnn::clTrain1c(const std::vector<float>& input, const std::vector<float>& t
             cl::NDRange globalSub = calculate_global_1d(WORKSIZE_1D, output.size());
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSub, cl::NullRange, globalSub, local_1d));
             CL_CHECK(clCommandQueue.enqueueCopyBuffer(d_err, d_incoming[layers - 1], 0, 0, sizeof(float) * output.size()));
+
+            size_t max_cweight_size = 0;
+            for(int i = 0; i < layers; i++) max_cweight_size = std::max(max_cweight_size, cweights[i].size() * cweights[i][0].size());
+            cl::Buffer d_C_T(clContext, CL_MEM_READ_WRITE, max_cweight_size * sizeof(float)); CL_CHECK(err);
 
             // Backpropagation loop (last layer to second layer)
             for (int layer = layers - 1; layer >= 1; --layer) {
@@ -212,7 +220,6 @@ void mnn::clTrain1c(const std::vector<float>& input, const std::vector<float>& t
                 CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelScale, cl::NullRange, globalWeightGrad, local_1d));
 
                 // --- Outgoing Gradient Calculation (for layer-1) ---
-                cl::Buffer d_C_T(clContext, CL_MEM_READ_WRITE, cweight_flat_size * sizeof(float)); CL_CHECK(err);
                 kernelTranspose.setArg(0, d_cweights[layer]);
                 kernelTranspose.setArg(1, d_C_T);
                 kernelTranspose.setArg(2, cweight_rows);
@@ -347,7 +354,7 @@ void mnn2d::clTrain1c(const std::vector<std::vector<float>>& input, const std::v
         clForprop(input);
 
         if(maxIndex(output) == maxIndex(target)) {
-            std::cout << "Correct output predicted with loss " << crossEntropy(output, target) << "." << std::endl;
+            // std::cout << "Correct output predicted with loss " << crossEntropy(output, target) << "." << std::endl;
         }
         else {
             // check for error and break if acceptable
@@ -470,7 +477,7 @@ void mnn2d::clTrain1c(const std::vector<std::vector<float>>& input, const std::v
         kernelMeanPool.setArg(1, d_final_output);
         kernelMeanPool.setArg(2, inHeight);
         kernelMeanPool.setArg(3, outWidth);
-        kernelMeanPool.setArg(4, 1);
+        kernelMeanPool.setArg(4, 1); // poolSize
         cl::NDRange globalPool = calculate_global_1d(WORKSIZE_1D, outWidth);
         CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelMeanPool, cl::NullRange, globalPool, local_1d));
         CL_CHECK(clCommandQueue.finish());
@@ -482,7 +489,7 @@ void mnn2d::clTrain1c(const std::vector<std::vector<float>>& input, const std::v
         if(maxIndex(output) == maxIndex(target)) {
             float loss = crossEntropy(output, target);
             if (loss < 0) loss = 0;
-            std::cout << "Correct output predicted with loss " << loss << "." << std::endl;
+            // std::cout << "Correct output predicted with loss " << loss << "." << std::endl;
         }
         else {
             // check for error and break if acceptable
@@ -523,9 +530,9 @@ void mnn2d::clTrain1c(const std::vector<std::vector<float>>& input, const std::v
                 cl::Buffer d_C_T(clContext, CL_MEM_READ_WRITE, cweights[layer].size() * cweights[layer][0].size() * sizeof(float)); CL_CHECK(err);
                 kernelTranspose.setArg(0, d_cweights[layer]);
                 kernelTranspose.setArg(1, d_C_T);
-                kernelTranspose.setArg(2, cweights[layer].size());
-                kernelTranspose.setArg(3, cweights[layer][0].size());
-                cl::NDRange globalTranspose = calculate_global_2d(size2d, cweights[layer].size(), cweights[layer][0].size());
+                kernelTranspose.setArg(2, prev_cols);
+                kernelTranspose.setArg(3, curr_cols);
+                cl::NDRange globalTranspose = calculate_global_2d(size2d, prev_cols, curr_cols);
                 CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelTranspose, cl::NullRange, globalTranspose, local_2d));
 
                 kernelMatMul.setArg(0, d_incoming[layer]);

@@ -20,7 +20,7 @@ void mnn::cuTrain1c(const std::vector<float>& input, const std::vector<float>& t
         cuForprop(input);
 
         if(maxIndex(output) == maxIndex(target)) {
-            std::cout << "Correct output predicted with loss " << crossEntropy(output, target) << "." << std::endl;
+            // std::cout << "Correct output predicted with loss " << crossEntropy(output, target) << "." << std::endl;
         }
         else {
             // check for error and break if acceptable
@@ -126,7 +126,7 @@ void mnn::cuTrain1c(const std::vector<float>& input, const std::vector<float>& t
         if(maxIndex(output) == maxIndex(target)) {
             float loss = crossEntropy(output, target);
             if (loss < 0) loss = 0;
-            std::cout << "Correct output predicted with loss " << loss << "." << std::endl;
+            // std::cout << "Correct output predicted with loss " << loss << "." << std::endl;
         }
         else {
             currloss = crossEntropy(output, target);
@@ -268,7 +268,7 @@ void mnn2d::cuTrain1c(const std::vector<std::vector<float>>& input, const std::v
         cuForprop(input);
 
         if(maxIndex(output) == maxIndex(target)) {
-            std::cout << "Correct output predicted with loss " << crossEntropy(output, target) << "." << std::endl;
+            // std::cout << "Correct output predicted with loss " << crossEntropy(output, target) << "." << std::endl;
         }
         else {
             // check for error and break if acceptable
@@ -374,7 +374,7 @@ void mnn2d::cuTrain1c(const std::vector<std::vector<float>>& input, const std::v
         if(maxIndex(output) == maxIndex(target)) {
             float loss = crossEntropy(output, target);
             if (loss < 0) loss = 0;
-            std::cout << "Correct output predicted with loss " << loss << "." << std::endl;
+            // std::cout << "Correct output predicted with loss " << loss << "." << std::endl;
         }
         else {
             currloss = crossEntropy(output, target);

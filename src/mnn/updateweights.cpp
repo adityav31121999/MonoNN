@@ -9,26 +9,26 @@
 
 // zero out gradients for new backprop
 void mnn::zeroGradients() {
-    for(auto& layer : cgradients) {
-        for(auto& row : layer)
-            std::fill(row.begin(), row.end(), 0.0f);
-    }
-    for(auto& layer : bgradients) {
-        for(auto& row : layer)
-            std::fill(row.begin(), row.end(), 0.0f);
+    for(size_t i = 0; i < layers; ++i) {
+        if (!cweights[i].empty()) {
+            cgradients[i].assign(cweights[i].size(), std::vector<float>(cweights[i][0].size(), 0.0f));
+        }
+        if (!bweights[i].empty()) {
+            bgradients[i].assign(bweights[i].size(), std::vector<float>(bweights[i][0].size(), 0.0f));
+        }
     }
 }
 
 
 // zero out gradients for new backprop
 void mnn2d::zeroGradients() {
-    for(auto& layer : cgradients) {
-        for(auto& row : layer)
-            std::fill(row.begin(), row.end(), 0.0f);
-    }
-    for(auto& layer : bgradients) {
-        for(auto& row : layer)
-            std::fill(row.begin(), row.end(), 0.0f);
+    for(size_t i = 0; i < layers; ++i) {
+        if (!cweights[i].empty()) {
+            cgradients[i].assign(cweights[i].size(), std::vector<float>(cweights[i][0].size(), 0.0f));
+        }
+        if (!bweights[i].empty()) {
+            bgradients[i].assign(bweights[i].size(), std::vector<float>(bweights[i][0].size(), 0.0f));
+        }
     }
 }
 

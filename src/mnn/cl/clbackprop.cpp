@@ -382,9 +382,9 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
                 // Launch softmax_reduce kernel (same as in forprop)
                 kernelSoftMaxReduce.setArg(0, d_dotProds[layer-1]);
                 kernelSoftMaxReduce.setArg(1, d_partial_results);
-                kernelSoftMaxReduce.setArg(2, cl::Local(sizeof(float) * WORKSIZE_1D));
-                kernelSoftMaxReduce.setArg(3, cl::Local(sizeof(float) * WORKSIZE_1D));
-                kernelSoftMaxReduce.setArg(4, (int)prev_dot_size);
+                kernelSoftMaxReduce.setArg(2, cl::Local(sizeof(float) * WORKSIZE_1D * 2)); // Combined local memory
+                kernelSoftMaxReduce.setArg(3, (int)prev_dot_size);
+                kernelSoftMaxReduce.setArg(4, SOFTMAX_TEMP);
                 cl::NDRange globalReduce = calculate_global_1d(WORKSIZE_1D, prev_dot_size);
                 cl::NDRange localReduce(WORKSIZE_1D);
                 CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSoftMaxReduce, cl::NullRange, globalReduce, localReduce));
@@ -538,8 +538,8 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
             std::vector<float> takeIn2(bweight_size, 0.0f);
             std::vector<float> takeIn3(cweight_size, 0.0f);
             std::vector<float> takeIn4(bweight_size, 0.0f);
-            cl::NDRange globalWeightGrad = calculate_global_1d(WORKSIZE_1D, cweights[i].size() * cweights[i][0].size());
-            size_t prev_layer_size = (i == 0) ? input.size() : activate[i - 1].size();
+            cl::NDRange globalCWeightGrad = calculate_global_1d(WORKSIZE_1D, cweight_size);
+            cl::NDRange globalBWeightGrad = calculate_global_1d(WORKSIZE_1D, bweight_size);
 
             // Update C weights using kernelUpdateWeights
             kernelUpdateWeights.setArg(0, d_cweights[i]);
@@ -548,14 +548,17 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
             kernelUpdateWeights.setArg(3, learningRate);
             kernelUpdateWeights.setArg(4, LAMBDA_L1);
             kernelUpdateWeights.setArg(5, LAMBDA_L2);
-            CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelUpdateWeights, cl::NullRange, globalWeightGrad, local_1d));
+            CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelUpdateWeights, cl::NullRange, globalCWeightGrad, local_1d));
             // Update B weights using kernelUpdateWeights
             kernelUpdateWeights.setArg(0, d_bweights[i]);
             kernelUpdateWeights.setArg(1, d_gradB[i]);
             kernelUpdateWeights.setArg(2, (int)bweight_size);
             // The learningRate, LAMBDA_L1, and LAMBDA_L2 are already set from the C weights update
             // and don't need to be set again if they are the same.
-            CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelUpdateWeights, cl::NullRange, globalWeightGrad, local_1d));
+            kernelUpdateWeights.setArg(3, learningRate);
+            kernelUpdateWeights.setArg(4, LAMBDA_L1);
+            kernelUpdateWeights.setArg(5, LAMBDA_L2);
+            CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelUpdateWeights, cl::NullRange, globalBWeightGrad, local_1d));
 
             // copy and reshape
             CL_CHECK(clCommandQueue.enqueueReadBuffer(d_cweights[i], CL_TRUE, 0, sizeof(float) * cweight_size, (void*)takeIn.data()));

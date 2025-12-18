@@ -20,7 +20,7 @@ void mnn::train1c(const std::vector<float>& input, const std::vector<float>& tar
         if(maxIndex(output) == maxIndex(target)) {
             float loss = crossEntropy(output, target);
             if (loss < 0) loss = 0;
-            std::cout << "Correct output predicted with loss " << loss << "." << std::endl;
+            // std::cout << "Correct output predicted with loss " << loss << "." << std::endl;
         }
         else {
             // check for error and break if acceptable
@@ -45,7 +45,7 @@ void mnn::train1c(const std::vector<float>& input, const std::vector<float>& tar
         if(maxIndex(output) == maxIndex(target)) {
             float loss = crossEntropy(output, target);
             if (loss < 0) loss = 0;
-            std::cout << "Correct output predicted with loss " << loss << "." << std::endl;
+            // std::cout << "Correct output predicted with loss " << loss << "." << std::endl;
         }
         else {
             // check for error and break if acceptable
@@ -93,7 +93,7 @@ void mnn2d::train1c(const std::vector<std::vector<float>>& input, const std::vec
         if(maxIndex(output) == maxIndex(target)) {
             float loss = crossEntropy(output, target);
             if (loss < 0) loss = 0;
-            std::cout << "Correct output predicted with loss " << loss << "." << std::endl;
+            // std::cout << "Correct output predicted with loss " << loss << "." << std::endl;
         }
         else {
             // check for error and break if acceptable
@@ -108,11 +108,11 @@ void mnn2d::train1c(const std::vector<std::vector<float>>& input, const std::vec
     else {
         // 1. Forward propagation
         // first layer
-        layerForward(input, dotProds[0], cweights[0], bweights[0], order);
+        layerForwardThread(input, dotProds[0], cweights[0], bweights[0], order);
         activate[0] = reshape(softmax(flatten(dotProds[0])), dotProds[0].size(), dotProds[0][0].size());
         // from 2nd to last
         for(int i = 1; i < layers; i++) {
-            layerForward(activate[i-1], dotProds[i], cweights[i], bweights[i], order);
+            layerForwardThread(activate[i-1], dotProds[i], cweights[i], bweights[i], order);
             activate[i] = reshape(softmax(flatten(dotProds[i])), dotProds[i].size(), dotProds[i][0].size());
         }
         // apply mean pooling to the final activation layer to get output
@@ -121,7 +121,7 @@ void mnn2d::train1c(const std::vector<std::vector<float>>& input, const std::vec
         if(maxIndex(output) == maxIndex(target)) {
             float loss = crossEntropy(output, target);
             if (loss < 0) loss = 0;
-            std::cout << "Correct output predicted with loss " << loss << "." << std::endl;
+            // std::cout << "Correct output predicted with loss " << loss << "." << std::endl;
         }
         else {
             // check for error and break if acceptable

@@ -10,8 +10,11 @@
  * @return The mean value of the elements in the vector.
  */
 float mean(const std::vector<float>& in) {
+    if (in.empty()) {
+        return 0.0f;
+    }
     float sum = 0.0f;
-    std::accumulate(in.begin(), in.end(), sum);
+    sum = std::accumulate(in.begin(), in.end(), 0.0f);
     return sum / in.size();
 }
 
@@ -64,11 +67,10 @@ float mse(const std::vector<float>& output, const std::vector<float>& target) {
     }
     float sum_sq_err = 0.0f;
     for (size_t i = 0; i < output.size(); ++i) {
-        float error = output[i] - target[i];
+        float error = clamp(output[i] - target[i]);
         sum_sq_err += error * error;
-        sum_sq_err = clamp(sum_sq_err);
     }
-    return sum_sq_err / output.size();
+    return clamp(sum_sq_err / output.size());
 }
 
 
@@ -105,11 +107,10 @@ float crossEntropy(const std::vector<float>& output, const std::vector<float>& t
     const float epsilon = 1e-9f;       // Small value to prevent log(0)
     for (size_t i = 0; i < output.size(); ++i) {
         // Clamp output to prevent log(0)
-        float clamped_output = std::max(output[i], epsilon);
+        float clamped_output = std::max(clamp(output[i]), epsilon);
         loss += target[i] * std::log(clamped_output);
-        loss = clamp(loss);
     }
-    return -loss;
+    return clamp(-loss);
 }
 
 
@@ -145,10 +146,9 @@ float binaryCrossEntropy(const std::vector<float>& output, const std::vector<flo
     float loss = 0.0f;
     for (size_t i = 0; i < output.size(); ++i) {
         // Add a small epsilon to prevent log(0) or log(1) for 0 or 1
-        loss += target[i] * std::log(output[i] + 1e-9f) + (1.0f - target[i]) * std::log(1.0f - output[i] + 1e-9f);
-        loss = clamp(loss);
+        loss += target[i] * std::log(clamp(output[i]) + 1e-9f) + (1.0f - target[i]) * std::log(1.0f - clamp(output[i]) + 1e-9f);
     }
-    return -loss / output.size();
+    return clamp(-loss / output.size());
 }
 
 
@@ -186,11 +186,10 @@ float categoricalCrossEntropy(const std::vector<std::vector<float>>& output, con
     float loss = 0.0f;
     for (size_t i = 0; i < output.size(); ++i) {
         for (size_t j = 0; j < output[i].size(); ++j) {
-            loss += target[i][j] * std::log(output[i][j] + 1e-9f);
-            loss = clamp(loss);
+            loss += target[i][j] * std::log(clamp(output[i][j]) + 1e-9f);
         }
     }
-    return -loss / output.size();
+    return clamp(-loss / output.size());
 }
 
 

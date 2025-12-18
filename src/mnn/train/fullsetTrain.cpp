@@ -38,21 +38,32 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
         return;
     }
 
-    std::cout << "ALL HYPERPARAMETERS SET FOR TRAINING:" << std::endl;
-    std::cout << "Order of Monomials: " << order << std::endl;
-    std::cout << "Gradient Splitting Factor (ALPHA): " << ALPHA << std::endl;
-    std::cout << "L1 Regularization Parameter (LAMBDA_L1): " << LAMBDA_L1 << std::endl;
-    std::cout << "L2 Regularization Parameter (LAMBDA_L2): " << LAMBDA_L2 << std::endl;
-    std::cout << "Dropout Rate (DROPOUT_RATE): " << DROPOUT_RATE << std::endl;
-    std::cout << "Decay Rate (DECAY_RATE): " << DECAY_RATE << std::endl;
-    std::cout << "Weight Decay Parameter (WEIGHT_DECAY): " << WEIGHT_DECAY << std::endl;
-    std::cout << "Softmax Temperature (SOFTMAX_TEMP): " << SOFTMAX_TEMP << std::endl;
+    std::cout << "ALL HYPERPARAMETERS SET FOR TRAINING ARE:" << std::endl;
+    std::cout << "> Order of Monomials: " << order << std::endl;
+    std::cout << "> Gradient Splitting Factor (ALPHA): " << ALPHA << std::endl;
+    std::cout << "> L1 Regularization Parameter (LAMBDA_L1): " << LAMBDA_L1 << std::endl;
+    std::cout << "> L2 Regularization Parameter (LAMBDA_L2): " << LAMBDA_L2 << std::endl;
+    std::cout << "> Dropout Rate (DROPOUT_RATE): " << DROPOUT_RATE << std::endl;
+    std::cout << "> Decay Rate (DECAY_RATE): " << DECAY_RATE << std::endl;
+    std::cout << "> Weight Decay Parameter (WEIGHT_DECAY): " << WEIGHT_DECAY << std::endl;
+    std::cout << "> Softmax Temperature (SOFTMAX_TEMP): " << SOFTMAX_TEMP << std::endl;
     this->learningRate = 0.001f;
 
     // Sort the dataset to ensure consistent order for resumable training
     std::sort(filePaths.begin(), filePaths.end());
     int totalFiles = filePaths.size();
     std::cout << "\n--- Starting Full Dataset Training (mnn) ---" << std::endl;
+    
+    if(useThreadOrBuffer == 1) {
+        #if defined(USE_CU) || defined(USE_CL)
+            std::cout << "> Using Common Buffers for single cycle of training" << std::endl;
+        #else
+            std::cout << "> Using threads for single cycle of training" << std::endl;
+        #endif
+    }
+    else {
+        std::cout << "> Using standalone distinct functions for single cycle of training" << std::endl;
+    }
 
     // access training progress information from file address and use it to re-start training
     // from new session
@@ -227,7 +238,7 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
     // Access all image files from the dataset path
     std::vector<std::filesystem::path> filePaths;
     std::string trainPath = dataSetPath + "/train";
-    
+
     try {
         for (const auto& entry : std::filesystem::directory_iterator(trainPath)) {
             if (entry.is_regular_file()) {
@@ -244,22 +255,32 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
         return;
     }
 
-    std::cout << "ALL HYPERPARAMETERS SET FOR TRAINING:" << std::endl;
-    std::cout << "Order of Monomials: " << order << std::endl;
-    std::cout << "Gradient Splitting Factor (ALPHA): " << ALPHA << std::endl;
-    std::cout << "L1 Regularization Parameter (LAMBDA_L1): " << LAMBDA_L1 << std::endl;
-    std::cout << "L2 Regularization Parameter (LAMBDA_L2): " << LAMBDA_L2 << std::endl;
-    std::cout << "Dropout Rate (DROPOUT_RATE): " << DROPOUT_RATE << std::endl;
-    std::cout << "Decay Rate (DECAY_RATE): " << DECAY_RATE << std::endl;
-    std::cout << "Weight Decay Parameter (WEIGHT_DECAY): " << WEIGHT_DECAY << std::endl;
-    std::cout << "Softmax Temperature (SOFTMAX_TEMP): " << SOFTMAX_TEMP << std::endl;
+    std::cout << "ALL HYPERPARAMETERS SET FOR TRAINING ARE:" << std::endl;
+    std::cout << "> Order of Monomials: " << order << std::endl;
+    std::cout << "> Gradient Splitting Factor (ALPHA): " << ALPHA << std::endl;
+    std::cout << "> L1 Regularization Parameter (LAMBDA_L1): " << LAMBDA_L1 << std::endl;
+    std::cout << "> L2 Regularization Parameter (LAMBDA_L2): " << LAMBDA_L2 << std::endl;
+    std::cout << "> Dropout Rate (DROPOUT_RATE): " << DROPOUT_RATE << std::endl;
+    std::cout << "> Decay Rate (DECAY_RATE): " << DECAY_RATE << std::endl;
+    std::cout << "> Weight Decay Parameter (WEIGHT_DECAY): " << WEIGHT_DECAY << std::endl;
+    std::cout << "> Softmax Temperature (SOFTMAX_TEMP): " << SOFTMAX_TEMP << std::endl;
     this->learningRate = 0.001f;
 
     // Sort the dataset to ensure consistent order for resumable training
     std::sort(filePaths.begin(), filePaths.end());
-
     int totalFiles = filePaths.size();
     std::cout << "\n--- Starting Full Dataset Training (mnn) ---" << std::endl;
+    
+    if(useThreadOrBuffer == 1) {
+        #if defined(USE_CU) || defined(USE_CL)
+            std::cout << "> Using Common Buffers for single cycle of training" << std::endl;
+        #else
+            std::cout << "> Using threads for single cycle of training" << std::endl;
+        #endif
+    }
+    else {
+        std::cout << "> Using standalone distinct functions for single cycle of training" << std::endl;
+    }
 
     // access training progress information from file address and use it to re-start training
     // from new session
@@ -331,14 +352,15 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
                     in[i][j] /= 255;
                 }
             }
+            input = in;
             target = exp;
             // backend selection
             #ifdef USE_CPU
-                train1c(in, target, useThreadOrBuffer);
+                train1c(in, exp, useThreadOrBuffer);
             #elif USE_CU
-                cuTrain1c(in, target, useThreadOrBuffer);
+                cuTrain1c(in, exp, useThreadOrBuffer);
             #elif USE_CL
-                clTrain1c(in, target, useThreadOrBuffer);
+                clTrain1c(in, exp, useThreadOrBuffer);
             #endif
 
             fileCount++;

@@ -15,7 +15,7 @@
 // Helper to determine thread count
 inline unsigned int get_thread_count(size_t work_size) {
     unsigned int num = std::thread::hardware_concurrency();
-    return num == 0 ? 2 : std::min(num, static_cast<unsigned int>(work_size));
+    return num == 0 ? 2 : std::min<unsigned int>(num, static_cast<unsigned int>(work_size));
 }
 
 
