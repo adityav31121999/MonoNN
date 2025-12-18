@@ -18,7 +18,9 @@ void mnn::train1c(const std::vector<float>& input, const std::vector<float>& tar
         forprop(input);
 
         if(maxIndex(output) == maxIndex(target)) {
-            std::cout << "Correct output predicted with loss " << crossEntropy(output, target) << "." << std::endl;
+            float loss = crossEntropy(output, target);
+            if (loss < 0) loss = 0;
+            std::cout << "Correct output predicted with loss " << loss << "." << std::endl;
         }
         else {
             // check for error and break if acceptable
@@ -41,7 +43,9 @@ void mnn::train1c(const std::vector<float>& input, const std::vector<float>& tar
         output = activate[layers - 1];
 
         if(maxIndex(output) == maxIndex(target)) {
-            std::cout << "Correct output predicted with loss " << crossEntropy(output, target) << "." << std::endl;
+            float loss = crossEntropy(output, target);
+            if (loss < 0) loss = 0;
+            std::cout << "Correct output predicted with loss " << loss << "." << std::endl;
         }
         else {
             // check for error and break if acceptable
@@ -87,7 +91,9 @@ void mnn2d::train1c(const std::vector<std::vector<float>>& input, const std::vec
         forprop(input);
 
         if(maxIndex(output) == maxIndex(target)) {
-            std::cout << "Correct output predicted with loss " << crossEntropy(output, target) << "." << std::endl;
+            float loss = crossEntropy(output, target);
+            if (loss < 0) loss = 0;
+            std::cout << "Correct output predicted with loss " << loss << "." << std::endl;
         }
         else {
             // check for error and break if acceptable
@@ -113,7 +119,9 @@ void mnn2d::train1c(const std::vector<std::vector<float>>& input, const std::vec
         output = meanPool(activate[layers - 1]);
 
         if(maxIndex(output) == maxIndex(target)) {
-            std::cout << "Correct output predicted with loss " << crossEntropy(output, target) << "." << std::endl;
+            float loss = crossEntropy(output, target);
+            if (loss < 0) loss = 0;
+            std::cout << "Correct output predicted with loss " << loss << "." << std::endl;
         }
         else {
             // check for error and break if acceptable

@@ -119,6 +119,7 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
             if (label < this->outSize) {
                 exp[label] = 1.0f;
             }
+            // normalise input
             for(int i = 0; i < in.size(); i++) {
                 in[i] /= 255;
             }
@@ -126,11 +127,11 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
             target = exp;
             // backend selection
             #ifdef USE_CPU
-                train1c(in, target, useThreadOrBuffer);
+                train1c(in, exp, useThreadOrBuffer);
             #elif USE_CU
-                cuTrain1c(in, target, useThreadOrBuffer);
+                cuTrain1c(in, exp, useThreadOrBuffer);
             #elif USE_CL
-                clTrain1c(in, target, useThreadOrBuffer);
+                clTrain1c(in, exp, useThreadOrBuffer);
             #endif
 
             fileCount++;

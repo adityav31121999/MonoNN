@@ -140,7 +140,9 @@ void mnn::clTrain1c(const std::vector<float>& input, const std::vector<float>& t
         CL_CHECK(clCommandQueue.enqueueReadBuffer(d_activate[layers - 1], CL_TRUE, 0, output.size() * sizeof(float), output.data()));
 
         if(maxIndex(output) == maxIndex(target)) {
-            std::cout << "Correct output predicted with loss " << crossEntropy(output, target) << "." << std::endl;
+            float loss = crossEntropy(output, target);
+            if (loss < 0) loss = 0;
+            std::cout << "Correct output predicted with loss " << loss << "." << std::endl;
         }
         else {
             zeroGradients();
@@ -478,7 +480,9 @@ void mnn2d::clTrain1c(const std::vector<std::vector<float>>& input, const std::v
         d_final_output = cl::Buffer();
 
         if(maxIndex(output) == maxIndex(target)) {
-            std::cout << "Correct output predicted with loss " << crossEntropy(output, target) << "." << std::endl;
+            float loss = crossEntropy(output, target);
+            if (loss < 0) loss = 0;
+            std::cout << "Correct output predicted with loss " << loss << "." << std::endl;
         }
         else {
             // check for error and break if acceptable

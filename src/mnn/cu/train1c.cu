@@ -124,7 +124,9 @@ void mnn::cuTrain1c(const std::vector<float>& input, const std::vector<float>& t
         CU_CHECK(cudaMemcpy(output.data(), d_activate[layers - 1], output.size() * sizeof(float), cudaMemcpyDeviceToHost));
 
         if(maxIndex(output) == maxIndex(target)) {
-            std::cout << "Correct output predicted with loss " << crossEntropy(output, target) << "." << std::endl;
+            float loss = crossEntropy(output, target);
+            if (loss < 0) loss = 0;
+            std::cout << "Correct output predicted with loss " << loss << "." << std::endl;
         }
         else {
             currloss = crossEntropy(output, target);
@@ -370,7 +372,9 @@ void mnn2d::cuTrain1c(const std::vector<std::vector<float>>& input, const std::v
         cudaFree(d_final_output);
 
         if(maxIndex(output) == maxIndex(target)) {
-            std::cout << "Correct output predicted with loss " << crossEntropy(output, target) << "." << std::endl;
+            float loss = crossEntropy(output, target);
+            if (loss < 0) loss = 0;
+            std::cout << "Correct output predicted with loss " << loss << "." << std::endl;
         }
         else {
             currloss = crossEntropy(output, target);
