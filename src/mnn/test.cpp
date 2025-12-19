@@ -30,7 +30,7 @@ void mnn::test(const std::string &dataSetPath, bool useThreadOrBuffer)
 
     if (filePaths.empty()) {
         std::cout << "Warning: No files found in dataset directory: " << dataSetPath << std::endl;
-        this->testPrg.testError = 0.0f;
+        testPrg.testError = 0.0f;
         return;
     }
 
@@ -40,7 +40,7 @@ void mnn::test(const std::string &dataSetPath, bool useThreadOrBuffer)
 
     std::cout << "\n--- Starting Test (mnn) ---" << std::endl;
     std::cout << "Found " << totalInputs << " files for testing." << std::endl;
-    this->testPrg.totalTestFiles = totalInputs;
+    testPrg.totalTestFiles = totalInputs;
 
     for(size_t i = 0; i < totalInputs; ++i) {
         const auto& filePath = filePaths[i];
@@ -68,28 +68,39 @@ void mnn::test(const std::string &dataSetPath, bool useThreadOrBuffer)
         if(maxIndex(this->output) == static_cast<size_t>(label)) {
             correctPredictions++;
         }
+        confusion[label][maxIndex(this->output)] += 1;
         // accumulate loss
         accLoss += crossEntropy(this->output, target);
+        getScore(output, target, allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
 
         if((i + 1) % 100 == 0 || (i + 1) == totalInputs) {
             float currentAccuracy = (float)correctPredictions / (i + 1);
             std::cout << "Processed " << i + 1 << "/" << totalInputs
-                      << " \t Accuracy: " << currentAccuracy * 100.0f << "%\t"
+                      << " \t Correct Prediction Percentage: " << currentAccuracy * 100.0f << "%\t"
                       << " | Avg Loss: " << accLoss / (i + 1.0f) << std::endl;
         }
     }
 
-    this->testPrg.testError = (totalInputs > 0) ? (accLoss / totalInputs) : 0.0f;
-    this->testPrg.correctPredictions = correctPredictions;
-    this->testPrg.testAccuracy = static_cast<float>(correctPredictions * 100) / totalInputs;
-    this->testPrg.totalTestFiles = totalInputs;
-    this->path2test_progress = dataSetPath + "/mnn1d_test.csv";
-    logTestProgressToCSV(this->testPrg, this->path2test_progress);
+    testPrg.testError = (totalInputs > 0) ? (accLoss / totalInputs) : 0.0f;
+    testPrg.correctPredictions = correctPredictions;
+    testPrg.testAccuracy = static_cast<float>(correctPredictions * 100) / totalInputs;
+    testPrg.totalTestFiles = totalInputs;
+    logTestProgressToCSV(testPrg, path2test_progress);
+    // evaluation
+    allScores.sse = allScores.totalSumOfError / totalInputs;
+    allScores.ssr = allScores.totalSumOfRegression / totalInputs;
+    allScores.sst = allScores.totalSumOfSquares / totalInputs;
+    allScores.r2 = allScores.ssr / allScores.sst;
+    confData = {};
+    confData = confusionMatrixFunc(confusion);
+    epochDataToCsv(dataSetPath, confusion, confData, allScores, testPrg, true);
+    path2test_progress = dataSetPath + "/mnn1d_test.csv";
     std::cout << "--- Test Finished (mnn) ---" << std::endl;
-    std::cout << "Final Accuracy: " << ((float)correctPredictions / totalInputs) * 100.0f << "%" << std::endl;
-    std::cout << "Final Average Loss: " << this->testPrg.testError << std::endl;
-    std::cout << "Correct Predictions: " << correctPredictions << std::endl;
     std::cout << "Total Inputs: " << totalInputs << std::endl;
+    std::cout << "Final Accuracy: " << ((float)correctPredictions / totalInputs) * 100.0f << "%" << std::endl;
+    std::cout << "Final Average Loss: " << testPrg.testError << std::endl;
+    std::cout << "Correct Predictions: " << correctPredictions << std::endl;
+
 }
 
 // for MNN2D
@@ -113,7 +124,7 @@ void mnn2d::test(const std::string &dataSetPath, bool useThreadOrBuffer)
 
     if (filePaths.empty()) {
         std::cout << "Warning: No files found in dataset directory: " << dataSetPath << std::endl;
-        this->testPrg.testError = 0.0f;
+        testPrg.testError = 0.0f;
         return;
     }
 
@@ -123,7 +134,7 @@ void mnn2d::test(const std::string &dataSetPath, bool useThreadOrBuffer)
 
     std::cout << "\n--- Starting Test (mnn2d) ---" << std::endl;
     std::cout << "Found " << totalInputs << " files for testing." << std::endl;
-    this->testPrg.totalTestFiles = totalInputs;
+    testPrg.totalTestFiles = totalInputs;
     
     for(size_t i = 0; i < totalInputs; ++i) {
         const auto& filePath = filePaths[i];
@@ -148,6 +159,7 @@ void mnn2d::test(const std::string &dataSetPath, bool useThreadOrBuffer)
         if(maxIndex(this->output) == static_cast<size_t>(label)) {
             correctPredictions++;
         }
+        getScore(output, target, allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
         // accumulate loss
         accLoss += crossEntropy(this->output, target);
 
@@ -159,15 +171,15 @@ void mnn2d::test(const std::string &dataSetPath, bool useThreadOrBuffer)
         }
     }
 
-    this->testPrg.testError = (totalInputs > 0) ? (accLoss / totalInputs) : 0.0f;
-    this->testPrg.correctPredictions = correctPredictions;
-    this->testPrg.testAccuracy = static_cast<float>(correctPredictions * 100) / totalInputs;
-    this->testPrg.totalTestFiles = totalInputs;
-    this->path2test_progress = dataSetPath + "/mnn1d_test.csv";
-    logTestProgressToCSV(this->testPrg, this->path2test_progress);
+    testPrg.testError = (totalInputs > 0) ? (accLoss / totalInputs) : 0.0f;
+    testPrg.correctPredictions = correctPredictions;
+    testPrg.testAccuracy = static_cast<float>(correctPredictions * 100) / totalInputs;
+    testPrg.totalTestFiles = totalInputs;
+    path2test_progress = dataSetPath + "/mnn1d_test.csv";
+    logTestProgressToCSV(testPrg, path2test_progress);
     std::cout << "--- Test Finished (mnn) ---" << std::endl;
     std::cout << "Final Accuracy: " << ((float)correctPredictions / totalInputs) * 100.0f << "%" << std::endl;
-    std::cout << "Final Average Loss: " << this->testPrg.testError << std::endl;
+    std::cout << "Final Average Loss: " << testPrg.testError << std::endl;
     std::cout << "Correct Predictions: " << correctPredictions << std::endl;
     std::cout << "Total Inputs: " << totalInputs << std::endl;
 }

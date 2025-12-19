@@ -19,6 +19,7 @@ set(MNN_SOURCES
     mnn/test.cpp
     mnn/preTrain.cpp
     mnn/evaluation/stats.cpp
+    mnn/evaluation/session.cpp
     mnn/evaluation/progress.cpp
     mnn/evaluation/confusion.cpp
     mnn/evaluation/epoch.cpp

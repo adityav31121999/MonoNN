@@ -32,14 +32,14 @@ bool logProgressToCSV(const progress& p, const std::string& filePath) {
     if (fileIsEmpty) {
         file << "epoch,batchSize,sessionSize,totalTrainFiles,filesProcessed,"
              << "currentLearningRate,loss,accLoss,trainingPredictions,correctPredPercent,totalCycleCount,"
-             << "totalSessionsOfTraining,timeForCurrentSession,timeTakenForTraining,\n";
+             << "sessionCount,timeForCurrentSession,timeTakenForTraining,\n";
     }
 
     // Append the data row
     file << p.epoch << "," << p.batchSize << "," << p.sessionSize << "," << p.totalTrainFiles << ","
          << p.filesProcessed << "," << p.currentLearningRate << "," << p.loss << "," << p.accLoss << ","
          << p.trainingPredictions << "," << p.correctPredPercent << ","  << p.totalCycleCount << ","
-         << p.totalSessionsOfTraining << "," << p.timeForCurrentSession << "," << p.timeTakenForTraining
+         << p.sessionCount << "," << p.timeForCurrentSession << "," << p.timeTakenForTraining
          << "," << "\n";
 
     file.close();
@@ -93,7 +93,7 @@ bool loadLastProgress(progress& p, const std::string& filePath) {
         std::getline(ss, token, ','); p.trainingPredictions = std::stoul(token);
         std::getline(ss, token, ','); p.correctPredPercent = std::stof(token);
         std::getline(ss, token, ','); p.totalCycleCount = std::stoull(token);
-        std::getline(ss, token, ','); p.totalSessionsOfTraining = std::stoul(token);
+        std::getline(ss, token, ','); p.sessionCount = std::stoul(token);
         std::getline(ss, token, ','); p.timeForCurrentSession = std::stod(token);
         std::getline(ss, token, ','); p.timeTakenForTraining = std::stod(token);
     }

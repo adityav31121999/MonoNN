@@ -182,7 +182,20 @@ Gradients for Monomial neural nets are calculated in a similar manner to MLPs.
   - Layer composition generates a dense function class.
   - More expressive than linear MLPs for the same width/depth.
 
+### **Universal Approximation For Specialised Orders**
+Similar to above, inspired from it, this theorem actually focuses on specific orders with symmetric and asymmetric fractional orders.
+- Monomial networks with fixed fractional order $m \ge 1$ and sufficient layers/neurons can approximate any continuous function on compact sets.
+- Following are the reasons:
+  - Powers of form $m = 0.2 + (0.4 * n)$ have antisymmetry and have one-to-one / bijective mapping, this order includes $m = 1$.
+  - For $n \ge 2$, this is far more expressive.
+  - For order, that lead to many-to-one or lead to symmetry are also expressive but impact of negative values can be ignored or negative value play similar roles to positive values.
+  - This order for many-to-one is of the form: $m = (0.4 * n)$ for $n \ge 2$.
+  - Layer composition generates a dense function class.
+  - More expressive than linear MLPs for the same width/depth due non-linear nature.
+  - Higer power can lead massive explosions or damping, this can be avoided with dropouts of weights.
+
 ---
+
 ## Project Versions
 
 - **0.0.1**: Basic Structure and File-by-File Training (complete)

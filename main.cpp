@@ -5,7 +5,7 @@
 #include <fstream>
 #include "mononn.h"
 
-#define TRAIN_2D 1
+#define TRAIN_2D 0
 
 int main() {
     try {
@@ -50,7 +50,7 @@ int main() {
         // network1.test(digit, useThreadOrBuffer);
 #else
         std::cout << "---------------------MNN2D---------------------" << std::endl;
-        mnn2d network2(inh, inw, outSize, hidden_layers2, order, digit + "/mnn2d/weights.bin");
+        mnn2d network2(inh, inw, outSize, hidden_layers2, order, digit);
         network2.weightUpdateType = 3;
         network2.trainPrg.sessionSize = 150;
         network2.fullDataSetTraining(digit, useThreadOrBuffer);

@@ -17,7 +17,7 @@ mnn2d::mnn2d(int inw, int inh, int outw, int layers, float order, std::string da
     order(order), inWidth(inw), inHeight(inh), outWidth(outw), layers(layers),
     batchSize(1), binFileAddress(datasetpath + "/mnn2d/weights.bin"), epochs(100), iterations(0), learningRate(0.01f)
 {
-    this->trainPrg = {};
+    trainPrg = {};
     // set hidden layers width and height
     int dim = (inw + outw) / 2;
     width.resize(layers, dim);
@@ -64,8 +64,9 @@ mnn2d::mnn2d(int inw, int inh, int outw, int layers, float order, std::string da
         param += static_cast<unsigned long long>(cweights[i].size() * cweights[i][0].size());
     }
     param *= 2; // b-weights
-    path2test_progress = datasetpath + "/testProgress.csv";
-    path2progress = datasetpath + "/trainProgress.csv";
+    path2test_progress = datasetpath + "/mnn2d/testProgress.csv";
+    path2progress = datasetpath + "/mnn2d/trainProgress.csv";
+    makeBinFile(initialValues);
     makeBinFile(binFileAddress);
     std::cout << "Network initialized with " << param << " parameters." 
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
@@ -151,7 +152,7 @@ mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::
     order(order), inWidth(inw), inHeight(inh), outWidth(outw), layers(layers),
     batchSize(1), binFileAddress(datasetpath + "/mnn2d/weights.bin"), epochs(100), iterations(0), learningRate(0.01f)
 {
-    this->trainPrg = {};
+    trainPrg = {};
     // set hidden layers width and height
     width.resize(layers, dim);
     width[layers - 1] = outw;
@@ -197,8 +198,9 @@ mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::
         param += static_cast<unsigned long long>(cweights[i].size() * cweights[i][0].size());
     }
     param *= 2; // b-weights
-    path2test_progress = datasetpath + "/testProgress.csv";
-    path2progress = datasetpath + "/trainProgress.csv";
+    path2test_progress = datasetpath + "/mnn2d/testProgress.csv";
+    path2progress = datasetpath + "/mnn2d/trainProgress.csv";
+    makeBinFile(initialValues);
     makeBinFile(binFileAddress);
     std::cout << "Network initialized with " << param << " parameters." 
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
@@ -276,7 +278,7 @@ mnn2d::mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, st
     order(order), inWidth(inw), inHeight(inh), outWidth(outw), layers(width.size()),
     width(width), batchSize(1), binFileAddress(datasetpath + "/mnn2d/weights.bin"), epochs(100), iterations(0), learningRate(0.01f)
 {
-    this->trainPrg = {};
+    trainPrg = {};
     input.resize(inh, std::vector<float>(inw, 0.0f));
     target.resize(outw, 0.0f);
     output.resize(outw, 0.0f);
@@ -321,8 +323,9 @@ mnn2d::mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, st
         param += static_cast<unsigned long long>(cweights[i].size() * cweights[i][0].size());
     }
     param *= 2; // b-weights
-    path2test_progress = datasetpath + "/testProgress.csv";
-    path2progress = datasetpath + "/trainProgress.csv";
+    path2test_progress = datasetpath + "/mnn2d/testProgress.csv";
+    path2progress = datasetpath + "/mnn2d/trainProgress.csv";
+    makeBinFile(initialValues);
     makeBinFile(binFileAddress);
     std::cout << "Network initialized with " << param << " parameters." 
               << " Total Size: " << sizeof(float) * param / (1024.0 * 1024.0) << " MB"<< std::endl;
@@ -470,6 +473,8 @@ void mnn2d::makeBinFile(const std::string &fileAddress)
             std::cin >> weightUpdateType;
             std::cout << std::endl;
             initiateWeights(weightUpdateType);
+            serializeWeights(cweights, bweights, initialValues);
+            serializeWeights(cweights, bweights, binFileAddress);
 		}
 	}
     else {
@@ -503,6 +508,8 @@ void mnn2d::makeBinFile(const std::string &fileAddress)
         std::cin >> weightUpdateType;
         std::cout << std::endl;
         initiateWeights(weightUpdateType);
+        serializeWeights(cweights, bweights, initialValues);
+        serializeWeights(cweights, bweights, binFileAddress);
     }
     saveNetwork();
 }

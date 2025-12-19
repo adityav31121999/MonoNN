@@ -36,16 +36,20 @@ public:
     std::vector<float> target;      // target vector
 
     unsigned long long param;       // counter for iterations
-    std::string binFileAddress;     // binary file address to save weights and biases
-    std::string path2progress;      // path to progress file for session-wise checks
-    std::string path2test_progress; // path to test progress file for session-wise checks
-    std::string path2EpochDir;      // epoch-based data stored here
     progress trainPrg;              // train progress
     test_progress testPrg;          // test progress
     confMat confData;               // precision and accuracy data
     scores allScores;               // r^2
     std::vector<std::vector<int>> confusion;        // confusion matrix
     std::vector<std::vector<float>> weightStats;    // weight statistics
+
+    std::string initialValues;      // binary file address to save initialised weights
+    std::string binFileAddress;     // binary file address to save trained weights and biases
+    std::string path2progress;      // path to progress file for session-wise checks
+    std::string path2test_progress; // path to test progress file for session-wise checks
+    std::string path2EpochDir;      // epoch-based data stored here
+    std::string path2SessionDir;    // session-based data stored here
+    std::string path2PreDir;        // path to pre-trained data
 
 // store values for training
 

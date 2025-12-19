@@ -13,7 +13,7 @@
 /**
  * @brief pre-training results for weights(stats),set gradients (0 in stats) and prediction, perform with 
  *  both train + test files. This will be used in analysis of training and testing (epoch-wise).
- * @param dataSetPath path to complete data 
+ * @param dataSetPath path to complete dataset
  */
 void mnn::preTrainRun(const std::string &dataSetPath)
 {
@@ -96,7 +96,7 @@ void mnn::preTrainRun(const std::string &dataSetPath)
 
         confData = confusionMatrixFunc(confusion);
         computeStatsForCsv(cweights, bweights, cgradients, bgradients, weightStats);
-        epochDataToCsv(dataSetPath + "/mnn1d_pretrain", 0, false, weightStats, confusion, confData, allScores, preTrainProgress);
+        epochDataToCsv(dataSetPath + "/mnn1d/pre", 0, false, weightStats, confusion, confData, allScores, preTrainProgress, false);
     }
 
     /*----------------------
@@ -128,7 +128,6 @@ void mnn::preTrainRun(const std::string &dataSetPath)
     confusion.assign(outSize, std::vector<int>(outSize, 0));
 
     for (const auto& filePath : testFilePaths) {
-        
         // Convert image to a flat 1D vector
         std::vector<float> in = flatten(cvMat2vec(image2grey(filePath.string())));
         for(auto& val : in) {
@@ -181,7 +180,7 @@ void mnn::preTrainRun(const std::string &dataSetPath)
     confData = confusionMatrixFunc(confusion);
     // Note: Gradients are zero in pre-training, so stats are only for weights.
     computeStatsForCsv(cweights, bweights, cgradients, bgradients, weightStats);
-    epochDataToCsv(dataSetPath + "/mnn1d_pretrain_test", confusion, confData, allScores, preTestProgress);
+    epochDataToCsv(dataSetPath + "/mnn1d/pre", confusion, confData, allScores, preTestProgress, false);
 
     std::cout << "--- Pre-Training Run Finished (mnn) ---" << std::endl;
 }
@@ -271,7 +270,7 @@ void mnn2d::preTrainRun(const std::string &dataSetPath)
 
         confData = confusionMatrixFunc(confusion);
         computeStatsForCsv(cweights, bweights, cgradients, bgradients, weightStats);
-        epochDataToCsv(dataSetPath + "/mnn2d_pretrain", 0, false, weightStats, confusion, confData, allScores, preTrainProgress);
+        epochDataToCsv(dataSetPath + "/mnn2d/pre", 0, false, weightStats, confusion, confData, allScores, preTrainProgress, false);
     }
 
     /*----------------------
@@ -353,7 +352,7 @@ void mnn2d::preTrainRun(const std::string &dataSetPath)
     confData = confusionMatrixFunc(confusion);
     // Note: Gradients are zero in pre-training, so stats are only for weights.
     computeStatsForCsv(cweights, bweights, cgradients, bgradients, weightStats); 
-    epochDataToCsv(dataSetPath + "/mnn2d_pretrain_test", confusion, confData, allScores, preTestProgress);
+    epochDataToCsv(dataSetPath + "/mnn2d/pre", confusion, confData, allScores, preTestProgress, false);
 
     std::cout << "--- Pre-Training Run Finished (mnn2d) ---" << std::endl;
 }

@@ -4,8 +4,8 @@
 #include "progress.hpp"
 
 /**
- * @brief save each training epochs data to csv
- * @param dataSetAddress address of dataset
+ * @brief save pre-train and each training epochs data to csv
+ * @param path2dir address of epoch directory
  * @param epoch training cycle count
  * @param batchOrNot batch training or not
  * @param weightStats weight statistics (mean, dev, min, max)
@@ -13,13 +13,29 @@
  * @param cm confusion matrix related scores
  * @param sc coefficient of determination
  * @param p training progress
+ * @param isTrainOrPre if is training == 1 else 0 for pre-train run
  */
-void epochDataToCsv(const std::string &dataSetAddress, const int epoch, bool batchOrNot,
+void epochDataToCsv(const std::string &path2dir, const int epoch, bool batchOrNot,
                     const std::vector<std::vector<float>> &weightStats,
                     const std::vector<std::vector<int>> &confusion,
-                    const confMat &cm, const scores &sc, const progress &p)
+                    const confMat &cm, const scores &sc, const progress &p,
+                    bool isTrainOrPre)
 {
-    std::string newCsv = dataSetAddress + "/epoch" + std::to_string(epoch) + "_" + std::to_string(batchOrNot) + ".csv";
+    std::filesystem::path dirPath = path2dir;
+    if (!dirPath.empty() && !std::filesystem::exists(dirPath)) {
+        std::cout << "Directory " << dirPath << " does not exist. Creating it." << std::endl;
+        if (!std::filesystem::create_directories(dirPath)) {
+            throw std::runtime_error("MNN CONSTRUCTOR: could not create directory: " + dirPath.string());
+        }
+    }
+
+    std::string newCsv;
+    if (isTrainOrPre == 1) {
+        newCsv = path2dir + "/epoch" + std::to_string(epoch) + "_" + std::to_string(batchOrNot) + ".csv";
+    }
+    else {
+        newCsv = path2dir + "/preTrainEpoch0.csv";
+    }
     std::filesystem::create_directories(std::filesystem::path(newCsv).parent_path());
     std::ofstream file(newCsv);
 
@@ -41,16 +57,38 @@ void epochDataToCsv(const std::string &dataSetAddress, const int epoch, bool bat
     file << "trainingPredictions," << p.trainingPredictions << "\n";
     file << "correctPredPercent," << p.correctPredPercent << "\n";
     file << "totalCycleCount," << p.totalCycleCount << "\n";
-    file << "totalSessionsOfTraining," << p.totalSessionsOfTraining << "\n";
+    file << "sessionCount," << p.sessionCount << "\n";
     file << "timeForCurrentSession," << p.timeForCurrentSession << "\n";
     file << "timeTakenForTraining," << p.timeTakenForTraining << "\n";
 
     // --- Weight Stats ---
     file << "\nWeightStats\n";
-    file << "layer,mean,std,min,max\n";
-    for (size_t i = 0; i < weightStats.size(); ++i) {
-        file << i;
+    file << "property,layer,mean,std,min,max\n";
+    size_t w = weightStats.size() / 4;
+    for (size_t i = 0; i < w; ++i) {
+        file << "cweights" + i;
         for (const auto& stat : weightStats[i]) {
+            file << "," << stat;
+        }
+        file << "\n";
+    }
+    for (size_t i = 0; i < w; ++i) {
+        file << "bweights" + i;
+        for (const auto& stat : weightStats[w + i]) {
+            file << "," << stat;
+        }
+        file << "\n";
+    }
+    for (size_t i = 0; i < w; ++i) {
+        file << "cgradients" + i;
+        for (const auto& stat : weightStats[(2 * w) + i]) {
+            file << "," << stat;
+        }
+        file << "\n";
+    }
+    for (size_t i = 0; i < w; ++i) {
+        file << "bgradients" + i;
+        for (const auto& stat : weightStats[(3 * w) + i]) {
             file << "," << stat;
         }
         file << "\n";
@@ -87,19 +125,27 @@ void epochDataToCsv(const std::string &dataSetAddress, const int epoch, bool bat
 
 
 /**
- * @brief save each training epochs data to csv
- * @param dataSetAddress address of dataset
+ * @brief save pre-train and test data to csv
+ * @param path2dir address of epoch directory
  * @param weightStats weight statistics (mean, dev, min, max)
  * @param confusion confusion matrix of epoch
  * @param cm confusion matrix related scores
  * @param sc coefficient of determination
  * @param p training progress
+ * @param isTestOrPre if is test run == 1 else 0 for pre-train run
  */
-void epochDataToCsv(const std::string& dataSetAddress,
-                    const std::vector<std::vector<int>>& confusion,
-					const confMat& cm, const scores& sc, const test_progress& p)
+void epochDataToCsv(const std::string& path2dir, const std::vector<std::vector<int>>& confusion,
+					const confMat& cm, const scores& sc, const test_progress& p, bool isTestOrPre)
 {
-    std::string newCsv = dataSetAddress + "/test.csv";
+    std::filesystem::path dirPath = path2dir;
+    if (!dirPath.empty() && !std::filesystem::exists(dirPath)) {
+        std::cout << "Directory " << dirPath << " does not exist. Creating it." << std::endl;
+        if (!std::filesystem::create_directories(dirPath)) {
+            throw std::runtime_error("MNN CONSTRUCTOR: could not create directory: " + dirPath.string());
+        }
+    }
+
+    std::string newCsv = path2dir + ((isTestOrPre == 1) ? "/test.csv" : "/preTest.csv");
     std::filesystem::create_directories(std::filesystem::path(newCsv).parent_path());
     std::ofstream file(newCsv);
 

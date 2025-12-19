@@ -49,39 +49,39 @@ void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuff
 
     int totalFiles = filePaths.size();
     std::cout << "\n--- Starting Mini-Batch Training (mnn) ---" << std::endl;
-    std::cout << "Resuming from file index: " << this->trainPrg.filesProcessed << std::endl;
+    std::cout << "Resuming from file index: " << trainPrg.filesProcessed << std::endl;
 
     // access training progress information from file address and use it to re-start training
     // from new session
     double previousTrainingTime = 0.0;
     batchSize = BATCH_SIZE;
     int curPreds = 0;
-    if (!loadLastProgress(this->trainPrg, this->path2progress)) {
+    if (!loadLastProgress(trainPrg, this->path2progress)) {
         // Preserve session and batch size set before calling train
         std::cout << "No progress file found or file is empty. Starting fresh training." << std::endl;
-        this->trainPrg = {}; // Reset progress
-        this->trainPrg.epoch = 0;
-        this->trainPrg.sessionSize = SESSION_SIZE;
-        this->trainPrg.batchSize = batchSize;
-        this->trainPrg.currentLearningRate = this->learningRate;
+        trainPrg = {}; // Reset progress
+        trainPrg.epoch = 0;
+        trainPrg.sessionSize = SESSION_SIZE;
+        trainPrg.batchSize = batchSize;
+        trainPrg.currentLearningRate = this->learningRate;
         curPreds = 0;
     }
     else {
         std::cout << "Successfully loaded progress. Resuming training." << std::endl;
-        this->learningRate = this->trainPrg.currentLearningRate;
-        previousTrainingTime = this->trainPrg.timeTakenForTraining;
-        curPreds = this->trainPrg.trainingPredictions;
-        std::cout << "Found " << totalFiles << " files for training. Resuming from file index " << this->trainPrg.filesProcessed << "." << std::endl;
+        this->learningRate = trainPrg.currentLearningRate;
+        previousTrainingTime = trainPrg.timeTakenForTraining;
+        curPreds = trainPrg.trainingPredictions;
+        std::cout << "Found " << totalFiles << " files for training. Resuming from file index " << trainPrg.filesProcessed << "." << std::endl;
     }
 
     int fileCount = 0;
     int filesInCurrentSession = 0;
     // Update progress struct with file and batch info
-    this->trainPrg.totalTrainFiles = totalFiles;
-    this->trainPrg.batchSize = batchSize;
-    int sessionFiles = this->trainPrg.sessionSize * this->trainPrg.batchSize;
+    trainPrg.totalTrainFiles = totalFiles;
+    trainPrg.batchSize = batchSize;
+    int sessionFiles = trainPrg.sessionSize * trainPrg.batchSize;
     std::cout << "Batch Training with batch size: " << BATCH_SIZE << std::endl;
-    std::cout << "Session Size (in batches/session): " << this->trainPrg.sessionSize << std::endl;
+    std::cout << "Session Size (in batches/session): " << trainPrg.sessionSize << std::endl;
     std::cout << "Files in Single Session: " << sessionFiles << std::endl;
 
     // start time count
@@ -111,7 +111,7 @@ void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuff
     std::cout << "Training with batch size: " << batchSize << " (" << totalBatches << " batches)" << std::endl;
 
     // Start iterating from the beginning of the batch where the last processed file was
-    int startFileIndex = (this->trainPrg.filesProcessed / batchSize) * batchSize;
+    int startFileIndex = (trainPrg.filesProcessed / batchSize) * batchSize;
     fileCount = startFileIndex;
     std::cout << "Starting from file index " << startFileIndex << " to align with batches." << std::endl;
 
@@ -166,34 +166,34 @@ void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuff
                 if (label < confusion.size() && maxIndex(outputBatch[j]) < confusion[0].size()) {
                     confusion[label][maxIndex(outputBatch[j])]++;
                 }
-                this->trainPrg.accLoss += crossEntropy(outputBatch[j], expBatch[j]);
-                this->allScores.totalSumOfError += static_cast<double>(sumOfSquareOfDiff(outputBatch[j], expBatch[j]));
-                this->allScores.totalSumOfRegression += static_cast<double>(sumOfSquareOfDiff(expBatch[j], mean(outputBatch[j])));
-                this->allScores.totalSumOfSquares += static_cast<double>(sumOfSquareOfDiff(expBatch[j], mean(expBatch[j])));
+                trainPrg.accLoss += crossEntropy(outputBatch[j], expBatch[j]);
+                allScores.totalSumOfError += static_cast<double>(sumOfSquareOfDiff(outputBatch[j], expBatch[j]));
+                allScores.totalSumOfRegression += static_cast<double>(sumOfSquareOfDiff(expBatch[j], mean(outputBatch[j])));
+                allScores.totalSumOfSquares += static_cast<double>(sumOfSquareOfDiff(expBatch[j], mean(expBatch[j])));
             }
 
             // for progress tracking
             fileCount += batchSize;
-            this->trainPrg.filesProcessed += batchSize;
+            trainPrg.filesProcessed += batchSize;
             filesInCurrentSession += batchSize;
             bool sessionEnd = 0;
             if ((sessionFiles > 0 && filesInCurrentSession >= sessionFiles) || fileCount == totalFiles) {
                 auto endTime = std::chrono::high_resolution_clock::now();
-                this->trainPrg.correctPredPercent = static_cast<float>(100 * correctPredictions) / fileCount;
-                this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
-                this->trainPrg.trainingPredictions = correctPredictions;
-                this->trainPrg.timeTakenForTraining += this->trainPrg.timeForCurrentSession;
-                this->learningRate = this->trainPrg.currentLearningRate;
-                this->trainPrg.totalSessionsOfTraining++;
-                this->trainPrg.totalCycleCount += sessionFiles;
-                this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(this->trainPrg.filesProcessed);
+                trainPrg.correctPredPercent = static_cast<float>(100 * correctPredictions) / fileCount;
+                trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
+                trainPrg.trainingPredictions = correctPredictions;
+                trainPrg.timeTakenForTraining += trainPrg.timeForCurrentSession;
+                this->learningRate = trainPrg.currentLearningRate;
+                trainPrg.sessionCount++;
+                trainPrg.totalCycleCount += sessionFiles;
+                trainPrg.loss = trainPrg.accLoss / static_cast<float>(trainPrg.filesProcessed);
                 sessionEnd = 1;
-                logProgressToCSV(this->trainPrg, this->path2progress);
-                std::cout << "Epoch: " << this->trainPrg.epoch 
+                logProgressToCSV(trainPrg, this->path2progress);
+                std::cout << "Epoch: " << trainPrg.epoch 
                           << " \tFiles: " << fileCount << "/" << totalFiles
                           << " \tPredictions: " << correctPredictions
-                          << " \tTraining Accuracy: " << this->trainPrg.correctPredPercent << "%"
-                          << " \tLoss: " << this->trainPrg.accLoss / static_cast<float>(this->trainPrg.filesProcessed)
+                          << " \tTraining Accuracy: " << trainPrg.correctPredPercent << "%"
+                          << " \tLoss: " << trainPrg.accLoss / static_cast<float>(trainPrg.filesProcessed)
                           << std::endl;
                 serializeWeights(cweights, bweights, binFileAddress);
                 filesInCurrentSession = 0;
@@ -205,7 +205,7 @@ void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuff
                 // computeStats(cweights, bweights, cgradients, bgradients, activate);
                 if (fileCount == totalFiles) {
                     std::cout << "All files processed. Next Epoch." << std::endl;
-                    this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(fileCount);
+                    trainPrg.loss = trainPrg.accLoss / static_cast<float>(fileCount);
                     bool notBatch = 1; // It is batch training
                     confData = {};
                     confData = confusionMatrixFunc(confusion);
@@ -213,38 +213,38 @@ void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuff
                     allScores.ssr = allScores.totalSumOfRegression / totalFiles;
                     allScores.sst = allScores.totalSumOfSquares / totalFiles;
                     allScores.r2 = allScores.ssr / allScores.sst;
-                    epochDataToCsv(dataSetPath + "/mnn1d", this->trainPrg.epoch, notBatch,
+                    epochDataToCsv(dataSetPath + "/mnn1d", trainPrg.epoch, notBatch,
                                     weightStats,
                                     confusion,
-                                    confData, allScores, trainPrg);
+                                    confData, allScores, trainPrg, true);
                     break;
                 }
             }
         }
 
-        if(this->trainPrg.correctPredPercent >= 98.0f) {
+        if(trainPrg.correctPredPercent >= 98.0f) {
             std::cout << "Training completed using minibatch of size " << BATCH_SIZE 
-                      << "with accuracy of " << this->trainPrg.correctPredPercent << "%" << std::endl;
+                      << "with accuracy of " << trainPrg.correctPredPercent << "%" << std::endl;
             break;
         }
-        this->trainPrg.epoch += 1;
-        this->trainPrg.filesProcessed = 0;
-        this->trainPrg.correctPredPercent = 0;
-        this->trainPrg.timeForCurrentSession = 0;
-        this->trainPrg.trainingPredictions = 0;
+        trainPrg.epoch += 1;
+        trainPrg.filesProcessed = 0;
+        trainPrg.correctPredPercent = 0;
+        trainPrg.timeForCurrentSession = 0;
+        trainPrg.trainingPredictions = 0;
         curPreds = 0;
         allScores = {};
         confusion.assign(outSize, std::vector<int>(outSize, 0));
-        this->learningRate = this->trainPrg.currentLearningRate;
-        this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(this->trainPrg.filesProcessed);
-        logProgressToCSV(this->trainPrg, this->path2progress);
+        this->learningRate = trainPrg.currentLearningRate;
+        trainPrg.loss = trainPrg.accLoss / static_cast<float>(trainPrg.filesProcessed);
+        logProgressToCSV(trainPrg, this->path2progress);
     }
 
     auto endTime = std::chrono::high_resolution_clock::now();
-    this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
-    this->trainPrg.timeTakenForTraining = previousTrainingTime + this->trainPrg.timeForCurrentSession;
+    trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
+    trainPrg.timeTakenForTraining = previousTrainingTime + trainPrg.timeForCurrentSession;
     serializeWeights(cweights, bweights, binFileAddress);
-    logProgressToCSV(this->trainPrg, this->path2progress);
+    logProgressToCSV(trainPrg, this->path2progress);
     std::cout << "--- Training Finished (mnn) ---" << std::endl;
 }
 
@@ -289,39 +289,39 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
 
     int totalFiles = filePaths.size();
     std::cout << "\n--- Starting Mini-Batch Training (mnn) ---" << std::endl;
-    std::cout << "Resuming from file index: " << this->trainPrg.filesProcessed << std::endl;
+    std::cout << "Resuming from file index: " << trainPrg.filesProcessed << std::endl;
 
     // access training progress information from file address and use it to re-start training
     // from new session
     double previousTrainingTime = 0.0;
     batchSize = BATCH_SIZE;
     int curPreds = 0;
-    if (!loadLastProgress(this->trainPrg, this->path2progress)) {
+    if (!loadLastProgress(trainPrg, this->path2progress)) {
         // Preserve session and batch size set before calling train
         std::cout << "No progress file found or file is empty. Starting fresh training." << std::endl;
-        this->trainPrg = {}; // Reset progress
-        this->trainPrg.epoch = 0;
-        this->trainPrg.sessionSize = SESSION_SIZE;
-        this->trainPrg.batchSize = batchSize;
-        this->trainPrg.currentLearningRate = this->learningRate;
+        trainPrg = {}; // Reset progress
+        trainPrg.epoch = 0;
+        trainPrg.sessionSize = SESSION_SIZE;
+        trainPrg.batchSize = batchSize;
+        trainPrg.currentLearningRate = this->learningRate;
         curPreds = 0;
     }
     else {
         std::cout << "Successfully loaded progress. Resuming training." << std::endl;
-        this->learningRate = this->trainPrg.currentLearningRate;
-        previousTrainingTime = this->trainPrg.timeTakenForTraining;
-        curPreds = this->trainPrg.trainingPredictions;
-        std::cout << "Found " << totalFiles << " files for training. Resuming from file index " << this->trainPrg.filesProcessed << "." << std::endl;
+        this->learningRate = trainPrg.currentLearningRate;
+        previousTrainingTime = trainPrg.timeTakenForTraining;
+        curPreds = trainPrg.trainingPredictions;
+        std::cout << "Found " << totalFiles << " files for training. Resuming from file index " << trainPrg.filesProcessed << "." << std::endl;
     }
 
     int fileCount = 0;
     int filesInCurrentSession = 0;
     // Update progress struct with file and batch info
-    this->trainPrg.totalTrainFiles = totalFiles;
-    this->trainPrg.batchSize = batchSize;
-    int sessionFiles = this->trainPrg.sessionSize * this->trainPrg.batchSize;
+    trainPrg.totalTrainFiles = totalFiles;
+    trainPrg.batchSize = batchSize;
+    int sessionFiles = trainPrg.sessionSize * trainPrg.batchSize;
     std::cout << "Batch Training with batch size: " << BATCH_SIZE << std::endl;
-    std::cout << "Session Size (in batches/session): " << this->trainPrg.sessionSize << std::endl;
+    std::cout << "Session Size (in batches/session): " << trainPrg.sessionSize << std::endl;
     std::cout << "Files in Single Session: " << sessionFiles << std::endl;
 
     // start time count
@@ -353,7 +353,7 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
     std::cout << "Training with batch size: " << batchSize << " (" << totalBatches << " batches)" << std::endl;
 
     // Start iterating from the beginning of the batch where the last processed file was
-    int startFileIndex = (this->trainPrg.filesProcessed / batchSize) * batchSize;
+    int startFileIndex = (trainPrg.filesProcessed / batchSize) * batchSize;
     fileCount = startFileIndex;
     std::cout << "Starting from file index " << startFileIndex << " to align with batches." << std::endl;
 
@@ -410,30 +410,30 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
                 if (label < confusion.size() && maxIndex(outputBatch[j]) < confusion[0].size()) {
                     confusion[label][maxIndex(outputBatch[j])]++;
                 }
-                this->trainPrg.accLoss += crossEntropy(outputBatch[j], expBatch[j]);
-                this->allScores.totalSumOfError += static_cast<double>(sumOfSquareOfDiff(outputBatch[j], expBatch[j]));
-                this->allScores.totalSumOfRegression += static_cast<double>(sumOfSquareOfDiff(expBatch[j], mean(outputBatch[j])));
-                this->allScores.totalSumOfSquares += static_cast<double>(sumOfSquareOfDiff(expBatch[j], mean(expBatch[j])));
+                trainPrg.accLoss += crossEntropy(outputBatch[j], expBatch[j]);
+                allScores.totalSumOfError += static_cast<double>(sumOfSquareOfDiff(outputBatch[j], expBatch[j]));
+                allScores.totalSumOfRegression += static_cast<double>(sumOfSquareOfDiff(expBatch[j], mean(outputBatch[j])));
+                allScores.totalSumOfSquares += static_cast<double>(sumOfSquareOfDiff(expBatch[j], mean(expBatch[j])));
             }
 
             // for progress tracking
             fileCount += batchSize;
-            this->trainPrg.filesProcessed += batchSize;
+            trainPrg.filesProcessed += batchSize;
             filesInCurrentSession += batchSize;
             bool sessionEnd = 0;
             if (sessionFiles > 0 && filesInCurrentSession >= sessionFiles) {
                 auto endTime = std::chrono::high_resolution_clock::now();
-                this->trainPrg.correctPredPercent = static_cast<float>(100 * correctPredictions) / fileCount;
-                this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
-                this->trainPrg.timeTakenForTraining += this->trainPrg.timeForCurrentSession;
-                this->learningRate = this->trainPrg.currentLearningRate;
-                this->trainPrg.totalSessionsOfTraining++;
-                this->trainPrg.totalCycleCount += sessionFiles;
-                this->trainPrg.filesProcessed += sessionFiles;
+                trainPrg.correctPredPercent = static_cast<float>(100 * correctPredictions) / fileCount;
+                trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
+                trainPrg.timeTakenForTraining += trainPrg.timeForCurrentSession;
+                this->learningRate = trainPrg.currentLearningRate;
+                trainPrg.sessionCount++;
+                trainPrg.totalCycleCount += sessionFiles;
+                trainPrg.filesProcessed += sessionFiles;
                 sessionEnd = 1;
-                logProgressToCSV(this->trainPrg, this->path2progress);
-                std::cout << "Epoch: " << this->trainPrg.epoch << "\tFiles: " << fileCount << "/" << totalFiles << " \tPredictions: " << correctPredictions << " \tTraining Accuracy: " << this->trainPrg.correctPredPercent << "%" 
-                          << " \tLoss: " << this->trainPrg.accLoss / static_cast<float>(this->trainPrg.filesProcessed)<< std::endl;
+                logProgressToCSV(trainPrg, this->path2progress);
+                std::cout << "Epoch: " << trainPrg.epoch << "\tFiles: " << fileCount << "/" << totalFiles << " \tPredictions: " << correctPredictions << " \tTraining Accuracy: " << trainPrg.correctPredPercent << "%" 
+                          << " \tLoss: " << trainPrg.accLoss / static_cast<float>(trainPrg.filesProcessed)<< std::endl;
             }
 
             // If a session size is defined and reached, stop training for this session
@@ -443,7 +443,7 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
                 filesInCurrentSession = 0;
                 if (fileCount == totalFiles) {
                     std::cout << "All files processed. Ending training." << std::endl;
-                    this->trainPrg.loss = this->trainPrg.accLoss / static_cast<float>(fileCount);
+                    trainPrg.loss = trainPrg.accLoss / static_cast<float>(fileCount);
                     bool notBatch = 1; // It is batch training
                     confData = {};
                     confData = confusionMatrixFunc(confusion);
@@ -451,36 +451,36 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
                     allScores.ssr = allScores.totalSumOfRegression / totalFiles;
                     allScores.sst = allScores.totalSumOfSquares / totalFiles;
                     allScores.r2 = allScores.ssr / allScores.sst;
-                    epochDataToCsv(dataSetPath + "/mnn2d", this->trainPrg.epoch, notBatch,
+                    epochDataToCsv(dataSetPath + "/mnn2d", trainPrg.epoch, notBatch,
                                     weightStats,
-                                    confusion, confData, allScores, trainPrg);
+                                    confusion, confData, allScores, trainPrg, true);
                     break;
                 }
             }
         }
 
-        this->trainPrg.epoch += 1;
-        if(this->trainPrg.correctPredPercent >= 97.0f) {
+        trainPrg.epoch += 1;
+        if(trainPrg.correctPredPercent >= 97.0f) {
             std::cout << "Training completed using minibatch of size " << BATCH_SIZE 
-                      << "with accuracy of " << this->trainPrg.correctPredPercent << "%" << std::endl;
+                      << "with accuracy of " << trainPrg.correctPredPercent << "%" << std::endl;
             break;
         }
-        this->trainPrg.correctPredPercent = 0;
-        this->trainPrg.accLoss = 0;
-        this->trainPrg.filesProcessed = 0;
-        this->trainPrg.timeForCurrentSession = 0;
-        this->trainPrg.loss = 0;
+        trainPrg.correctPredPercent = 0;
+        trainPrg.accLoss = 0;
+        trainPrg.filesProcessed = 0;
+        trainPrg.timeForCurrentSession = 0;
+        trainPrg.loss = 0;
         curPreds = 0;
         allScores = {};
         confusion.assign(outWidth, std::vector<int>(outWidth, 0));
-        this->trainPrg.timeForCurrentSession = 0;
-        logProgressToCSV(this->trainPrg, this->path2progress);
+        trainPrg.timeForCurrentSession = 0;
+        logProgressToCSV(trainPrg, this->path2progress);
     }
 
     auto endTime = std::chrono::high_resolution_clock::now();
-    this->trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
-    this->trainPrg.timeTakenForTraining = previousTrainingTime + this->trainPrg.timeForCurrentSession;
+    trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
+    trainPrg.timeTakenForTraining = previousTrainingTime + trainPrg.timeForCurrentSession;
     serializeWeights(cweights, bweights, binFileAddress);
-    logProgressToCSV(this->trainPrg, this->path2progress);
+    logProgressToCSV(trainPrg, this->path2progress);
     std::cout << "--- Training Finished (mnn) ---" << std::endl;
 }
