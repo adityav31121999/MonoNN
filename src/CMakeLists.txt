@@ -13,11 +13,11 @@ set(MNN_SOURCES
     mnn/mnn2d.cpp
     mnn/accessbin.cpp
     mnn/image.cpp
-    mnn/train/onlineTrain.cpp
-    mnn/train/batchTrain.cpp
-    mnn/train/fullsetTrain.cpp
-    mnn/test.cpp
-    mnn/preTrain.cpp
+    mnn/trainNtest/preTrain.cpp
+    mnn/trainNtest/onlineTrain.cpp
+    mnn/trainNtest/batchTrain.cpp
+    mnn/trainNtest/fullsetTrain.cpp
+    mnn/trainNtest/test.cpp
     mnn/evaluation/stats.cpp
     mnn/evaluation/session.cpp
     mnn/evaluation/progress.cpp

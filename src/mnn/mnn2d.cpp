@@ -406,7 +406,6 @@ mnn2d::mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, st
  */
 void mnn2d::makeBinFile(const std::string &fileAddress)
 {
-	this->binFileAddress = fileAddress;
 	long expectedFileSize = (long)(this->param * sizeof(float));
 
     // Ensure the directory exists before trying to access the file.
@@ -473,8 +472,7 @@ void mnn2d::makeBinFile(const std::string &fileAddress)
             std::cin >> weightUpdateType;
             std::cout << std::endl;
             initiateWeights(weightUpdateType);
-            serializeWeights(cweights, bweights, initialValues);
-            serializeWeights(cweights, bweights, binFileAddress);
+            serializeWeights(cweights, bweights, fileAddress);
 		}
 	}
     else {
@@ -508,8 +506,7 @@ void mnn2d::makeBinFile(const std::string &fileAddress)
         std::cin >> weightUpdateType;
         std::cout << std::endl;
         initiateWeights(weightUpdateType);
-        serializeWeights(cweights, bweights, initialValues);
-        serializeWeights(cweights, bweights, binFileAddress);
+        serializeWeights(cweights, bweights, fileAddress);
     }
     saveNetwork();
 }

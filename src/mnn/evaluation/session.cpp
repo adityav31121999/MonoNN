@@ -48,39 +48,40 @@ void sessionDataToCsv(const std::string& dir2Ses, int epoch, int session,
     file << "timeTakenForTraining," << p.timeTakenForTraining << "\n";
 
     // --- Weight Stats ---
+    size_t w = weightStats.size() / 5;
     file << "\nWeightStats\n";
     file << "property,layer,mean,std,min,max\n";
-    for (size_t i = 0; i < weightStats.size()/5; ++i) {
-        file << "cweights" + i;
+    for (size_t i = 0; i < w; ++i) {
+        file << "cweights" + std::to_string(i);
         for (const auto& stat : weightStats[i]) {
             file << "," << stat;
         }
         file << "\n";
     }
-    for (size_t i = 0; i < weightStats.size()/5; ++i) {
-        file << "bweights" + i;
-        for (const auto& stat : weightStats[i]) {
+    for (size_t i = 0; i < w; ++i) {
+        file << "bweights" + std::to_string(i);
+        for (const auto& stat : weightStats[w + i]) {
             file << "," << stat;
         }
         file << "\n";
     }
-    for (size_t i = 0; i < weightStats.size()/5; ++i) {
-        file << "cgradients" + i;
-        for (const auto& stat : weightStats[i]) {
+    for (size_t i = 0; i < w; ++i) {
+        file << "cgradients" + std::to_string(i);
+        for (const auto& stat : weightStats[(2 * w) + i]) {
             file << "," << stat;
         }
         file << "\n";
     }
-    for (size_t i = 0; i < weightStats.size()/5; ++i) {
-        file << "bgradients" + i;
-        for (const auto& stat : weightStats[i]) {
+    for (size_t i = 0; i < w; ++i) {
+        file << "bgradients" + std::to_string(i);
+        for (const auto& stat : weightStats[(3 * w) + i]) {
             file << "," << stat;
         }
         file << "\n";
     }
-    for (size_t i = 0; i < weightStats.size()/5; ++i) {
-        file << "activations" + i;
-        for (const auto& stat : weightStats[i]) {
+    for (size_t i = 0; i < w; ++i) {
+        file << "activations" + std::to_string(i);
+        for (const auto& stat : weightStats[(4 * w) + i]) {
             file << "," << stat;
         }
         file << "\n";

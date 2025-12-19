@@ -136,6 +136,7 @@ public:
     void miniBatchTraining(const std::string& dataSetPath, bool useThreadOrBuffer);
     void fullDataSetTraining(const std::string& dataSetPath, bool useThreadOrBuffer);
     void test(const std::string& dataSetPath, bool useThreadOrBuffer);
+    void trainAndTest(const std::string& dataSetPath, bool useThreadOrBuffer);
 
 // destructor
     ~mnn() = default;

@@ -23,9 +23,6 @@ int main() {
 
     std::string digit       =   path2Folder + "/digits_mnist";
     std::string fashion     =   path2Folder + "/fashion_mnist";
-    std::string indic       =   path2Folder + "/indic_mnist";
-    std::string kannada     =   path2Folder + "/kannada_mnist";
-    std::string kmnist      =   path2Folder + "/kmnist";
     std::string cifar10     =   path2Folder + "/cifar10";
 
     int inSize = 784;

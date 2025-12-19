@@ -209,8 +209,8 @@ Similar to above, inspired from it, this theorem actually focuses on specific or
   - full dataset training over epochs
 - **0.0.3**: (in progress)
   - Buffer-based and thread-based stand alone training functions
-  - Thread-based C++ functions for forprop and backprop
-  - Evaluation Metrics
+  - Thread-based C++ functions for single-cycle training functions
+  - Evaluation Metrics for pre-training, training and testing stages
 
 ## Project Structure
 
@@ -320,9 +320,12 @@ For this project, training and testing are performed, but validation is ignored.
 - Following are the datasets used in training these networks:
   - MNIST digits
   - MNIST fashion
-  - KMNIST
   - CIFAR-10
 - Two networks are trained per dataset (one for MNN and MNN2D each).
+- For each network, multiple types of data is stored for analysis:
+  - Pre-training run on training and testing data.
+  - Training data for fixed number of files (sessions) and each epoch.
+  - Testing data.
 
 ### Pre-Training
 - Pre-training evaluation will be performed on the initialised weights on both train and test files.
@@ -361,3 +364,9 @@ Following are the metrics employed to evaludate performance of Networks in train
 - Weight initialisation for both Coefficients and Biases will be **He(mean = 0.0, std. deviation)**.
 - In trianing, weight update will be done by **Elastic Net Regularisation**.
 - All networks will be trained with **fullSetTraining**.
+
+## References
+
+1. LeCun, Y., Cortes, C., & Burges, C. J. (2010). [MNIST handwritten digit database](http://yann.lecun.com/exdb/mnist). *ATT Labs [Online]*, 2.
+2. Xiao, H., Rasul, K., & Vollgraf, R. (2017). [Fashion-MNIST: a Novel Image Dataset for Benchmarking Machine Learning Algorithms](http://arxiv.org/abs/1708.07747). *CoRR*, abs/1708.07747.
+3. Krizhevsky, A. (2009). Learning multiple layers of features from tiny images. *Technical Report*.

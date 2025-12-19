@@ -66,28 +66,28 @@ void epochDataToCsv(const std::string &path2dir, const int epoch, bool batchOrNo
     file << "property,layer,mean,std,min,max\n";
     size_t w = weightStats.size() / 4;
     for (size_t i = 0; i < w; ++i) {
-        file << "cweights" + i;
+        file << "cweights" + std::to_string(i);
         for (const auto& stat : weightStats[i]) {
             file << "," << stat;
         }
         file << "\n";
     }
     for (size_t i = 0; i < w; ++i) {
-        file << "bweights" + i;
+        file << "bweights" + std::to_string(i);
         for (const auto& stat : weightStats[w + i]) {
             file << "," << stat;
         }
         file << "\n";
     }
     for (size_t i = 0; i < w; ++i) {
-        file << "cgradients" + i;
+        file << "cgradients" + std::to_string(i);
         for (const auto& stat : weightStats[(2 * w) + i]) {
             file << "," << stat;
         }
         file << "\n";
     }
     for (size_t i = 0; i < w; ++i) {
-        file << "bgradients" + i;
+        file << "bgradients" + std::to_string(i);
         for (const auto& stat : weightStats[(3 * w) + i]) {
             file << "," << stat;
         }
