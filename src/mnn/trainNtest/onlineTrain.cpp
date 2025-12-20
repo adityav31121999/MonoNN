@@ -63,15 +63,11 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool useThreadOrBuffer)
     double previousTrainingTime = 0.0;
     if (!loadLastProgress(trainPrg, this->path2progress)) {
         // Preserve session and batch size set before calling train
-        unsigned int sessionSizeBackup = trainPrg.sessionSize;
-        unsigned int batchSizeBackup = this->batchSize;
         std::cout << "No progress file found or file is empty. Starting fresh training." << std::endl;
         trainPrg = {}; // Reset progress
-        trainPrg.sessionSize = SESSION_SIZE;
-        trainPrg.batchSize = batchSize;
+        trainPrg.sessionSize = ((totalFiles % SESSION_SIZE == 0) && (totalFiles % SESSION_SIZE <= 100)) ? SESSION_SIZE : totalFiles % 100;
+        trainPrg.batchSize = 1;
         trainPrg.currentLearningRate = this->learningRate;
-        trainPrg.sessionSize = sessionSizeBackup;
-        trainPrg.batchSize = batchSizeBackup;
     }
     else {
         std::cout << "Successfully loaded progress. Resuming training." << std::endl;
@@ -253,15 +249,11 @@ void mnn2d::onlineTraining(const std::string &dataSetPath, bool useThreadOrBuffe
     double previousTrainingTime = 0.0;
     if (!loadLastProgress(trainPrg, this->path2progress)) {
         // Preserve session and batch size set before calling train
-        unsigned int sessionSizeBackup = trainPrg.sessionSize;
-        unsigned int batchSizeBackup = this->batchSize;
         std::cout << "No progress file found or file is empty. Starting fresh training." << std::endl;
         trainPrg = {}; // Reset progress
-        trainPrg.sessionSize = SESSION_SIZE;
-        trainPrg.batchSize = batchSize;
+        trainPrg.sessionSize = ((totalFiles % SESSION_SIZE == 0) && (totalFiles % SESSION_SIZE <= 100)) ? SESSION_SIZE : totalFiles % 100;
+        trainPrg.batchSize = 1;
         trainPrg.currentLearningRate = this->learningRate;
-        trainPrg.sessionSize = sessionSizeBackup;
-        trainPrg.batchSize = batchSizeBackup;
     }
     else {
         std::cout << "Successfully loaded progress. Resuming training." << std::endl;

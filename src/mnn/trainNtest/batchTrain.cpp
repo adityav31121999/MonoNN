@@ -62,9 +62,8 @@ void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuff
         // Preserve session and batch size set before calling train
         std::cout << "No progress file found or file is empty. Starting fresh training." << std::endl;
         trainPrg = {}; // Reset progress
-        trainPrg.epoch = 0;
-        trainPrg.sessionSize = SESSION_SIZE;
-        trainPrg.batchSize = batchSize;
+        trainPrg.sessionSize = ((totalFiles % SESSION_SIZE == 0) && (totalFiles % SESSION_SIZE <= 100)) ? SESSION_SIZE : totalFiles % 100;
+        trainPrg.batchSize = BATCH_SIZE;
         trainPrg.currentLearningRate = this->learningRate;
         curPreds = 0;
     }
@@ -318,9 +317,8 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
         // Preserve session and batch size set before calling train
         std::cout << "No progress file found or file is empty. Starting fresh training." << std::endl;
         trainPrg = {}; // Reset progress
-        trainPrg.epoch = 0;
-        trainPrg.sessionSize = SESSION_SIZE;
-        trainPrg.batchSize = batchSize;
+        trainPrg.sessionSize = ((totalFiles % SESSION_SIZE == 0) && (totalFiles % SESSION_SIZE <= 100)) ? SESSION_SIZE : totalFiles % 100;
+        trainPrg.batchSize = BATCH_SIZE;
         trainPrg.currentLearningRate = this->learningRate;
         curPreds = 0;
     }

@@ -41,10 +41,10 @@ void mnn::preTrainRun(const std::string &dataSetPath)
         int totalTrainFiles = trainFilePaths.size();
         unsigned int correctPredictions = 0;
         float accLoss = 0.0f;
-
+        int factor = totalTrainFiles / 100;
         confusion.assign(outSize, std::vector<int>(outSize, 0));
         allScores = {};
-
+        int count = 0;
         for (const auto& filePath : trainFilePaths) {
             // Convert image to a flat 1D vector
             std::vector<float> in = flatten(cvMat2vec(image2grey(filePath.string())));
@@ -76,7 +76,12 @@ void mnn::preTrainRun(const std::string &dataSetPath)
             accLoss += crossEntropy(output, exp);
             getScore(output, exp, allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
             if (label < confusion.size() && maxIndex(output) < confusion[0].size()) {
-                confusion[label][maxIndex(output)]++;
+                confusion[label][maxIndex(output)] += 1;
+            }
+            count++;
+            if(count % factor == 0) {
+                std::cout << "Processed " << count << "/" << totalTrainFiles
+                          << " files. Percent: " << static_cast<float>(count * 100) / totalTrainFiles << "%" << std::endl;
             }
         }
 
@@ -97,6 +102,12 @@ void mnn::preTrainRun(const std::string &dataSetPath)
         preTrainProgress.epoch = 0;
 
         confData = confusionMatrixFunc(confusion);
+        std::vector<std::string> classes(outSize);
+        for (int i = 0; i < outSize; ++i) {
+            classes[i] = std::to_string(i);
+        }
+        printConfusionMatrix(confusion);
+        printClassificationReport(confData, classes);
         computeStatsForCsv(cweights, bweights, cgradients, bgradients, activate, weightStats);
         allScores.sse = allScores.totalSumOfError / totalTrainFiles;
         allScores.ssr = allScores.totalSumOfRegression / totalTrainFiles;
@@ -124,75 +135,86 @@ void mnn::preTrainRun(const std::string &dataSetPath)
         std::cout << "Warning: No files found in dataset directory: " << testPath << std::endl;
         return;
     }
+    else {
+        std::cout << "\n--- Starting Pre-Train Run on Test Set (mnn) ---" << std::endl;
+        std::sort(testFilePaths.begin(), testFilePaths.end());
+        int totalTestFiles = testFilePaths.size();
+        unsigned int correctPredictions = 0;
+        float accLoss = 0.0f;
+        int factor = totalTestFiles / 100;
+        confusion.assign(outSize, std::vector<int>(outSize, 0));
+        allScores = {};
+        int count = 0;
+        for (const auto& filePath : testFilePaths) {
+            // Convert image to a flat 1D vector
+            std::vector<float> in = flatten(cvMat2vec(image2grey(filePath.string())));
+            for(auto& val : in) {
+                val /= 255.0f;
+            }
 
-    std::cout << "\n--- Starting Pre-Train Run on Test Set (mnn) ---" << std::endl;
-    std::sort(testFilePaths.begin(), testFilePaths.end());
-    int totalTestFiles = testFilePaths.size();
-    unsigned int correctPredictions = 0;
-    float accLoss = 0.0f;
+            // Extract label from filename (e.g., "image_7.png" -> 7)
+            std::string filename = filePath.stem().string();
+            int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
 
-    confusion.assign(outSize, std::vector<int>(outSize, 0));
-    allScores = {};
+            // Create one-hot encoded target vector
+            std::vector<float> exp(this->outSize, 0.0f);
+            if (label < this->outSize) {
+                exp[label] = 1.0f;
+            }
 
-    for (const auto& filePath : testFilePaths) {
-        // Convert image to a flat 1D vector
-        std::vector<float> in = flatten(cvMat2vec(image2grey(filePath.string())));
-        for(auto& val : in) {
-            val /= 255.0f;
+            #ifdef USE_CPU
+                forprop(in);
+            #elif USE_CU
+                cuForprop(in);
+            #elif USE_CL
+                clForprop(in);
+            #endif
+
+            if (maxIndex(output) == maxIndex(exp)) {
+                correctPredictions++;
+            }
+            accLoss += crossEntropy(output, exp);
+            getScore(output, exp, allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
+            if (label < confusion.size() && maxIndex(output) < confusion[0].size()) {
+                confusion[label][maxIndex(output)] += 1;
+            }
+            count++;
+            if(count % factor == 0) {
+                std::cout << "Processed " << count << "/" << totalTestFiles
+                          << " files. Percent: " << static_cast<float>(count * 100) / totalTestFiles << "%" << std::endl;
+            }
         }
 
-        // Extract label from filename (e.g., "image_7.png" -> 7)
-        std::string filename = filePath.stem().string();
-        int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
+        float accuracy = (totalTestFiles > 0) ? (static_cast<float>(correctPredictions) / totalTestFiles) * 100.0f : 0.0f;
+        float averageLoss = (totalTestFiles > 0) ? accLoss / totalTestFiles : 0.0f;
 
-        // Create one-hot encoded target vector
-        std::vector<float> exp(this->outSize, 0.0f);
-        if (label < this->outSize) {
-            exp[label] = 1.0f;
-        }
+        std::cout << "Pre-Train on Test Set Finished." << std::endl;
+        std::cout << "Total Files: " << totalTestFiles << std::endl;
+        std::cout << "Correct Predictions: " << correctPredictions << std::endl;
+        std::cout << "Accuracy: " << accuracy << "%" << std::endl;
+        std::cout << "Average Loss: " << averageLoss << std::endl;
 
-        #ifdef USE_CPU
-            forprop(in);
-        #elif USE_CU
-            cuForprop(in);
-        #elif USE_CL
-            clForprop(in);
-        #endif
+        // Log results
+        test_progress preTestProgress = {};
+        preTestProgress.totalTestFiles = totalTestFiles;
+        preTestProgress.testAccuracy = accuracy;
+        preTestProgress.testError = averageLoss;
+        preTestProgress.correctPredictions = correctPredictions;
 
-        if (maxIndex(output) == maxIndex(exp)) {
-            correctPredictions++;
+        confData = confusionMatrixFunc(confusion);
+        std::vector<std::string> classes(outSize);
+        for (int i = 0; i < outSize; ++i) {
+            classes[i] = std::to_string(i);
         }
-        accLoss += crossEntropy(output, exp);
-        getScore(output, exp, allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
-        if (label < confusion.size() && maxIndex(output) < confusion[0].size()) {
-            confusion[label][maxIndex(output)]++;
-        }
+        printConfusionMatrix(confusion);
+        printClassificationReport(confData, classes);
+        computeStatsForCsv(cweights, bweights, cgradients, bgradients, activate, weightStats);
+        allScores.sse = allScores.totalSumOfError / totalTestFiles;
+        allScores.ssr = allScores.totalSumOfRegression / totalTestFiles;
+        allScores.sst = allScores.totalSumOfSquares / totalTestFiles;
+        allScores.r2 = allScores.ssr / allScores.sst;
+        epochDataToCsv(dataSetPath + "/mnn1d/pre", confusion, confData, allScores, preTestProgress, false);
     }
-
-    float accuracy = (totalTestFiles > 0) ? (static_cast<float>(correctPredictions) / totalTestFiles) * 100.0f : 0.0f;
-    float averageLoss = (totalTestFiles > 0) ? accLoss / totalTestFiles : 0.0f;
-
-    std::cout << "Pre-Train on Test Set Finished." << std::endl;
-    std::cout << "Total Files: " << totalTestFiles << std::endl;
-    std::cout << "Correct Predictions: " << correctPredictions << std::endl;
-    std::cout << "Accuracy: " << accuracy << "%" << std::endl;
-    std::cout << "Average Loss: " << averageLoss << std::endl;
-
-    // Log results
-    test_progress preTestProgress = {};
-    preTestProgress.totalTestFiles = totalTestFiles;
-    preTestProgress.testAccuracy = accuracy;
-    preTestProgress.testError = averageLoss;
-    preTestProgress.correctPredictions = correctPredictions;
-
-    confData = confusionMatrixFunc(confusion);
-    // Note: Gradients are zero in pre-training, so stats are only for weights.
-    computeStatsForCsv(cweights, bweights, cgradients, bgradients, activate, weightStats);
-    allScores.sse = allScores.totalSumOfError / totalTestFiles;
-    allScores.ssr = allScores.totalSumOfRegression / totalTestFiles;
-    allScores.sst = allScores.totalSumOfSquares / totalTestFiles;
-    allScores.r2 = allScores.ssr / allScores.sst;
-    epochDataToCsv(dataSetPath + "/mnn1d/pre", confusion, confData, allScores, preTestProgress, false);
 
     std::cout << "--- Pre-Training Run Finished (mnn) ---" << std::endl;
 }
@@ -229,10 +251,10 @@ void mnn2d::preTrainRun(const std::string &dataSetPath)
         int totalTrainFiles = trainFilePaths.size();
         unsigned int correctPredictions = 0;
         float accLoss = 0.0f;
-
+        int factor = totalTrainFiles / 100;
         confusion.assign(outWidth, std::vector<int>(outWidth, 0));
         allScores = {};
-
+        int count = 0;
         for (const auto& filePath : trainFilePaths) {
             std::vector<std::vector<float>> in = cvMat2vec(image2grey(filePath.string()));
             for(auto& row : in) {
@@ -264,6 +286,11 @@ void mnn2d::preTrainRun(const std::string &dataSetPath)
             if (label < confusion.size() && maxIndex(output) < confusion[0].size()) {
                 confusion[label][maxIndex(output)]++;
             }
+            count++;
+            if(count % factor == 0) {
+                std::cout << "Processed " << count << "/" << totalTrainFiles
+                          << " files. Percent: " << static_cast<float>(count * 100) / totalTrainFiles << "%" << std::endl;
+            }
         }
 
         float accuracy = (totalTrainFiles > 0) ? (static_cast<float>(correctPredictions) / totalTrainFiles) * 100.0f : 0.0f;
@@ -283,6 +310,12 @@ void mnn2d::preTrainRun(const std::string &dataSetPath)
         preTrainProgress.epoch = 0;
 
         confData = confusionMatrixFunc(confusion);
+        std::vector<std::string> classes(outWidth);
+        for (int i = 0; i < outWidth; ++i) {
+            classes[i] = std::to_string(i);
+        }
+        printConfusionMatrix(confusion);
+        printClassificationReport(confData, classes);
         computeStatsForCsv(cweights, bweights, cgradients, bgradients, activate, weightStats);
         allScores.sse = allScores.totalSumOfError / totalTrainFiles;
         allScores.ssr = allScores.totalSumOfRegression / totalTrainFiles;
@@ -310,73 +343,84 @@ void mnn2d::preTrainRun(const std::string &dataSetPath)
         std::cout << "Warning: No files found in test dataset directory: " << testPath << std::endl;
         return;
     }
+    else {
+        std::cout << "\n--- Starting Pre-Train Run on Test Set (mnn2d) ---" << std::endl;
+        std::sort(testFilePaths.begin(), testFilePaths.end());
+        int totalTestFiles = testFilePaths.size();
+        unsigned int correctPredictions = 0;
+        float accLoss = 0.0f;
+        int factor = totalTestFiles / 100;
+        confusion.assign(outWidth, std::vector<int>(outWidth, 0));
+        allScores = {};
+        int count = 0;
+        for (const auto& filePath : testFilePaths) {
+            std::vector<std::vector<float>> in = cvMat2vec(image2grey(filePath.string()));
+            for(auto& row : in) {
+                for(auto& val : row) {
+                    val /= 255.0f;
+                }
+            }
 
-    std::cout << "\n--- Starting Pre-Train Run on Test Set (mnn2d) ---" << std::endl;
-    std::sort(testFilePaths.begin(), testFilePaths.end());
-    int totalTestFiles = testFilePaths.size();
-    unsigned int correctPredictions = 0;
-    float accLoss = 0.0f;
+            std::string filename = filePath.stem().string();
+            int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
+            std::vector<float> exp(this->outWidth, 0.0f);
+            if (label < this->outWidth) {
+                exp[label] = 1.0f;
+            }
 
-    confusion.assign(outWidth, std::vector<int>(outWidth, 0));
-    allScores = {};
+            #ifdef USE_CPU
+                forprop(in);
+            #elif USE_CU
+                cuForprop(in);
+            #elif USE_CL
+                clForprop(in);
+            #endif
 
-    for (const auto& filePath : testFilePaths) {
-        std::vector<std::vector<float>> in = cvMat2vec(image2grey(filePath.string()));
-        for(auto& row : in) {
-            for(auto& val : row) {
-                val /= 255.0f;
+            if (maxIndex(output) == maxIndex(exp)) {
+                correctPredictions++;
+            }
+            accLoss += crossEntropy(output, exp);
+            getScore(output, exp, allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
+            if (label < confusion.size() && maxIndex(output) < confusion[0].size()) {
+                confusion[label][maxIndex(output)]++;
+            }
+            count++;
+            if(count % factor == 0) {
+                std::cout << "Processed " << count << "/" << totalTestFiles
+                          << " files. Percent: " << static_cast<float>(count * 100) / totalTestFiles << "%" << std::endl;
             }
         }
 
-        std::string filename = filePath.stem().string();
-        int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
-        std::vector<float> exp(this->outWidth, 0.0f);
-        if (label < this->outWidth) {
-            exp[label] = 1.0f;
-        }
+        float accuracy = (totalTestFiles > 0) ? (static_cast<float>(correctPredictions) / totalTestFiles) * 100.0f : 0.0f;
+        float averageLoss = (totalTestFiles > 0) ? accLoss / totalTestFiles : 0.0f;
 
-        #ifdef USE_CPU
-            forprop(in);
-        #elif USE_CU
-            cuForprop(in);
-        #elif USE_CL
-            clForprop(in);
-        #endif
+        std::cout << "Pre-Train on Test Set Finished." << std::endl;
+        std::cout << "Total Files: " << totalTestFiles << std::endl;
+        std::cout << "Correct Predictions: " << correctPredictions << std::endl;
+        std::cout << "Accuracy: " << accuracy << "%" << std::endl;
+        std::cout << "Average Loss: " << averageLoss << std::endl;
 
-        if (maxIndex(output) == maxIndex(exp)) {
-            correctPredictions++;
+        // Log results
+        test_progress preTestProgress = {};
+        preTestProgress.totalTestFiles = totalTestFiles;
+        preTestProgress.testAccuracy = accuracy;
+        preTestProgress.testError = averageLoss;
+        preTestProgress.correctPredictions = correctPredictions;
+
+        confData = confusionMatrixFunc(confusion);
+        std::vector<std::string> classes(outWidth);
+        for (int i = 0; i < outWidth; ++i) {
+            classes[i] = std::to_string(i);
         }
-        accLoss += crossEntropy(output, exp);
-        getScore(output, exp, allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
-        if (label < confusion.size() && maxIndex(output) < confusion[0].size()) {
-            confusion[label][maxIndex(output)]++;
-        }
+        printConfusionMatrix(confusion);
+        printClassificationReport(confData, classes);
+        computeStatsForCsv(cweights, bweights, cgradients, bgradients, activate, weightStats);
+        allScores.sse = allScores.totalSumOfError / totalTestFiles;
+        allScores.ssr = allScores.totalSumOfRegression / totalTestFiles;
+        allScores.sst = allScores.totalSumOfSquares / totalTestFiles;
+        allScores.r2 = allScores.ssr / allScores.sst;
+        epochDataToCsv(dataSetPath + "/mnn2d/pre", confusion, confData, allScores, preTestProgress, false);
     }
-
-    float accuracy = (totalTestFiles > 0) ? (static_cast<float>(correctPredictions) / totalTestFiles) * 100.0f : 0.0f;
-    float averageLoss = (totalTestFiles > 0) ? accLoss / totalTestFiles : 0.0f;
-
-    std::cout << "Pre-Train on Test Set Finished." << std::endl;
-    std::cout << "Total Files: " << totalTestFiles << std::endl;
-    std::cout << "Correct Predictions: " << correctPredictions << std::endl;
-    std::cout << "Accuracy: " << accuracy << "%" << std::endl;
-    std::cout << "Average Loss: " << averageLoss << std::endl;
-
-    // Log results
-    test_progress preTestProgress = {};
-    preTestProgress.totalTestFiles = totalTestFiles;
-    preTestProgress.testAccuracy = accuracy;
-    preTestProgress.testError = averageLoss;
-    preTestProgress.correctPredictions = correctPredictions;
-
-    confData = confusionMatrixFunc(confusion);
-    // Note: Gradients are zero in pre-training, so stats are only for weights.
-    computeStatsForCsv(cweights, bweights, cgradients, bgradients, activate, weightStats);
-    allScores.sse = allScores.totalSumOfError / totalTestFiles;
-    allScores.ssr = allScores.totalSumOfRegression / totalTestFiles;
-    allScores.sst = allScores.totalSumOfSquares / totalTestFiles;
-    allScores.r2 = allScores.ssr / allScores.sst;
-    epochDataToCsv(dataSetPath + "/mnn2d/pre", confusion, confData, allScores, preTestProgress, false);
 
     std::cout << "--- Pre-Training Run Finished (mnn2d) ---" << std::endl;
 }

@@ -72,7 +72,13 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
     if (!loadLastProgress(trainPrg, this->path2progress)) {
         std::cout << "No progress file found or file is empty. Starting fresh training." << std::endl;
         trainPrg = {}; // Reset progress
-        trainPrg.sessionSize = SESSION_SIZE;
+        allScores = {};
+        allScores.totalSumOfSquares = 0.0f;
+        allScores.totalSumOfRegression = 0.0f;
+        allScores.totalSumOfError = 0.0f;
+        allScores.r2 = 0.0f;
+        confData = {};
+        trainPrg.sessionSize = ((totalFiles % SESSION_SIZE == 0) && (totalFiles % SESSION_SIZE <= 100)) ? SESSION_SIZE : totalFiles % 100;
         trainPrg.batchSize = 1;
         trainPrg.currentLearningRate = this->learningRate;
         curPreds = 0;
@@ -301,14 +307,17 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
     double previousTrainingTime = 0.0;
     int curPreds = 0;
     if (!loadLastProgress(trainPrg, this->path2progress)) {
-        // Preserve session and batch size set before calling train
-        unsigned int sessionSizeBackup = trainPrg.sessionSize;
         std::cout << "No progress file found or file is empty. Starting fresh training." << std::endl;
         trainPrg = {}; // Reset progress
-        trainPrg.sessionSize = SESSION_SIZE;
+        allScores = {};
+        allScores.totalSumOfSquares = 0.0f;
+        allScores.totalSumOfRegression = 0.0f;
+        allScores.totalSumOfError = 0.0f;
+        allScores.r2 = 0.0f;
+        confData = {};
+        trainPrg.sessionSize = ((totalFiles % SESSION_SIZE == 0) && (totalFiles % SESSION_SIZE <= 100)) ? SESSION_SIZE : totalFiles % 100;
         trainPrg.batchSize = 1;
         trainPrg.currentLearningRate = this->learningRate;
-        trainPrg.sessionSize = sessionSizeBackup;
         curPreds = 0;
     }
     else {
