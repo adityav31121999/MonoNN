@@ -1,9 +1,52 @@
 #include <filesystem>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <stdexcept>
-#include "mnn.hpp"
-#include "mnn2d.hpp"
+#include "progress.hpp"
+
+/**
+ * @brief Reads the training stage configuration from a CSV file.
+ * @param filepath Path to the traintest.csv file.
+ * @return A vector of StageInfo structs.
+ */
+std::vector<StageInfo> readTrainTestCsv(const std::string& filepath) {
+    std::vector<StageInfo> stages;
+    std::ifstream ifs(filepath);
+    if (!ifs.is_open()) return stages;
+
+    std::string line;
+    while (std::getline(ifs, line)) {
+        if (line.empty()) continue;
+        std::stringstream ss(line);
+        std::string segment;
+        StageInfo info;
+        
+        if (!std::getline(ss, segment, ',')) continue;
+        info.name = segment;
+        
+        if (!std::getline(ss, segment, ',')) continue;
+        try { info.id = std::stoi(segment); } catch (...) { continue; }
+        
+        if (!std::getline(ss, segment, ',')) continue;
+        try { info.status = std::stoi(segment); } catch (...) { continue; }
+        
+        stages.push_back(info);
+    }
+    return stages;
+}
+
+/**
+ * @brief Writes the training stage configuration to a CSV file.
+ * @param filepath Path to the traintest.csv file.
+ * @param stages Vector of StageInfo structs to write.
+ */
+void writeTrainTestCsv(const std::string& filepath, const std::vector<StageInfo>& stages) {
+    std::ofstream ofs(filepath);
+    for (const auto& s : stages) {
+        ofs << s.name << ", " << s.id << ", " << s.status << "\n";
+    }
+}
 
 /**
  * @brief Appends the current training progress as a new row in a CSV file.
@@ -45,6 +88,7 @@ bool logProgressToCSV(const progress& p, const std::string& filePath) {
     file.close();
     return true;
 }
+
 
 /**
  * @brief Loads the most recent training progress from the last line of a CSV log file.

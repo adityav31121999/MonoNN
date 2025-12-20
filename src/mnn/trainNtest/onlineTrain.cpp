@@ -14,6 +14,8 @@
  * Hence, removed those parts from the online training definition.
  */
 
+// for MNN
+
 /**
  * @brief train network online on given dataset
  * @param dataSetPath path to dataset folder
@@ -137,14 +139,31 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool useThreadOrBuffer)
         trainPrg.filesProcessed++;
         filesInCurrentSession++;
         bool sessionEnd = 0;
-        if (sessionFiles > 0 && filesInCurrentSession == trainPrg.sessionSize) {
-            std::cout << "Session file limit (" << trainPrg.sessionSize << ") reached." << std::endl;
+        if ((sessionFiles > 0 && filesInCurrentSession == trainPrg.sessionSize) || fileCount == totalFiles) {
+            std::cout << "Session file limit (" << trainPrg.sessionSize << ") reached or End of Epoch." << std::endl;
             auto endTime = std::chrono::high_resolution_clock::now();
+            trainPrg.correctPredPercent = static_cast<float>(100 * trainPrg.trainingPredictions) / fileCount;
             trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
             trainPrg.timeTakenForTraining = previousTrainingTime + trainPrg.timeForCurrentSession;
             this->learningRate = trainPrg.currentLearningRate;
             trainPrg.sessionCount++;
+            trainPrg.totalCycleCount += filesInCurrentSession;
+            // Confusion Matrix
+            confData = {};
+            confData = confusionMatrixFunc(confusion);
+            // Stats
+            computeStatsForCsv(cweights, bweights, cgradients, bgradients, activate, weightStats);
+            // Scores
+            allScores.sse = allScores.totalSumOfError / trainPrg.filesProcessed;
+            allScores.ssr = allScores.totalSumOfRegression / trainPrg.filesProcessed;
+            allScores.sst = allScores.totalSumOfSquares / trainPrg.filesProcessed;
+            allScores.r2 = allScores.ssr / allScores.sst;
+            // Save session data
+            sessionDataToCsv(path2SessionDir, trainPrg.epoch, trainPrg.sessionCount, false,
+                                weightStats, confusion, confData, allScores, trainPrg);
+            trainPrg.loss = trainPrg.accLoss / static_cast<float>(trainPrg.filesProcessed);
             sessionEnd = 1;
+            startTime = std::chrono::high_resolution_clock::now();
         }
         std::cout<< "File count: " << fileCount << std::endl;
 
@@ -152,7 +171,6 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool useThreadOrBuffer)
         if (sessionEnd == 1 || fileCount == totalFiles) {
             std::cout << "Processed " << fileCount << "/" << totalFiles << " files..." << std::endl;
             std::cout << "====== Diagnostics For Current Session ======" << std::endl;
-            computeStats(cweights, bweights, cgradients, bgradients, activate);
             if (logProgressToCSV(trainPrg, this->path2progress) == 1)
                 std::cout << "Progress logged successfully." << std::endl;
             else 
@@ -175,7 +193,6 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool useThreadOrBuffer)
                                 true);
                 break;
             }
-            startTime = std::chrono::high_resolution_clock::now();
         }
     }
 
@@ -187,6 +204,7 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool useThreadOrBuffer)
     std::cout << "--- Training Finished (mnn) ---" << std::endl;
 }
 
+// for MNN2D
 
 /**
  * @brief train network online on given dataset
@@ -312,14 +330,31 @@ void mnn2d::onlineTraining(const std::string &dataSetPath, bool useThreadOrBuffe
         trainPrg.filesProcessed++;
         filesInCurrentSession++;
         bool sessionEnd = 0;
-        if (sessionFiles > 0 && filesInCurrentSession == trainPrg.sessionSize) {
-            std::cout << "Session file limit (" << trainPrg.sessionSize << ") reached." << std::endl;
+        if ((sessionFiles > 0 && filesInCurrentSession == trainPrg.sessionSize) || fileCount == totalFiles) {
+            std::cout << "Session file limit (" << trainPrg.sessionSize << ") reached or End of Epoch." << std::endl;
             auto endTime = std::chrono::high_resolution_clock::now();
+            trainPrg.correctPredPercent = static_cast<float>(100 * trainPrg.trainingPredictions) / fileCount;
             trainPrg.timeForCurrentSession = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
             trainPrg.timeTakenForTraining = previousTrainingTime + trainPrg.timeForCurrentSession;
             this->learningRate = trainPrg.currentLearningRate;
             trainPrg.sessionCount++;
+            trainPrg.totalCycleCount += filesInCurrentSession;
+            // Confusion Matrix
+            confData = {};
+            confData = confusionMatrixFunc(confusion);
+            // Stats
+            computeStatsForCsv(cweights, bweights, cgradients, bgradients, activate, weightStats);
+            // Scores
+            allScores.sse = allScores.totalSumOfError / trainPrg.filesProcessed;
+            allScores.ssr = allScores.totalSumOfRegression / trainPrg.filesProcessed;
+            allScores.sst = allScores.totalSumOfSquares / trainPrg.filesProcessed;
+            allScores.r2 = allScores.ssr / allScores.sst;
+            // Save session data
+            sessionDataToCsv(path2SessionDir, trainPrg.epoch, trainPrg.sessionCount, false,
+                                weightStats, confusion, confData, allScores, trainPrg);
+            trainPrg.loss = trainPrg.accLoss / static_cast<float>(trainPrg.filesProcessed);
             sessionEnd = 1;
+            startTime = std::chrono::high_resolution_clock::now();
         }
         std::cout<< "File count: " << fileCount << std::endl;
 
@@ -327,7 +362,6 @@ void mnn2d::onlineTraining(const std::string &dataSetPath, bool useThreadOrBuffe
         if (sessionEnd == 1 || fileCount == totalFiles) {
             std::cout << "Processed " << fileCount << "/" << totalFiles << " files..." << std::endl;
             std::cout << "====== Diagnostics For Current Session ======" << std::endl;
-            computeStats(cweights, bweights, cgradients, bgradients, activate);
             if (logProgressToCSV(trainPrg, this->path2progress) == 1)
                 std::cout << "Progress logged successfully." << std::endl;
             else 
@@ -350,7 +384,6 @@ void mnn2d::onlineTraining(const std::string &dataSetPath, bool useThreadOrBuffe
                                 true);
                 break;
             }
-            startTime = std::chrono::high_resolution_clock::now();
         }
     }
 

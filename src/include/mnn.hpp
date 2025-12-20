@@ -50,6 +50,7 @@ public:
     std::string path2EpochDir;      // epoch-based data stored here
     std::string path2SessionDir;    // session-based data stored here
     std::string path2PreDir;        // path to pre-trained data
+    std::string path2Stage;         // path to testNtrain.csv
 
 // store values for training
 

@@ -472,5 +472,5 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
         confusion.assign(outWidth, std::vector<int>(outWidth, 0));
     }
 
-    std::cout << "--- Training Finished (mnn) ---" << std::endl;
+    std::cout << "--- Training Finished (mnn2d) ---" << std::endl;
 }

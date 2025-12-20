@@ -82,6 +82,13 @@ struct test_progress {
     unsigned int correctPredictions;    // correct predictions done in testing
 };
 
+// struct to hold stage info for training
+struct StageInfo {
+    std::string name;
+    int id;
+    int status;
+};
+
 
 // progress evaluation functions
 
@@ -110,6 +117,10 @@ confMat confusionMatrixFunc(const std::vector<std::vector<int>>& confusionMatrix
 void printConfusionMatrix(const std::vector<std::vector<int>>& confusionMatrix);
 void printClassificationReport(const confMat& cm, const std::vector<std::string>& classNames = {});
 void getScore(const std::vector<float>& actual, const std::vector<float>& pred, double SST, double SSR, double SSE);
+
+// stage info functions
+std::vector<StageInfo> readTrainTestCsv(const std::string& filepath);
+void writeTrainTestCsv(const std::string& filepath, const std::vector<StageInfo>& stages);
 
 // logging functions
 

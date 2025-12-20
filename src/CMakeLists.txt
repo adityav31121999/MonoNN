@@ -18,6 +18,7 @@ set(MNN_SOURCES
     mnn/trainNtest/batchTrain.cpp
     mnn/trainNtest/fullsetTrain.cpp
     mnn/trainNtest/test.cpp
+    mnn/trainNtest/trainNtest.cpp
     mnn/evaluation/stats.cpp
     mnn/evaluation/session.cpp
     mnn/evaluation/progress.cpp

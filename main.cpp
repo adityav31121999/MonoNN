@@ -5,7 +5,7 @@
 #include <fstream>
 #include "mononn.h"
 
-#define TRAIN_2D 0
+#define TRAIN_2D 1
 
 int main() {
     try {

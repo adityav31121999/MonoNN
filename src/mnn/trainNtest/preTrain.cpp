@@ -43,6 +43,7 @@ void mnn::preTrainRun(const std::string &dataSetPath)
         float accLoss = 0.0f;
 
         confusion.assign(outSize, std::vector<int>(outSize, 0));
+        allScores = {};
 
         for (const auto& filePath : trainFilePaths) {
             // Convert image to a flat 1D vector
@@ -73,6 +74,7 @@ void mnn::preTrainRun(const std::string &dataSetPath)
                 correctPredictions++;
             }
             accLoss += crossEntropy(output, exp);
+            getScore(output, exp, allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
             if (label < confusion.size() && maxIndex(output) < confusion[0].size()) {
                 confusion[label][maxIndex(output)]++;
             }
@@ -95,7 +97,11 @@ void mnn::preTrainRun(const std::string &dataSetPath)
         preTrainProgress.epoch = 0;
 
         confData = confusionMatrixFunc(confusion);
-        computeStatsForCsv(cweights, bweights, cgradients, bgradients, weightStats);
+        computeStatsForCsv(cweights, bweights, cgradients, bgradients, activate, weightStats);
+        allScores.sse = allScores.totalSumOfError / totalTrainFiles;
+        allScores.ssr = allScores.totalSumOfRegression / totalTrainFiles;
+        allScores.sst = allScores.totalSumOfSquares / totalTrainFiles;
+        allScores.r2 = allScores.ssr / allScores.sst;
         epochDataToCsv(dataSetPath + "/mnn1d/pre", 0, false, weightStats, confusion, confData, allScores, preTrainProgress, false);
     }
 
@@ -126,6 +132,7 @@ void mnn::preTrainRun(const std::string &dataSetPath)
     float accLoss = 0.0f;
 
     confusion.assign(outSize, std::vector<int>(outSize, 0));
+    allScores = {};
 
     for (const auto& filePath : testFilePaths) {
         // Convert image to a flat 1D vector
@@ -156,6 +163,7 @@ void mnn::preTrainRun(const std::string &dataSetPath)
             correctPredictions++;
         }
         accLoss += crossEntropy(output, exp);
+        getScore(output, exp, allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
         if (label < confusion.size() && maxIndex(output) < confusion[0].size()) {
             confusion[label][maxIndex(output)]++;
         }
@@ -179,7 +187,11 @@ void mnn::preTrainRun(const std::string &dataSetPath)
 
     confData = confusionMatrixFunc(confusion);
     // Note: Gradients are zero in pre-training, so stats are only for weights.
-    computeStatsForCsv(cweights, bweights, cgradients, bgradients, weightStats);
+    computeStatsForCsv(cweights, bweights, cgradients, bgradients, activate, weightStats);
+    allScores.sse = allScores.totalSumOfError / totalTestFiles;
+    allScores.ssr = allScores.totalSumOfRegression / totalTestFiles;
+    allScores.sst = allScores.totalSumOfSquares / totalTestFiles;
+    allScores.r2 = allScores.ssr / allScores.sst;
     epochDataToCsv(dataSetPath + "/mnn1d/pre", confusion, confData, allScores, preTestProgress, false);
 
     std::cout << "--- Pre-Training Run Finished (mnn) ---" << std::endl;
@@ -219,6 +231,7 @@ void mnn2d::preTrainRun(const std::string &dataSetPath)
         float accLoss = 0.0f;
 
         confusion.assign(outWidth, std::vector<int>(outWidth, 0));
+        allScores = {};
 
         for (const auto& filePath : trainFilePaths) {
             std::vector<std::vector<float>> in = cvMat2vec(image2grey(filePath.string()));
@@ -247,6 +260,7 @@ void mnn2d::preTrainRun(const std::string &dataSetPath)
                 correctPredictions++;
             }
             accLoss += crossEntropy(output, exp);
+            getScore(output, exp, allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
             if (label < confusion.size() && maxIndex(output) < confusion[0].size()) {
                 confusion[label][maxIndex(output)]++;
             }
@@ -269,7 +283,11 @@ void mnn2d::preTrainRun(const std::string &dataSetPath)
         preTrainProgress.epoch = 0;
 
         confData = confusionMatrixFunc(confusion);
-        computeStatsForCsv(cweights, bweights, cgradients, bgradients, weightStats);
+        computeStatsForCsv(cweights, bweights, cgradients, bgradients, activate, weightStats);
+        allScores.sse = allScores.totalSumOfError / totalTrainFiles;
+        allScores.ssr = allScores.totalSumOfRegression / totalTrainFiles;
+        allScores.sst = allScores.totalSumOfSquares / totalTrainFiles;
+        allScores.r2 = allScores.ssr / allScores.sst;
         epochDataToCsv(dataSetPath + "/mnn2d/pre", 0, false, weightStats, confusion, confData, allScores, preTrainProgress, false);
     }
 
@@ -300,6 +318,7 @@ void mnn2d::preTrainRun(const std::string &dataSetPath)
     float accLoss = 0.0f;
 
     confusion.assign(outWidth, std::vector<int>(outWidth, 0));
+    allScores = {};
 
     for (const auto& filePath : testFilePaths) {
         std::vector<std::vector<float>> in = cvMat2vec(image2grey(filePath.string()));
@@ -328,6 +347,7 @@ void mnn2d::preTrainRun(const std::string &dataSetPath)
             correctPredictions++;
         }
         accLoss += crossEntropy(output, exp);
+        getScore(output, exp, allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
         if (label < confusion.size() && maxIndex(output) < confusion[0].size()) {
             confusion[label][maxIndex(output)]++;
         }
@@ -351,7 +371,11 @@ void mnn2d::preTrainRun(const std::string &dataSetPath)
 
     confData = confusionMatrixFunc(confusion);
     // Note: Gradients are zero in pre-training, so stats are only for weights.
-    computeStatsForCsv(cweights, bweights, cgradients, bgradients, weightStats); 
+    computeStatsForCsv(cweights, bweights, cgradients, bgradients, activate, weightStats);
+    allScores.sse = allScores.totalSumOfError / totalTestFiles;
+    allScores.ssr = allScores.totalSumOfRegression / totalTestFiles;
+    allScores.sst = allScores.totalSumOfSquares / totalTestFiles;
+    allScores.r2 = allScores.ssr / allScores.sst;
     epochDataToCsv(dataSetPath + "/mnn2d/pre", confusion, confData, allScores, preTestProgress, false);
 
     std::cout << "--- Pre-Training Run Finished (mnn2d) ---" << std::endl;

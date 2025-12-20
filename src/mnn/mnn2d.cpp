@@ -15,7 +15,9 @@
  */
 mnn2d::mnn2d(int inw, int inh, int outw, int layers, float order, std::string datasetpath) :
     order(order), inWidth(inw), inHeight(inh), outWidth(outw), layers(layers),
-    batchSize(1), binFileAddress(datasetpath + "/mnn2d/weights.bin"), epochs(100), iterations(0), learningRate(0.01f)
+    batchSize(1), binFileAddress(datasetpath + "/mnn2d/weights.bin"), 
+    initialValues(datasetpath + "/mnn2d/initialisedWeights.bin"),
+    epochs(100), iterations(0), learningRate(0.01f)
 {
     trainPrg = {};
     // set hidden layers width and height
@@ -66,6 +68,9 @@ mnn2d::mnn2d(int inw, int inh, int outw, int layers, float order, std::string da
     param *= 2; // b-weights
     path2test_progress = datasetpath + "/mnn2d/testProgress.csv";
     path2progress = datasetpath + "/mnn2d/trainProgress.csv";
+    path2SessionDir = datasetpath + "/mnn2d/session";
+    path2EpochDir = datasetpath + "/mnn2d/epoch";
+    path2PreDir = datasetpath + "/mnn2d/pre";
     makeBinFile(initialValues);
     makeBinFile(binFileAddress);
     std::cout << "Network initialized with " << param << " parameters." 
@@ -150,7 +155,9 @@ mnn2d::mnn2d(int inw, int inh, int outw, int layers, float order, std::string da
  */
 mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::string datasetpath) :
     order(order), inWidth(inw), inHeight(inh), outWidth(outw), layers(layers),
-    batchSize(1), binFileAddress(datasetpath + "/mnn2d/weights.bin"), epochs(100), iterations(0), learningRate(0.01f)
+    batchSize(1), binFileAddress(datasetpath + "/mnn2d/weights.bin"), 
+    initialValues(datasetpath + "/mnn2d/initialisedWeights.bin"),
+    epochs(100), iterations(0), learningRate(0.01f)
 {
     trainPrg = {};
     // set hidden layers width and height
@@ -200,6 +207,9 @@ mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::
     param *= 2; // b-weights
     path2test_progress = datasetpath + "/mnn2d/testProgress.csv";
     path2progress = datasetpath + "/mnn2d/trainProgress.csv";
+    path2SessionDir = datasetpath + "/mnn2d/session";
+    path2EpochDir = datasetpath + "/mnn2d/epoch";
+    path2PreDir = datasetpath + "/mnn2d/pre";
     makeBinFile(initialValues);
     makeBinFile(binFileAddress);
     std::cout << "Network initialized with " << param << " parameters." 
@@ -276,7 +286,9 @@ mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::
  */
 mnn2d::mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, std::string datasetpath) :
     order(order), inWidth(inw), inHeight(inh), outWidth(outw), layers(width.size()),
-    width(width), batchSize(1), binFileAddress(datasetpath + "/mnn2d/weights.bin"), epochs(100), iterations(0), learningRate(0.01f)
+    width(width), batchSize(1), binFileAddress(datasetpath + "/mnn2d/weights.bin"), 
+    initialValues(datasetpath + "/mnn2d/initialisedWeights.bin"),
+    epochs(100), iterations(0), learningRate(0.01f)
 {
     trainPrg = {};
     input.resize(inh, std::vector<float>(inw, 0.0f));
@@ -325,6 +337,9 @@ mnn2d::mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, st
     param *= 2; // b-weights
     path2test_progress = datasetpath + "/mnn2d/testProgress.csv";
     path2progress = datasetpath + "/mnn2d/trainProgress.csv";
+    path2SessionDir = datasetpath + "/mnn2d/session";
+    path2EpochDir = datasetpath + "/mnn2d/epoch";
+    path2PreDir = datasetpath + "/mnn2d/pre";
     makeBinFile(initialValues);
     makeBinFile(binFileAddress);
     std::cout << "Network initialized with " << param << " parameters." 
