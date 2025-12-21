@@ -78,7 +78,7 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
         allScores.totalSumOfError = 0.0f;
         allScores.r2 = 0.0f;
         confData = {};
-        trainPrg.sessionSize = ((totalFiles % SESSION_SIZE == 0) && (totalFiles % SESSION_SIZE <= 100)) ? SESSION_SIZE : totalFiles % 100;
+        trainPrg.sessionSize = ((totalFiles % SESSION_SIZE == 0) && (totalFiles / SESSION_SIZE <= 100)) ? SESSION_SIZE : (totalFiles / 100);
         trainPrg.batchSize = 1;
         trainPrg.currentLearningRate = this->learningRate;
         curPreds = 0;
@@ -139,6 +139,7 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
             }
             input = in;
             target = exp;
+
             // backend selection
             #ifdef USE_CPU
                 train1c(in, exp, useThreadOrBuffer);
@@ -159,7 +160,7 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
             getScore(output, target, allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
 
             bool sessionEnd = 0;
-            if ((sessionFiles > 0 && filesInCurrentSession == trainPrg.sessionSize) || fileCount == totalFiles) {
+            if ((sessionFiles > 0 && filesInCurrentSession == sessionFiles) || fileCount == totalFiles) {
                 auto endTime = std::chrono::high_resolution_clock::now();
                 // progress file
                 trainPrg.correctPredPercent = static_cast<float>(100 * correctPredictions) / fileCount;
@@ -186,9 +187,9 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
                 sessionEnd = 1;
                 startTime = std::chrono::high_resolution_clock::now();
                 std::cout << "Epoch: " << trainPrg.epoch << "\tFiles Processed: " << fileCount << "/" << totalFiles
-                          << " \tPredictions: " << correctPredictions
-                          << " \tTraining Accuracy: " << trainPrg.correctPredPercent << "%"
-                          << " \tLoss: " << trainPrg.accLoss / static_cast<float>(trainPrg.filesProcessed)
+                          << "\tPredictions: " << correctPredictions
+                          << "\tTraining Accuracy: " << trainPrg.correctPredPercent << "%"
+                          << "\tLoss: " << trainPrg.accLoss / static_cast<float>(trainPrg.filesProcessed)
                           << std::endl;
             }
 
@@ -318,7 +319,7 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
         allScores.totalSumOfError = 0.0f;
         allScores.r2 = 0.0f;
         confData = {};
-        trainPrg.sessionSize = ((totalFiles % SESSION_SIZE == 0) && (totalFiles % SESSION_SIZE <= 100)) ? SESSION_SIZE : totalFiles % 100;
+        trainPrg.sessionSize = ((totalFiles % SESSION_SIZE == 0) && (totalFiles / SESSION_SIZE <= 100)) ? SESSION_SIZE : (totalFiles / 100);
         trainPrg.batchSize = 1;
         trainPrg.currentLearningRate = this->learningRate;
         curPreds = 0;
@@ -380,6 +381,7 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
             }
             input = in;
             target = exp;
+
             // backend selection
             #ifdef USE_CPU
                 train1c(in, exp, useThreadOrBuffer);
@@ -400,7 +402,7 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
             getScore(output, target, allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
 
             bool sessionEnd = 0;
-            if ((sessionFiles > 0 && filesInCurrentSession == trainPrg.sessionSize) || fileCount == totalFiles) {
+            if ((sessionFiles > 0 && filesInCurrentSession == sessionFiles) || fileCount == totalFiles) {
                 auto endTime = std::chrono::high_resolution_clock::now();
                 // progress file
                 trainPrg.correctPredPercent = static_cast<float>(100 * correctPredictions) / fileCount;
@@ -426,9 +428,9 @@ void mnn2d::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOr
                 sessionEnd = 1;
                 startTime = std::chrono::high_resolution_clock::now();
                 std::cout << "Epoch: " << trainPrg.epoch << "\tFiles Processed: " << fileCount << "/" << totalFiles
-                          << " \tPredictions: " << correctPredictions
-                          << " \tTraining Accuracy: " << trainPrg.correctPredPercent << "%"
-                          << " \tLoss: " << trainPrg.accLoss / static_cast<float>(trainPrg.filesProcessed)
+                          << "\tPredictions: " << correctPredictions
+                          << "\tTraining Accuracy: " << trainPrg.correctPredPercent << "%"
+                          << "\tLoss: " << trainPrg.accLoss / static_cast<float>(trainPrg.filesProcessed)
                           << std::endl;
             }
 

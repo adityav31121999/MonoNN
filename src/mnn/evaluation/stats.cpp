@@ -9,21 +9,26 @@
 
 /**
  * @brief get regression scores
+ * @param [in] prediction prediction vector
+ * @param [in] target target vector
+ * @param [out] SST total sum of squares
+ * @param [out] SSR sum of squared regressions
+ * @param [out] SSE sum of squared errors
  */
-void getScore(const std::vector<float>& actual, const std::vector<float>& pred, double SST, double SSR, double SSE) {
-    if (actual.size() != pred.size()) {
-        throw std::runtime_error("getScore: Sizes of vector must match: " + std::to_string(actual.size()) + " vs. " + std::to_string(pred.size()));
+void getScore(const std::vector<float>& prediction, const std::vector<float>& target, double& SST, double& SSR, double& SSE) {
+    if (prediction.size() != target.size()) {
+        throw std::runtime_error("getScore: Sizes of vector must match: " + std::to_string(prediction.size()) + " vs. " + std::to_string(target.size()));
     }
 
-    float m1 = 0.0f;
-    float m2 = 0.0f;
-    m1 = std::accumulate(actual.begin(), actual.end(), 0.0f);
-    m2 = std::accumulate(pred.begin(), pred.end(), 0.0f);
+    float targetMean = 0.0f;
+    if (!target.empty()) {
+        targetMean = std::accumulate(target.begin(), target.end(), 0.0f) / static_cast<float>(target.size());
+    }
 
-    for(int i = 0; i < actual.size(); i++) {
-        SSE += static_cast<double>((actual[i] - pred[i]) * (actual[i] - pred[i]));
-        SSR += static_cast<double>((actual[i] - m2) * (actual[i] - m2));
-        SST += static_cast<double>((actual[i] - m1) * (actual[i] - m1));
+    for(size_t i = 0; i < target.size(); i++) {
+        SSE += static_cast<double>((target[i] - prediction[i]) * (target[i] - prediction[i]));
+        SSR += static_cast<double>((prediction[i] - targetMean) * (prediction[i] - targetMean));
+        SST += static_cast<double>((target[i] - targetMean) * (target[i] - targetMean));
     }
 }
 

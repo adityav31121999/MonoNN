@@ -49,9 +49,14 @@ void mnn::trainNtest(const std::string &dataSetPath, bool useThreadOrBuffer)
 
         if (stage.id == 1) {
             preTrainRun(dataSetPath);
-        } else if (stage.id == 2) {
+        }
+        else if (stage.id == 2) {
+            std::cout << "Pre-training run completed in previous stage." << std::endl;
             fullDataSetTraining(dataSetPath, useThreadOrBuffer);
-        } else if (stage.id == 3) {
+        }
+        else if (stage.id == 3) {
+            std::cout << "Pre-training run completed in previous stage." << std::endl;
+            std::cout << "Training completed in previous stage." << std::endl;
             test(dataSetPath, useThreadOrBuffer);
         }
         stage.status = 1;
@@ -98,9 +103,14 @@ void mnn2d::trainNtest(const std::string &dataSetPath, bool useThreadOrBuffer)
 
         if (stage.id == 1) {
             preTrainRun(dataSetPath);
-        } else if (stage.id == 2) {
+        }
+        else if (stage.id == 2) {
+            std::cout << "Pre-training run completed in previous stage." << std::endl;
             fullDataSetTraining(dataSetPath, useThreadOrBuffer);
-        } else if (stage.id == 3) {
+        }
+        else if (stage.id == 3) {
+            std::cout << "Pre-training run completed in previous stage." << std::endl;
+            std::cout << "Training completed in previous stage." << std::endl;
             test(dataSetPath, useThreadOrBuffer);
         }
         stage.status = 1;

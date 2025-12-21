@@ -119,7 +119,7 @@ void computeStatsForCsv(const std::vector<std::vector<std::vector<float>>> &cwei
 confMat confusionMatrixFunc(const std::vector<std::vector<int>>& confusionMatrix);
 void printConfusionMatrix(const std::vector<std::vector<int>>& confusionMatrix);
 void printClassificationReport(const confMat& cm, const std::vector<std::string>& classNames = {});
-void getScore(const std::vector<float>& actual, const std::vector<float>& pred, double SST, double SSR, double SSE);
+void getScore(const std::vector<float>& prediction, const std::vector<float>& target, double& SST, double& SSR, double& SSE);
 
 // stage info functions
 

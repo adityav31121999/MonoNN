@@ -62,7 +62,7 @@ Gradients for Monomial neural nets are calculated in a similar manner to MLPs.
 
 ### _Gradients for perceptron:_
 
-- Consider a perceptron with two neurons as follows:
+Consider a perceptron with two neurons as follows:
 
 ```
            ____                       ____
@@ -117,7 +117,7 @@ Gradients for Monomial neural nets are calculated in a similar manner to MLPs.
 
 ## Gradients for Network
 
-- Similar to the perceptron, the whole mechanism follows similar math, though for `MNN` and `MNN2D`, it only differs in dimensions.
+Similar to the perceptron, the whole mechanism follows similar math, though for `MNN` and `MNN2D`, it only differs in dimensions.
 - In `MNN` gradients are passed as vectors; in `MNN2D` they are passed as matrices.
 - **Loss (Cross Entropy):**
   - For MNN: $CE = -\sum_{i=1}^{N} (T_i \log P_i)$, here P = SoftMax($a_{l-1}$)

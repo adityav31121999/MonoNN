@@ -168,9 +168,7 @@ void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuff
                     confusion[label][maxIndex(outputBatch[j])]++;
                 }
                 trainPrg.accLoss += crossEntropy(outputBatch[j], expBatch[j]);
-                allScores.totalSumOfError += static_cast<double>(sumOfSquareOfDiff(outputBatch[j], expBatch[j]));
-                allScores.totalSumOfRegression += static_cast<double>(sumOfSquareOfDiff(expBatch[j], mean(outputBatch[j])));
-                allScores.totalSumOfSquares += static_cast<double>(sumOfSquareOfDiff(expBatch[j], mean(expBatch[j])));
+                getScore(outputBatch[j], expBatch[j], allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
             }
 
             // for progress tracking
@@ -428,9 +426,7 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
                     confusion[label][maxIndex(outputBatch[j])]++;
                 }
                 trainPrg.accLoss += crossEntropy(outputBatch[j], expBatch[j]);
-                allScores.totalSumOfError += static_cast<double>(sumOfSquareOfDiff(outputBatch[j], expBatch[j]));
-                allScores.totalSumOfRegression += static_cast<double>(sumOfSquareOfDiff(expBatch[j], mean(outputBatch[j])));
-                allScores.totalSumOfSquares += static_cast<double>(sumOfSquareOfDiff(expBatch[j], mean(expBatch[j])));
+                getScore(outputBatch[j], expBatch[j], allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
             }
 
             // for progress tracking

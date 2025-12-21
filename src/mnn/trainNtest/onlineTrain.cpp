@@ -117,9 +117,7 @@ void mnn::onlineTraining(const std::string &dataSetPath, bool useThreadOrBuffer)
             confusion[label][maxIndex(output)]++;
         }
         trainPrg.accLoss += crossEntropy(output, exp);
-        allScores.totalSumOfError += static_cast<double>(sumOfSquareOfDiff(output, exp));
-        allScores.totalSumOfRegression += static_cast<double>(sumOfSquareOfDiff(exp, mean(output)));
-        allScores.totalSumOfSquares += static_cast<double>(sumOfSquareOfDiff(exp, mean(exp)));
+        getScore(output, exp, allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
         this->target = exp;
         // backend selection
         #ifdef USE_CPU
@@ -305,9 +303,7 @@ void mnn2d::onlineTraining(const std::string &dataSetPath, bool useThreadOrBuffe
             confusion[label][maxIndex(output)]++;
         }
         trainPrg.accLoss += crossEntropy(output, exp);
-        allScores.totalSumOfError += static_cast<double>(sumOfSquareOfDiff(output, exp));
-        allScores.totalSumOfRegression += static_cast<double>(sumOfSquareOfDiff(exp, mean(output)));
-        allScores.totalSumOfSquares += static_cast<double>(sumOfSquareOfDiff(exp, mean(exp)));
+        getScore(output, exp, allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
         target = exp;
         #ifdef USE_CPU
             (useThreadOrBuffer == 0) ? train(in, exp) : threadTrain(in, exp);

@@ -64,6 +64,8 @@ void mnn::preTrainRun(const std::string &dataSetPath)
         int factor = totalTrainFiles / 100;
         confusion.assign(outSize, std::vector<int>(outSize, 0));
         allScores = {};
+        allScores.totalSumOfRegression = 0.0f; allScores.totalSumOfError = 0.0f; allScores.totalSumOfSquares = 0.0f;
+        allScores.r2 = 0.0f; allScores.sse = 0.0f; allScores.ssr = 0.0f; allScores.sst = 0.0f;
         confData = {};
         int count = 0;
         for(int i = 0; i < totalTrainFiles; i += batchSize) {
@@ -109,9 +111,7 @@ void mnn::preTrainRun(const std::string &dataSetPath)
                     confusion[label][maxIndex(outputBatch[j])]++;
                 }
                 trainPrg.accLoss += crossEntropy(outputBatch[j], expBatch[j]);
-                allScores.totalSumOfError += static_cast<double>(sumOfSquareOfDiff(outputBatch[j], expBatch[j]));
-                allScores.totalSumOfRegression += static_cast<double>(sumOfSquareOfDiff(expBatch[j], mean(outputBatch[j])));
-                allScores.totalSumOfSquares += static_cast<double>(sumOfSquareOfDiff(expBatch[j], mean(expBatch[j])));
+                getScore(outputBatch[j], expBatch[j], allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
             }
 
             // for progress tracking
@@ -181,8 +181,6 @@ void mnn::preTrainRun(const std::string &dataSetPath)
         float accLoss = 0.0f;
         int factor = totalTestFiles / 100;
         confusion.assign(outSize, std::vector<int>(outSize, 0));
-        allScores = {};
-        int count = 0;
         batchSize = BATCH_SIZE;
         this->inputBatch.resize(batchSize);
         this->outputBatch.resize(batchSize);
@@ -200,6 +198,10 @@ void mnn::preTrainRun(const std::string &dataSetPath)
                 this->actBatch[i][j].resize(width[i]);
             }
         }
+        allScores = {};
+        allScores.totalSumOfRegression = 0.0f; allScores.totalSumOfError = 0.0f; allScores.totalSumOfSquares = 0.0f;
+        allScores.r2 = 0.0f; allScores.sse = 0.0f; allScores.ssr = 0.0f; allScores.sst = 0.0f;
+        int count = 0;
         for(int i = 0; i < totalTestFiles; i += batchSize) {
             // Convert image to a flat 1D vector
             std::vector<std::vector<float>> inBatch;
@@ -244,9 +246,7 @@ void mnn::preTrainRun(const std::string &dataSetPath)
                     confusion[label][maxIndex(outputBatch[j])]++;
                 }
                 trainPrg.accLoss += crossEntropy(outputBatch[j], expBatch[j]);
-                allScores.totalSumOfError += static_cast<double>(sumOfSquareOfDiff(outputBatch[j], expBatch[j]));
-                allScores.totalSumOfRegression += static_cast<double>(sumOfSquareOfDiff(expBatch[j], mean(outputBatch[j])));
-                allScores.totalSumOfSquares += static_cast<double>(sumOfSquareOfDiff(expBatch[j], mean(expBatch[j])));
+                getScore(outputBatch[j], expBatch[j], allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
             }
 
             // for progress tracking
@@ -347,6 +347,8 @@ void mnn2d::preTrainRun(const std::string &dataSetPath)
         int factor = totalTrainFiles / 100;
         confusion.assign(outWidth, std::vector<int>(outWidth, 0));
         allScores = {};
+        allScores.totalSumOfRegression = 0.0f; allScores.totalSumOfError = 0.0f; allScores.totalSumOfSquares = 0.0f;
+        allScores.r2 = 0.0f; allScores.sse = 0.0f; allScores.ssr = 0.0f; allScores.sst = 0.0f;
         confData = {};
         int count = 0;
         for(int i = 0; i < totalTrainFiles; i += batchSize) {
@@ -462,6 +464,8 @@ void mnn2d::preTrainRun(const std::string &dataSetPath)
         int factor = totalTestFiles / 100;
         confusion.assign(outWidth, std::vector<int>(outWidth, 0));
         allScores = {};
+        allScores.totalSumOfRegression = 0.0f; allScores.totalSumOfError = 0.0f; allScores.totalSumOfSquares = 0.0f;
+        allScores.r2 = 0.0f; allScores.sse = 0.0f; allScores.ssr = 0.0f; allScores.sst = 0.0f;
         int count = 0;
         batchSize = BATCH_SIZE;
         this->inputBatch.resize(batchSize);

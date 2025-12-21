@@ -6,6 +6,11 @@
 
 /**
  * @brief this is to store session-wise per epoch data for detailed analysis
+ * @param dir2Ses directory to sessions data
+ * @param epoch epoch of training
+ * @param session session of training in current epoch
+ * @param batchOrNot true for batch training, else 0
+ * @param weightStats weights stats ()
  */
 void sessionDataToCsv(const std::string& dir2Ses, int epoch, int session,
                 bool batchOrNot, const std::vector<std::vector<float>> &weightStats,
@@ -60,28 +65,28 @@ void sessionDataToCsv(const std::string& dir2Ses, int epoch, int session,
     }
     for (size_t i = 0; i < w; ++i) {
         file << "bweights" + std::to_string(i);
-        for (const auto& stat : weightStats[i]) {
+        for (const auto& stat : weightStats[w + i]) {
             file << "," << stat;
         }
         file << "\n";
     }
     for (size_t i = 0; i < w; ++i) {
         file << "cgradients" + std::to_string(i);
-        for (const auto& stat : weightStats[i]) {
+        for (const auto& stat : weightStats[2*w + i]) {
             file << "," << stat;
         }
         file << "\n";
     }
     for (size_t i = 0; i < w; ++i) {
         file << "bgradients" + std::to_string(i);
-        for (const auto& stat : weightStats[i]) {
+        for (const auto& stat : weightStats[3*w + i]) {
             file << "," << stat;
         }
         file << "\n";
     }
     for (size_t i = 0; i < w; ++i) {
         file << "activations" + std::to_string(i);
-        for (const auto& stat : weightStats[i]) {
+        for (const auto& stat : weightStats[4*w + i]) {
             file << "," << stat;
         }
         file << "\n";
@@ -174,7 +179,7 @@ void sessionDataToCsv1(const std::string& dir2Ses, int epoch, int session,
     }
     for (size_t i = 0; i < w; ++i) {
         file << "bweights" + std::to_string(i);
-        for (const auto& stat : weightStats[i]) {
+        for (const auto& stat : weightStats[w + i]) {
             file << "," << stat;
         }
         file << "\n";

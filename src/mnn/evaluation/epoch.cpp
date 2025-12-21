@@ -125,7 +125,7 @@ void epochDataToCsv(const std::string &path2dir, const int epoch, bool batchOrNo
 
 
 /**
- * @brief save pre-train and each training epochs data to csv
+ * @brief save pre-train run and each training epochs data to csv
  * @param path2dir address of epoch directory
  * @param epoch training cycle count
  * @param batchOrNot batch training or not
@@ -232,7 +232,7 @@ void epochDataToCsv1(const std::string &path2dir, const int epoch, bool batchOrN
 
 
 /**
- * @brief save pre-train and test data to csv
+ * @brief save pre-train run and test data to csv
  * @param path2dir address of epoch directory
  * @param weightStats weight statistics (mean, dev, min, max)
  * @param confusion confusion matrix of epoch
