@@ -3,7 +3,7 @@
 #include <vector>
 #include <string>
 
-#define LEARNING_MAX 0.001f         // maximum learning rate allowed
+#define LEARNING_MAX 0.01 f         // maximum learning rate allowed
 #define LEARNING_MIN 0.00001f       // minimum learning rate allowed
 #define LAMBDA_L1 0.0001f           // L1 regularization parameter
 #define LAMBDA_L2 0.0025f           // L2 regularization parameter
@@ -13,7 +13,7 @@
 #define SOFTMAX_TEMP 1.05f          // softmax temperature
 #define EPOCH 50                    // epochs for single set training
 #define SESSION_SIZE 150            // number of batches in single session
-#define BATCH_SIZE 8                // number of inputs in single batch
+#define BATCH_SIZE 100              // number of inputs in single batch
 #define ALPHA 0.80f                 // gradient splitting factor
 
 
@@ -95,6 +95,7 @@ struct StageInfo {
 Statistics computeStats(const std::vector<float>& data);
 Statistics computeStats(const std::vector<std::vector<float>>& data);
 Statistics computeStats(const std::vector<std::vector<std::vector<float>>>& data);
+void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights);
 void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights,
         const std::vector<std::vector<std::vector<float>>>& cgrad, const std::vector<std::vector<std::vector<float>>>& bgrad,
         const std::vector<std::vector<float>>& act);
@@ -104,6 +105,8 @@ void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, 
 void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights,
         const std::vector<std::vector<std::vector<float>>>& cgrad, const std::vector<std::vector<std::vector<float>>>& bgrad,
         const std::vector<std::vector<std::vector<std::vector<float>>>>& act);
+void computeStatsForCsv(const std::vector<std::vector<std::vector<float>>> &cweights, const std::vector<std::vector<std::vector<float>>> &bweights,
+                        std::vector<std::vector<float>> &stats);
 void computeStatsForCsv(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights,
         const std::vector<std::vector<std::vector<float>>>& cgrad, const std::vector<std::vector<std::vector<float>>>& bgrad,
         std::vector<std::vector<float>>& stats);
@@ -119,6 +122,7 @@ void printClassificationReport(const confMat& cm, const std::vector<std::string>
 void getScore(const std::vector<float>& actual, const std::vector<float>& pred, double SST, double SSR, double SSE);
 
 // stage info functions
+
 std::vector<StageInfo> readTrainTestCsv(const std::string& filepath);
 void writeTrainTestCsv(const std::string& filepath, const std::vector<StageInfo>& stages);
 
@@ -130,9 +134,13 @@ bool logTestProgressToCSV(const test_progress& p, const std::string& filePath);
 bool loadLastTestProgress(test_progress& p, const std::string& filePath);
 void sessionDataToCsv(const std::string& dir2Ses, int epoch, int session, bool batchOrNot, const std::vector<std::vector<float>> &weightStats,
                     const std::vector<std::vector<int>> &confusion, const confMat &cm, const scores &sc, const progress &p);
+void sessionDataToCsv1(const std::string& dir2Ses, int epoch, int session, bool batchOrNot, const std::vector<std::vector<float>> &weightStats,
+                    const std::vector<std::vector<int>> &confusion, const confMat &cm, const scores &sc, const progress &p);
 void epochDataToCsv(const std::string &path2dir, const int epoch, bool batchOrNot, const std::vector<std::vector<float>> &weightStats,
                     const std::vector<std::vector<int>> &confusion, const confMat &cm, const scores &sc, const progress &p, bool isTrainOrPre);
 void epochDataToCsv(const std::string& dataSetAddress, const std::vector<std::vector<int>>& confusion, const confMat& cm, const scores& sc,
                     const test_progress& p, bool isTestOrPre);
+void epochDataToCsv1(const std::string &path2dir, const int epoch, bool batchOrNot, const std::vector<std::vector<float>> &weightStats,
+                    const std::vector<std::vector<int>> &confusion, const confMat &cm, const scores &sc, const progress &p, bool isTrainOrPre);
 
 #endif // PROGRESS_HPP

@@ -95,12 +95,12 @@ void mnn::test(const std::string &dataSetPath, bool useThreadOrBuffer)
     confData = confusionMatrixFunc(confusion);
     epochDataToCsv(dataSetPath, confusion, confData, allScores, testPrg, true);
     path2test_progress = dataSetPath + "/mnn1d_test.csv";
-    std::cout << "--- Test Finished (mnn) ---" << std::endl;
+    std::cout << "------ Final Result ------" << std::endl;
     std::cout << "Total Inputs: " << totalInputs << std::endl;
     std::cout << "Final Accuracy: " << ((float)correctPredictions / totalInputs) * 100.0f << "%" << std::endl;
     std::cout << "Final Average Loss: " << testPrg.testError << std::endl;
     std::cout << "Correct Predictions: " << correctPredictions << std::endl;
-
+    std::cout << "--- Test Finished (mnn) ---" << std::endl;
 }
 
 // for MNN2D
@@ -163,7 +163,7 @@ void mnn2d::test(const std::string &dataSetPath, bool useThreadOrBuffer)
         // accumulate loss
         accLoss += crossEntropy(this->output, target);
 
-        if((i + 1) % 100 == 0 || (i + 1) == totalInputs) {
+        if((i + 1) % 200 == 0 || (i + 1) == totalInputs) {
             float currentAccuracy = (float)correctPredictions / (i + 1);
             std::cout << "Processed " << i + 1 << "/" << totalInputs
                       << " \t Accuracy: " << currentAccuracy * 100.0f << "%\t"
@@ -177,9 +177,10 @@ void mnn2d::test(const std::string &dataSetPath, bool useThreadOrBuffer)
     testPrg.totalTestFiles = totalInputs;
     path2test_progress = dataSetPath + "/mnn1d_test.csv";
     logTestProgressToCSV(testPrg, path2test_progress);
-    std::cout << "--- Test Finished (mnn) ---" << std::endl;
+    std::cout << "------- Final Result -------" << std::endl;
     std::cout << "Final Accuracy: " << ((float)correctPredictions / totalInputs) * 100.0f << "%" << std::endl;
     std::cout << "Final Average Loss: " << testPrg.testError << std::endl;
     std::cout << "Correct Predictions: " << correctPredictions << std::endl;
     std::cout << "Total Inputs: " << totalInputs << std::endl;
+    std::cout << "--- Test Finished (mnn2d) ---" << std::endl;
 }

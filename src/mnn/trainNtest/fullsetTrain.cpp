@@ -180,6 +180,7 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
                 allScores.sst = allScores.totalSumOfSquares / trainPrg.filesProcessed;
                 allScores.r2 = allScores.ssr / allScores.sst;
                 // save session data
+                computeStatsForCsv(cweights, bweights, cgradients, bgradients, activate, weightStats);
                 sessionDataToCsv(path2SessionDir, trainPrg.epoch, trainPrg.sessionCount, false,
                                     weightStats, confusion, confData, allScores, trainPrg);
                 sessionEnd = 1;
@@ -210,8 +211,10 @@ void mnn::fullDataSetTraining(const std::string &dataSetPath, bool useThreadOrBu
                     allScores.ssr = allScores.totalSumOfRegression / totalFiles;
                     allScores.sst = allScores.totalSumOfSquares / totalFiles;
                     allScores.r2 = allScores.ssr / allScores.sst;
+                    weightStats.clear();
+                    computeStatsForCsv(cweights, bweights, weightStats);
                     epochDataToCsv(dataSetPath + "/mnn1d", trainPrg.epoch, notBatch, weightStats, confusion, confData, allScores,
-                                    trainPrg, true);
+                                   trainPrg, true);
                     break;
                 }
             }

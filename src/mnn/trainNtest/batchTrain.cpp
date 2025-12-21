@@ -385,22 +385,23 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
         for(int i = startFileIndex; i < totalFiles; i += batchSize) {
             std::vector<std::vector<std::vector<float>>> inBatch;
             std::vector<std::vector<float>> expBatch;
-            int currentBatchEnd = std::min<int>(i + batchSize, totalFiles);
+            const int currentBatchEnd = std::min<int>(i + batchSize, totalFiles);
+            const int currentBatchSize = currentBatchEnd - i;
             // get image
             for(int j = i; j < currentBatchEnd; ++j) {
                 const auto& filePath = filePaths[j];
                 inBatch.push_back(cvMat2vec(image2grey(filePath.string())));
                 std::string filename = filePath.stem().string();
                 int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
-                std::vector<float> exp(this->outWidth, 0.0f);
+                std::vector<float> exp(outWidth, 0.0f);
                 if (label < this->outWidth) {
                     exp[label] = 1.0f;
                 }
                 expBatch.push_back(exp);
             }
-            for(int j = 0; j < batchSize; j++) {
-                for(int k = 0; k < inBatch[j].size(); k++) {
-                    for(int p = 0; p < inBatch[j][k].size(); j++) {
+            for(int j = 0; j < currentBatchSize; j++) {
+                for(size_t k = 0; k < inBatch[j].size(); k++) {
+                    for(size_t p = 0; p < inBatch[j][k].size(); p++) {
                         inBatch[j][k][p] /= 255.0f;
                     }
                 }
@@ -417,7 +418,7 @@ void mnn2d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBu
                 clTrainBatch1c(inBatch, expBatch, useThreadOrBuffer);
             #endif
 
-            for (int j = 0; j < batchSize; j++) {
+            for (int j = 0; j < currentBatchSize; j++) {
                 if(maxIndex(outputBatch[j]) == maxIndex(expBatch[j])) {
                     correctPredictions++;
                 }

@@ -12,7 +12,8 @@
 
 /**
  * @brief pre-training results for weights(stats),set gradients (0 in stats) and prediction, perform with 
- *  both train + test files. This will be used in analysis of training and testing (epoch-wise).
+ *  both train + test files. This will be used in analysis of training and testing (epoch-wise). Uses batch
+ *  Forprop for fast execution.
  * @param dataSetPath path to complete dataset
  */
 void mnn::preTrainRun(const std::string &dataSetPath)
@@ -37,6 +38,25 @@ void mnn::preTrainRun(const std::string &dataSetPath)
     }
     else {
         std::cout << "\n--- Starting Pre-Train Run on Training Set (mnn) ---" << std::endl;
+        std::cout << "Batch Size: " << BATCH_SIZE << std::endl;
+        std::cout << "Order of Monomials: " << order << std::endl;
+        batchSize = BATCH_SIZE;
+        this->inputBatch.resize(batchSize);
+        this->outputBatch.resize(batchSize);
+        this->targetBatch.resize(batchSize);
+        this->dotBatch.resize(layers, std::vector<std::vector<float>>(batchSize));
+        this->actBatch.resize(layers, std::vector<std::vector<float>>(batchSize));
+        for(int j = 0; j < batchSize; j++) {
+            this->inputBatch[j].resize(inSize, 0.0f);
+            this->outputBatch[j].resize(outSize, 0.0f);
+            this->targetBatch[j].resize(outSize, 0.0f);
+        }
+        for(int i = 0; i < layers; i++) {
+            for(int j = 0; j < batchSize; j++) {
+                this->dotBatch[i][j].resize(width[i]);
+                this->actBatch[i][j].resize(width[i]);
+            }
+        }
         std::sort(trainFilePaths.begin(), trainFilePaths.end());
         int totalTrainFiles = trainFilePaths.size();
         unsigned int correctPredictions = 0;
@@ -44,41 +64,59 @@ void mnn::preTrainRun(const std::string &dataSetPath)
         int factor = totalTrainFiles / 100;
         confusion.assign(outSize, std::vector<int>(outSize, 0));
         allScores = {};
+        confData = {};
         int count = 0;
-        for (const auto& filePath : trainFilePaths) {
-            // Convert image to a flat 1D vector
-            std::vector<float> in = flatten(cvMat2vec(image2grey(filePath.string())));
-            for(auto& val : in) {
-                val /= 255.0f;
+        for(int i = 0; i < totalTrainFiles; i += batchSize) {
+            std::vector<std::vector<float>> inBatch;
+            std::vector<std::vector<float>> expBatch;
+            int currentBatchEnd = std::min<int>(i + batchSize, totalTrainFiles);
+            // get image 
+            for(int j = i; j < currentBatchEnd; ++j) {
+                const auto& filePath = trainFilePaths[j];
+                inBatch.push_back(flatten(cvMat2vec(image2grey(filePath.string()))));
+                std::string filename = filePath.stem().string();
+                int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
+                std::vector<float> exp(this->outSize, 0.0f);
+                if (label < this->outSize) {
+                    exp[label] = 1.0f;
+                }
+                expBatch.push_back(exp);
+            }
+            for(int j = 0; j < inBatch.size(); j++) {
+                for(size_t k = 0; k < inBatch[j].size(); k++) {
+                    inBatch[j][k] /= 255.0f;
+                }
             }
 
-            // Extract label from filename (e.g., "image_7.png" -> 7)
-            std::string filename = filePath.stem().string();
-            int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
-
-            // Create one-hot encoded target vector
-            std::vector<float> exp(this->outSize, 0.0f);
-            if (label < this->outSize) {
-                exp[label] = 1.0f;
-            }
-
+            inputBatch = inBatch;
+            targetBatch = expBatch;
+            // backend selection
             #ifdef USE_CPU
-                forprop(in);
+                forprop(inBatch);
             #elif USE_CU
-                cuForprop(in);
+                cuForprop(inBatch);
             #elif USE_CL
-                clForprop(in);
+                clForprop(inBatch);
             #endif
 
-            if (maxIndex(output) == maxIndex(exp)) {
-                correctPredictions++;
+            for (int j = 0; j < inBatch.size(); j++) {
+                if(maxIndex(outputBatch[j]) == maxIndex(expBatch[j])) {
+                    correctPredictions++;
+                }
+                // Update confusion matrix
+                int label = maxIndex(expBatch[j]);
+                if (label < confusion.size() && maxIndex(outputBatch[j]) < confusion[0].size()) {
+                    confusion[label][maxIndex(outputBatch[j])]++;
+                }
+                trainPrg.accLoss += crossEntropy(outputBatch[j], expBatch[j]);
+                allScores.totalSumOfError += static_cast<double>(sumOfSquareOfDiff(outputBatch[j], expBatch[j]));
+                allScores.totalSumOfRegression += static_cast<double>(sumOfSquareOfDiff(expBatch[j], mean(outputBatch[j])));
+                allScores.totalSumOfSquares += static_cast<double>(sumOfSquareOfDiff(expBatch[j], mean(expBatch[j])));
             }
-            accLoss += crossEntropy(output, exp);
-            getScore(output, exp, allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
-            if (label < confusion.size() && maxIndex(output) < confusion[0].size()) {
-                confusion[label][maxIndex(output)] += 1;
-            }
-            count++;
+
+            // for progress tracking
+            count += batchSize;
+            trainPrg.filesProcessed += batchSize;
             if(count % factor == 0) {
                 std::cout << "Processed " << count << "/" << totalTrainFiles
                           << " files. Percent: " << static_cast<float>(count * 100) / totalTrainFiles << "%" << std::endl;
@@ -108,7 +146,7 @@ void mnn::preTrainRun(const std::string &dataSetPath)
         }
         printConfusionMatrix(confusion);
         printClassificationReport(confData, classes);
-        computeStatsForCsv(cweights, bweights, cgradients, bgradients, activate, weightStats);
+        computeStatsForCsv(cweights, bweights, weightStats);
         allScores.sse = allScores.totalSumOfError / totalTrainFiles;
         allScores.ssr = allScores.totalSumOfRegression / totalTrainFiles;
         allScores.sst = allScores.totalSumOfSquares / totalTrainFiles;
@@ -145,40 +183,75 @@ void mnn::preTrainRun(const std::string &dataSetPath)
         confusion.assign(outSize, std::vector<int>(outSize, 0));
         allScores = {};
         int count = 0;
-        for (const auto& filePath : testFilePaths) {
+        batchSize = BATCH_SIZE;
+        this->inputBatch.resize(batchSize);
+        this->outputBatch.resize(batchSize);
+        this->targetBatch.resize(batchSize);
+        this->dotBatch.resize(layers, std::vector<std::vector<float>>(batchSize));
+        this->actBatch.resize(layers, std::vector<std::vector<float>>(batchSize));
+        for(int j = 0; j < batchSize; j++) {
+            this->inputBatch[j].resize(inSize, 0.0f);
+            this->outputBatch[j].resize(outSize, 0.0f);
+            this->targetBatch[j].resize(outSize, 0.0f);
+        }
+        for(int i = 0; i < layers; i++) {
+            for(int j = 0; j < batchSize; j++) {
+                this->dotBatch[i][j].resize(width[i]);
+                this->actBatch[i][j].resize(width[i]);
+            }
+        }
+        for(int i = 0; i < totalTestFiles; i += batchSize) {
             // Convert image to a flat 1D vector
-            std::vector<float> in = flatten(cvMat2vec(image2grey(filePath.string())));
-            for(auto& val : in) {
-                val /= 255.0f;
+            std::vector<std::vector<float>> inBatch;
+            std::vector<std::vector<float>> expBatch;
+            int currentBatchEnd = std::min<int>(i + batchSize, totalTestFiles);
+            // get image 
+            for(int j = i; j < currentBatchEnd; ++j) {
+                const auto& filePath = trainFilePaths[j];
+                inBatch.push_back(flatten(cvMat2vec(image2grey(filePath.string()))));
+                std::string filename = filePath.stem().string();
+                int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
+                std::vector<float> exp(this->outSize, 0.0f);
+                if (label < this->outSize) {
+                    exp[label] = 1.0f;
+                }
+                expBatch.push_back(exp);
+            }
+            for(int j = 0; j < inBatch.size(); j++) {
+                for(size_t k = 0; k < inBatch[j].size(); k++) {
+                    inBatch[j][k] /= 255.0f;
+                }
             }
 
-            // Extract label from filename (e.g., "image_7.png" -> 7)
-            std::string filename = filePath.stem().string();
-            int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
-
-            // Create one-hot encoded target vector
-            std::vector<float> exp(this->outSize, 0.0f);
-            if (label < this->outSize) {
-                exp[label] = 1.0f;
-            }
-
+            inputBatch = inBatch;
+            targetBatch = expBatch;
+            // backend selection
             #ifdef USE_CPU
-                forprop(in);
+                forprop(inBatch);
             #elif USE_CU
-                cuForprop(in);
+                cuForprop(inBatch);
             #elif USE_CL
-                clForprop(in);
+                clForprop(inBatch);
             #endif
 
-            if (maxIndex(output) == maxIndex(exp)) {
-                correctPredictions++;
+            for (int j = 0; j < inBatch.size(); j++) {
+                if(maxIndex(outputBatch[j]) == maxIndex(expBatch[j])) {
+                    correctPredictions++;
+                }
+                // Update confusion matrix
+                int label = maxIndex(expBatch[j]);
+                if (label < confusion.size() && maxIndex(outputBatch[j]) < confusion[0].size()) {
+                    confusion[label][maxIndex(outputBatch[j])]++;
+                }
+                trainPrg.accLoss += crossEntropy(outputBatch[j], expBatch[j]);
+                allScores.totalSumOfError += static_cast<double>(sumOfSquareOfDiff(outputBatch[j], expBatch[j]));
+                allScores.totalSumOfRegression += static_cast<double>(sumOfSquareOfDiff(expBatch[j], mean(outputBatch[j])));
+                allScores.totalSumOfSquares += static_cast<double>(sumOfSquareOfDiff(expBatch[j], mean(expBatch[j])));
             }
-            accLoss += crossEntropy(output, exp);
-            getScore(output, exp, allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
-            if (label < confusion.size() && maxIndex(output) < confusion[0].size()) {
-                confusion[label][maxIndex(output)] += 1;
-            }
-            count++;
+
+            // for progress tracking
+            count += batchSize;
+            trainPrg.filesProcessed += batchSize;
             if(count % factor == 0) {
                 std::cout << "Processed " << count << "/" << totalTestFiles
                           << " files. Percent: " << static_cast<float>(count * 100) / totalTestFiles << "%" << std::endl;
@@ -208,7 +281,6 @@ void mnn::preTrainRun(const std::string &dataSetPath)
         }
         printConfusionMatrix(confusion);
         printClassificationReport(confData, classes);
-        computeStatsForCsv(cweights, bweights, cgradients, bgradients, activate, weightStats);
         allScores.sse = allScores.totalSumOfError / totalTestFiles;
         allScores.ssr = allScores.totalSumOfRegression / totalTestFiles;
         allScores.sst = allScores.totalSumOfSquares / totalTestFiles;
@@ -246,7 +318,28 @@ void mnn2d::preTrainRun(const std::string &dataSetPath)
     if (trainFilePaths.empty()) {
         std::cout << "Warning: No files found in train dataset directory: " << trainPath << std::endl;
     } else {
-        std::cout << "\n--- Starting Pre-Train Run on Training Set (mnn2d) ---" << std::endl;
+        std::cout << "\n--- Starting Pre-Train Run on Training Set (mnn) ---" << std::endl;
+        std::cout << "Batch Size: " << BATCH_SIZE << std::endl;
+        std::cout << "Order of Monomials: " << order << std::endl;
+        batchSize = BATCH_SIZE;
+        this->inputBatch.resize(batchSize);
+        this->outputBatch.resize(batchSize);
+        this->targetBatch.resize(batchSize);
+        this->dotBatch.resize(layers);
+        this->actBatch.resize(layers);
+        for(int j = 0; j < batchSize; j++) {
+            this->inputBatch[j].resize(inHeight, std::vector<float>(inWidth, 0.0f));
+            this->outputBatch[j].resize(outWidth, 0.0f);
+            this->targetBatch[j].resize(outWidth, 0.0f);
+        }
+        for(int i = 0; i < layers; i++) {
+            this->dotBatch[i].resize(batchSize);
+            this->actBatch[i].resize(batchSize);
+            for(int j = 0; j < batchSize; j++) {
+                this->dotBatch[i][j].resize(inHeight, std::vector<float>(width[i], 0.0f));
+                this->actBatch[i][j].resize(inHeight, std::vector<float>(width[i], 0.0f));
+            }
+        }
         std::sort(trainFilePaths.begin(), trainFilePaths.end());
         int totalTrainFiles = trainFilePaths.size();
         unsigned int correctPredictions = 0;
@@ -254,39 +347,56 @@ void mnn2d::preTrainRun(const std::string &dataSetPath)
         int factor = totalTrainFiles / 100;
         confusion.assign(outWidth, std::vector<int>(outWidth, 0));
         allScores = {};
+        confData = {};
         int count = 0;
-        for (const auto& filePath : trainFilePaths) {
-            std::vector<std::vector<float>> in = cvMat2vec(image2grey(filePath.string()));
-            for(auto& row : in) {
-                for(auto& val : row) {
-                    val /= 255.0f;
+        for(int i = 0; i < totalTrainFiles; i += batchSize) {
+            std::vector<std::vector<std::vector<float>>> inBatch;
+            std::vector<std::vector<float>> expBatch;
+            int currentBatchEnd = std::min<int>(i + batchSize, totalTrainFiles);
+            
+            for(int j = i; j < currentBatchEnd; ++j) {
+                const auto& filePath = trainFilePaths[j];
+                inBatch.push_back(cvMat2vec(image2grey(filePath.string())));
+                std::string filename = filePath.stem().string();
+                int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
+                std::vector<float> exp(this->outWidth, 0.0f);
+                if (label < this->outWidth) {
+                    exp[label] = 1.0f;
+                }
+                expBatch.push_back(exp);
+            }
+
+            for(auto& mat : inBatch) {
+                for(auto& row : mat) {
+                    for(auto& val : row) {
+                        val /= 255.0f;
+                    }
                 }
             }
 
-            std::string filename = filePath.stem().string();
-            int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
-            std::vector<float> exp(this->outWidth, 0.0f);
-            if (label < this->outWidth) {
-                exp[label] = 1.0f;
-            }
+            inputBatch = inBatch;
+            targetBatch = expBatch;
 
             #ifdef USE_CPU
-                forprop(in);
+                forprop(inBatch);
             #elif USE_CU
-                cuForprop(in);
+                cuForprop(inBatch);
             #elif USE_CL
-                clForprop(in);
+                clForprop(inBatch);
             #endif
 
-            if (maxIndex(output) == maxIndex(exp)) {
-                correctPredictions++;
+            for (int j = 0; j < inBatch.size(); j++) {
+                if (maxIndex(outputBatch[j]) == maxIndex(expBatch[j])) {
+                    correctPredictions++;
+                }
+                accLoss += crossEntropy(outputBatch[j], expBatch[j]);
+                getScore(outputBatch[j], expBatch[j], allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
+                int label = maxIndex(expBatch[j]);
+                if (label < confusion.size() && maxIndex(outputBatch[j]) < confusion[0].size()) {
+                    confusion[label][maxIndex(outputBatch[j])]++;
+                }
             }
-            accLoss += crossEntropy(output, exp);
-            getScore(output, exp, allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
-            if (label < confusion.size() && maxIndex(output) < confusion[0].size()) {
-                confusion[label][maxIndex(output)]++;
-            }
-            count++;
+            count += inBatch.size();
             if(count % factor == 0) {
                 std::cout << "Processed " << count << "/" << totalTrainFiles
                           << " files. Percent: " << static_cast<float>(count * 100) / totalTrainFiles << "%" << std::endl;
@@ -316,7 +426,7 @@ void mnn2d::preTrainRun(const std::string &dataSetPath)
         }
         printConfusionMatrix(confusion);
         printClassificationReport(confData, classes);
-        computeStatsForCsv(cweights, bweights, cgradients, bgradients, activate, weightStats);
+        computeStatsForCsv(cweights, bweights, weightStats);
         allScores.sse = allScores.totalSumOfError / totalTrainFiles;
         allScores.ssr = allScores.totalSumOfRegression / totalTrainFiles;
         allScores.sst = allScores.totalSumOfSquares / totalTrainFiles;
@@ -353,38 +463,73 @@ void mnn2d::preTrainRun(const std::string &dataSetPath)
         confusion.assign(outWidth, std::vector<int>(outWidth, 0));
         allScores = {};
         int count = 0;
-        for (const auto& filePath : testFilePaths) {
-            std::vector<std::vector<float>> in = cvMat2vec(image2grey(filePath.string()));
-            for(auto& row : in) {
-                for(auto& val : row) {
-                    val /= 255.0f;
+        batchSize = BATCH_SIZE;
+        this->inputBatch.resize(batchSize);
+        this->outputBatch.resize(batchSize);
+        this->targetBatch.resize(batchSize);
+        this->dotBatch.resize(layers);
+        this->actBatch.resize(layers);
+        for(int j = 0; j < batchSize; j++) {
+            this->inputBatch[j].resize(inHeight, std::vector<float>(inWidth, 0.0f));
+            this->outputBatch[j].resize(outWidth, 0.0f);
+            this->targetBatch[j].resize(outWidth, 0.0f);
+        }
+        for(int i = 0; i < layers; i++) {
+            this->dotBatch[i].resize(batchSize);
+            this->actBatch[i].resize(batchSize);
+            for(int j = 0; j < batchSize; j++) {
+                this->dotBatch[i][j].resize(inHeight, std::vector<float>(width[i], 0.0f));
+                this->actBatch[i][j].resize(inHeight, std::vector<float>(width[i], 0.0f));
+            }
+        }
+        for(int i = 0; i < totalTestFiles; i += batchSize) {
+            std::vector<std::vector<std::vector<float>>> inBatch;
+            std::vector<std::vector<float>> expBatch;
+            int currentBatchEnd = std::min<int>(i + batchSize, totalTestFiles);
+            
+            for(int j = i; j < currentBatchEnd; ++j) {
+                const auto& filePath = testFilePaths[j];
+                inBatch.push_back(cvMat2vec(image2grey(filePath.string())));
+                std::string filename = filePath.stem().string();
+                int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
+                std::vector<float> exp(this->outWidth, 0.0f);
+                if (label < this->outWidth) {
+                    exp[label] = 1.0f;
+                }
+                expBatch.push_back(exp);
+            }
+
+            for(auto& mat : inBatch) {
+                for(auto& row : mat) {
+                    for(auto& val : row) {
+                        val /= 255.0f;
+                    }
                 }
             }
 
-            std::string filename = filePath.stem().string();
-            int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
-            std::vector<float> exp(this->outWidth, 0.0f);
-            if (label < this->outWidth) {
-                exp[label] = 1.0f;
-            }
+            inputBatch = inBatch;
+            targetBatch = expBatch;
 
             #ifdef USE_CPU
-                forprop(in);
+                forprop(inBatch);
             #elif USE_CU
-                cuForprop(in);
+                cuForprop(inBatch);
             #elif USE_CL
-                clForprop(in);
+                clForprop(inBatch);
             #endif
 
-            if (maxIndex(output) == maxIndex(exp)) {
-                correctPredictions++;
+            for (int j = 0; j < inBatch.size(); j++) {
+                if (maxIndex(outputBatch[j]) == maxIndex(expBatch[j])) {
+                    correctPredictions++;
+                }
+                accLoss += crossEntropy(outputBatch[j], expBatch[j]);
+                getScore(outputBatch[j], expBatch[j], allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
+                int label = maxIndex(expBatch[j]);
+                if (label < confusion.size() && maxIndex(outputBatch[j]) < confusion[0].size()) {
+                    confusion[label][maxIndex(outputBatch[j])]++;
+                }
             }
-            accLoss += crossEntropy(output, exp);
-            getScore(output, exp, allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
-            if (label < confusion.size() && maxIndex(output) < confusion[0].size()) {
-                confusion[label][maxIndex(output)]++;
-            }
-            count++;
+            count += inBatch.size();
             if(count % factor == 0) {
                 std::cout << "Processed " << count << "/" << totalTestFiles
                           << " files. Percent: " << static_cast<float>(count * 100) / totalTestFiles << "%" << std::endl;
@@ -414,7 +559,6 @@ void mnn2d::preTrainRun(const std::string &dataSetPath)
         }
         printConfusionMatrix(confusion);
         printClassificationReport(confData, classes);
-        computeStatsForCsv(cweights, bweights, cgradients, bgradients, activate, weightStats);
         allScores.sse = allScores.totalSumOfError / totalTestFiles;
         allScores.ssr = allScores.totalSumOfRegression / totalTestFiles;
         allScores.sst = allScores.totalSumOfSquares / totalTestFiles;

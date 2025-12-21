@@ -33,6 +33,29 @@ void mnn::forprop(const std::vector<float>& input)
  */
 void mnn::forprop(const std::vector<std::vector<float>>& input)
 {
+    if (input.empty())
+        throw std::runtime_error("Input vector is empty");
+    this->batchSize = input.size();
+
+    if (dotBatch.size() != layers) {
+        dotBatch.resize(layers);
+        actBatch.resize(layers);
+    }
+    for (int i = 0; i < layers; ++i) {
+        if (dotBatch[i].size() != batchSize) {
+            dotBatch[i].resize(batchSize);
+            actBatch[i].resize(batchSize);
+            for (int j = 0; j < batchSize; ++j) {
+                dotBatch[i][j].resize(width[i]);
+                actBatch[i][j].resize(width[i]);
+            }
+        }
+        // Reset dotBatch values to 0 as layerForwardBatch accumulates
+        for (int j = 0; j < batchSize; ++j) {
+            std::fill(dotBatch[i][j].begin(), dotBatch[i][j].end(), 0.0f);
+        }
+    }
+
     // first layer
     layerForwardBatch(input, dotBatch[0], cweights[0], bweights[0], order);
     for(int i = 0; i < batchSize; i++) {
@@ -46,7 +69,8 @@ void mnn::forprop(const std::vector<std::vector<float>>& input)
             actBatch[j][i] = sigmoid(dotBatch[j][i]);
         }
     }
-   outputBatch = actBatch[layers-1];
+
+    outputBatch = actBatch[layers-1];
 }
 
 // forprop for mnn2d
@@ -65,6 +89,7 @@ void mnn2d::forprop(const std::vector<std::vector<float>>& input)
         layerForward(activate[i-1], dotProds[i], cweights[i], bweights[i], order);
         activate[i] = reshape(softmax(flatten(dotProds[i])), dotProds[i].size(), dotProds[i][0].size());
     }
+
     // apply mean pooling to the final activation layer to get output
     output = meanPool(activate[layers - 1]);
 }
@@ -76,6 +101,30 @@ void mnn2d::forprop(const std::vector<std::vector<float>>& input)
  */
 void mnn2d::forprop(const std::vector<std::vector<std::vector<float>>>& input)
 {
+    if (input.empty()) return;
+    this->batchSize = input.size();
+
+    if (dotBatch.size() != layers) {
+        dotBatch.resize(layers);
+        actBatch.resize(layers);
+    }
+    for (int i = 0; i < layers; ++i) {
+        if (dotBatch[i].size() != batchSize) {
+            dotBatch[i].resize(batchSize);
+            actBatch[i].resize(batchSize);
+            for (int j = 0; j < batchSize; ++j) {
+                dotBatch[i][j].resize(inHeight, std::vector<float>(width[i], 0.0f));
+                actBatch[i][j].resize(inHeight, std::vector<float>(width[i]));
+            }
+        }
+        // Reset dotBatch values to 0
+        for (int j = 0; j < batchSize; ++j) {
+            for (int r = 0; r < inHeight; ++r) {
+                std::fill(dotBatch[i][j][r].begin(), dotBatch[i][j][r].end(), 0.0f);
+            }
+        }
+    }
+
     // first layer
     layerForwardBatch(input, dotBatch[0], cweights[0], bweights[0], order);
     for(int i = 0; i < batchSize; i++) {
