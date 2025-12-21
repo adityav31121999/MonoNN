@@ -227,7 +227,7 @@ Similar to above, inspired from it, this theorem actually focuses on specific or
   - `OpenCL` context function is declared along with error support.
   - `Cuda` kernel declarations are provided.
   - `C++` operations and functions are declared here too.
-- The core logic is planned within the `src` directory. The implementation defines two main classes in `src/mnn.hpp` and `src/mnn2.hpp`:
+- The core logic is planned within the `src` directory. The implementation defines two main classes in `src/mnn1d.hpp` and `src/mnn2.hpp`:
   - **`mnn`**: A class designed to represent a Monomial Neural Network for 1-dimensional input and output data (vectors).
   - **`mnn2d`**: A class designed to represent a Monomial Neural Network for 2-dimensional input and output data (matrices/images).
   - Headers for loss, activations, and class definitions are provided separately.

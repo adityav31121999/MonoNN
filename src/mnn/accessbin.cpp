@@ -2,7 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <stdexcept>
-#include "mnn.hpp"
+#include "mnn1d.hpp"
 #include "mnn2d.hpp"
 
 /**

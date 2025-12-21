@@ -1,4 +1,4 @@
-#include "mnn.hpp"
+#include "mnn1d.hpp"
 #include "mnn2d.hpp"
 #include <vector>
 #include <stdexcept>

@@ -3,7 +3,7 @@
 #include <random>
 #include <fstream>
 #include <filesystem>
-#include "mnn.hpp"
+#include "mnn1d.hpp"
 #include "mnn2d.hpp"
 #include "operators.hpp"
 // set weights

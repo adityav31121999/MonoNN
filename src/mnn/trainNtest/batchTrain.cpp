@@ -6,7 +6,7 @@
 #include <string>
 #include <algorithm>
 #include <random>
-#include "mnn.hpp"
+#include "mnn1d.hpp"
 #include "mnn2d.hpp"
 
 // for MNN

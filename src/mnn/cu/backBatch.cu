@@ -1,5 +1,5 @@
 #ifdef USE_CU
-#include "mnn.hpp"
+#include "mnn1d.hpp"
 #include "mnn2d.hpp"
 #include <cuda_runtime.h>
 #include <vector>

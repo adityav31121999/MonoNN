@@ -4,7 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <filesystem>
-#include "mnn.hpp"
+#include "mnn1d.hpp"
 #include "mnn2d.hpp"
 
 // zero out gradients for new backprop

@@ -1,4 +1,4 @@
-#include "mnn.hpp"
+#include "mnn1d.hpp"
 #include "mnn2d.hpp"
 #include <opencv2/core.hpp>      // For cv::Mat
 #include <opencv2/imgcodecs.hpp> // For cv::imread

@@ -1,4 +1,4 @@
-#include "mnn.hpp"
+#include "mnn1d.hpp"
 #include <stdexcept>
 #include <iostream>
 #include <fstream>

@@ -1,5 +1,5 @@
 #ifdef USE_CPU
-#include "mnn.hpp"
+#include "mnn1d.hpp"
 #include "mnn2d.hpp"
 
 void mnn::threadTrain(const std::vector<float> &input, const std::vector<float> &target)

@@ -3,7 +3,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <cmath>
-#include "mnn.hpp"
+#include "mnn1d.hpp"
 #include "mnn2d.hpp"
 
 /**
