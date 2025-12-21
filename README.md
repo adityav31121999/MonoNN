@@ -211,10 +211,13 @@ Similar to above, inspired from it, this theorem actually focuses on specific or
   - Online training for single files and batches
   - Mini-batch training
   - full dataset training over epochs
-- **0.0.3**: (in progress)
+- **0.0.3**: Evaluations and corrections
   - Buffer-based and thread-based stand alone training functions
   - Thread-based C++ functions for single-cycle training functions
   - Evaluation Metrics for pre-training, training and testing stages
+  - All corrections made to MNN2D class functions and other functions
+- **0.0.4**: New Network definitions (in progress)
+  - new classes and definitions
 
 ## Project Structure
 
