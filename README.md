@@ -218,6 +218,7 @@ Similar to above, inspired from it, this theorem actually focuses on specific or
   - All corrections made to MNN2D class functions and other functions
 - **0.0.4**: New Network definitions (in progress)
   - new classes and definitions
+  - 
 
 ## Project Structure
 
