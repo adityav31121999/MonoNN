@@ -13,7 +13,7 @@
  * @param input The input vector.
  * @param target The target output vector.
  */
-void mnn::clBufTrain(const std::vector<float>& input, const std::vector<float>& target) {
+void mnn1d::clBufTrain(const std::vector<float>& input, const std::vector<float>& target) {
     cl_int err;
     cl::NDRange local_1d(WORKSIZE_1D);
     cl::NDRange local_2d(WORKSIZE_2DX, WORKSIZE_2DY);
@@ -73,7 +73,7 @@ void mnn::clBufTrain(const std::vector<float>& input, const std::vector<float>& 
                 CL_CHECK(clCommandQueue.enqueueWriteBuffer(d_bweights[i], CL_TRUE, 0, flat_b.size() * sizeof(float), flat_b.data()));
             }
 
-            // --- Forward Propagation (adapted from mnn::clForprop) ---
+            // --- Forward Propagation (adapted from mnn1d::clForprop) ---
             cl::Buffer d_current_act = d_in;
             cl::Kernel kernelForward = kernels.at("kernelLayerForward2");
             cl::Kernel kernelSigmoid = kernels.at("sigmoid");
@@ -131,7 +131,7 @@ void mnn::clBufTrain(const std::vector<float>& input, const std::vector<float>& 
             currloss = crossEntropy(output, target);
             std::cout << "Current CE Loss at epoch " << epoch << " : " << currloss << std::endl;
 
-            // --- Backward Propagation (adapted from mnn::clBackprop) ---
+            // --- Backward Propagation (adapted from mnn1d::clBackprop) ---
             cl::Kernel kernelSub = kernels.at("subtract");
             cl::Kernel kernelSigmoidDer = kernels.at("sigmoidDer");
             cl::Kernel kernelScale = kernels.at("scaleByValue");

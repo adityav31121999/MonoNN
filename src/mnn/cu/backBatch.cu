@@ -12,7 +12,7 @@
  * @brief batch backpropgation using CUDA for mnn
  * @param expected expected result from forprop
  */
-void mnn::cuBackprop(const std::vector<std::vector<float>>& expected) {
+void mnn1d::cuBackprop(const std::vector<std::vector<float>>& expected) {
     try {
         int batchSize = expected.size();
         if (batchSize == 0) {
@@ -252,7 +252,7 @@ void mnn::cuBackprop(const std::vector<std::vector<float>>& expected) {
         }
     }
     catch (const std::runtime_error& e) {
-        throw std::runtime_error(std::string("Exception in mnn::cuBackprop (batch): ") + e.what());
+        throw std::runtime_error(std::string("Exception in mnn1d::cuBackprop (batch): ") + e.what());
     }
 }
 

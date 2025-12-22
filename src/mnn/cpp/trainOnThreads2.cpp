@@ -2,7 +2,7 @@
 #include "mnn1d.hpp"
 #include "mnn2d.hpp"
 
-void mnn::threadTrainBatch(const std::vector<std::vector<float>> &inputs, const std::vector<std::vector<float>> &targets)
+void mnn1d::threadTrainBatch(const std::vector<std::vector<float>> &inputs, const std::vector<std::vector<float>> &targets)
 {
     if (inputs.size() != targets.size()) {
         throw std::invalid_argument("Number of inputs and targets in batch must be the same.");

@@ -10,7 +10,7 @@
  * @brief forprop for mnn using OpenCL
  * @param input input vector
  */
-void mnn::clForprop(const std::vector<float>& input)
+void mnn1d::clForprop(const std::vector<float>& input)
 {
     try {
         cl_int err;
@@ -98,7 +98,7 @@ void mnn::clForprop(const std::vector<float>& input)
         CL_CHECK(clCommandQueue.enqueueReadBuffer(d_activate[layers - 1], CL_TRUE, 0, sizeof(float) * output.size(), output.data()));
     }
     catch (const std::runtime_error& e) {
-        throw std::runtime_error(std::string("Exception in mnn::clForprop: ") + e.what());
+        throw std::runtime_error(std::string("Exception in mnn1d::clForprop: ") + e.what());
     }
 }
 

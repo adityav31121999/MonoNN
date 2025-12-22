@@ -8,11 +8,15 @@
 #include "progress.hpp"
 
 /**
- * @brief class for monomial neural network for static and dynamic type
+ * @brief class for monomial neural network for static and dynamic type:
+ *      1. Static MNN1D
+ *      2. Static MNN2D
+ *      3. Dynamic MNN1D
+ *      4. Dynamic MNN2D
  */
 class mononn {
 private:
-
+    int type;                   // type of MonoNN
 public:
 
 };

@@ -11,7 +11,7 @@
  * @param target The target output vector.
  * @param useThread 1 to use thread based faster execution else 0.
  */
-void mnn::train1c(const std::vector<float>& input, const std::vector<float>& target, bool useThread) {
+void mnn1d::train1c(const std::vector<float>& input, const std::vector<float>& target, bool useThread) {
     // single cycle training
     if (useThread == 0) {
         // 1. Forward propagation

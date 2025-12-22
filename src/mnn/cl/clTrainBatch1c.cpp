@@ -11,7 +11,7 @@
  * @param targets A vector of target vectors.
  * @param useBuffer Unused for OpenCL implementation.
  */
-void mnn::clTrainBatch1c(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets, bool useBuffer) {
+void mnn1d::clTrainBatch1c(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets, bool useBuffer) {
     if (inputs.size() != targets.size()) {
         throw std::invalid_argument("Number of inputs and targets in batch must be the same.");
     }
@@ -141,7 +141,7 @@ void mnn::clTrainBatch1c(const std::vector<std::vector<float>>& inputs, const st
             CL_CHECK(clCommandQueue.enqueueWriteBuffer(d_bweights[i], CL_TRUE, 0, flat_b.size() * sizeof(float), flat_b.data()));
         }
 
-        // --- Forward Propagation (adapted from mnn::clForprop(batch)) ---
+        // --- Forward Propagation (adapted from mnn1d::clForprop(batch)) ---
         cl::Buffer d_current_act = d_input_batch;
         cl::Kernel kernelForwardBatch = kernels.at("kernelLayerForwardBatch2");
         cl::Kernel kernelSigmoid = kernels.at("sigmoid");
@@ -222,7 +222,7 @@ void mnn::clTrainBatch1c(const std::vector<std::vector<float>>& inputs, const st
             std::cout << "\n-> Predictions: " << correct_predictions << "/" << inputs.size() 
                         << "\tAvg. CE Loss: " << currloss << std::endl;
 
-            // --- Backward Propagation (adapted from mnn::clBackprop(batch)) ---
+            // --- Backward Propagation (adapted from mnn1d::clBackprop(batch)) ---
             cl::Kernel kernelSub = kernels.at("subtract");
             cl::Kernel kernelSigmoidDer = kernels.at("sigmoidDer");
             cl::Kernel kernelScale = kernels.at("scaleByValue");

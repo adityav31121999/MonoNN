@@ -16,7 +16,7 @@
  *          - b: constant
  *          - Both c and b are trainable parameters.
  */
-class mnn {
+class mnn1d {
 public:
     float order;                // order of neurons
     int inSize;                 // input size
@@ -71,10 +71,10 @@ public:
 
 // constructors
 
-    mnn() = default;
-    mnn(int insize, int outsize, int layers, float order, std::string binFileAddress);
-    mnn(int insize, int outsize, int dim, int layers, float order, std::string binFileAddress);
-    mnn(int insize, int outsize, std::vector<int> width, float order, std::string binFileAddress);
+    mnn1d() = default;
+    mnn1d(int insize, int outsize, int layers, float order, std::string binFileAddress);
+    mnn1d(int insize, int outsize, int dim, int layers, float order, std::string binFileAddress);
+    mnn1d(int insize, int outsize, std::vector<int> width, float order, std::string binFileAddress);
 
     void makeBinFile(const std::string& fileAddress);
     void initiateWeights(int type);
@@ -140,7 +140,7 @@ public:
     void trainNtest(const std::string& dataSetPath, bool useThreadOrBuffer);
 
 // destructor
-    ~mnn() = default;
+    ~mnn1d() = default;
 };
 
 #endif // MNN_HPP

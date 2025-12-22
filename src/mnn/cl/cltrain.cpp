@@ -10,7 +10,7 @@
  * @param input The input vector.
  * @param target The target output vector.
  */
-void mnn::clTrain(const std::vector<float>& input, const std::vector<float>& target) {
+void mnn1d::clTrain(const std::vector<float>& input, const std::vector<float>& target) {
     int i = 0;
     float initialLR = this->learningRate;
     while (1) {
@@ -48,7 +48,7 @@ void mnn::clTrain(const std::vector<float>& input, const std::vector<float>& tar
  * @param inputs A vector of input vectors.
  * @param targets A vector of target vectors.
  */
-void mnn::clTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets) {
+void mnn1d::clTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets) {
     if (inputs.size() != targets.size()) {
         throw std::invalid_argument("Number of inputs and targets in batch must be the same.");
     }

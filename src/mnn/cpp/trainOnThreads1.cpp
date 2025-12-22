@@ -2,7 +2,7 @@
 #include "mnn1d.hpp"
 #include "mnn2d.hpp"
 
-void mnn::threadTrain(const std::vector<float> &input, const std::vector<float> &target)
+void mnn1d::threadTrain(const std::vector<float> &input, const std::vector<float> &target)
 {
     int i = 0;
     float initialLR = this->learningRate;

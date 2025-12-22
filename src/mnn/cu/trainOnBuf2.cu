@@ -10,7 +10,7 @@
  * @param inputs A vector of input vectors.
  * @param targets A vector of target vectors.
  */
-void mnn::cuBufTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets) {
+void mnn1d::cuBufTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets) {
     if (inputs.size() != targets.size() || inputs.empty()) {
         throw std::invalid_argument("Invalid batch training data.");
     }

@@ -13,7 +13,7 @@
  * @param inputs A vector of input vectors.
  * @param targets A vector of target vectors.
  */
-void mnn::clBufTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets) {
+void mnn1d::clBufTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets) {
     if (inputs.size() != targets.size() || inputs.empty()) {
         throw std::invalid_argument("Invalid batch training data.");
     }
@@ -83,7 +83,7 @@ void mnn::clBufTrainBatch(const std::vector<std::vector<float>>& inputs, const s
                 CL_CHECK(clCommandQueue.enqueueWriteBuffer(d_bweights[i], CL_TRUE, 0, flat_b.size() * sizeof(float), flat_b.data()));
             }
 
-            // --- Forward Propagation (adapted from mnn::clForprop(batch)) ---
+            // --- Forward Propagation (adapted from mnn1d::clForprop(batch)) ---
             cl::Buffer d_current_act = d_input_batch;
             cl::Kernel kernelForwardBatch = kernels.at("kernelLayerForwardBatch2");
             cl::Kernel kernelSigmoid = kernels.at("sigmoid");
@@ -160,7 +160,7 @@ void mnn::clBufTrainBatch(const std::vector<std::vector<float>>& inputs, const s
                 this->epochs += 50;
             }
 
-            // --- Backward Propagation (adapted from mnn::clBackprop(batch)) ---
+            // --- Backward Propagation (adapted from mnn1d::clBackprop(batch)) ---
             cl::Kernel kernelSub = kernels.at("subtract");
             cl::Kernel kernelSigmoidDer = kernels.at("sigmoidDer");
             cl::Kernel kernelScale = kernels.at("scaleByValue");

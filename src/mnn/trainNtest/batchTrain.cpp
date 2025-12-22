@@ -16,7 +16,7 @@
  * @param dataSetPath path to dataset folder
  * @param useThreadOrBuffer use threads in CPU and full buffer-based operation in CUDA and OpenCL
  */
-void mnn::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuffer)
+void mnn1d::miniBatchTraining(const std::string &dataSetPath, bool useThreadOrBuffer)
 {
     // Access all image files from the dataset path
     std::vector<std::filesystem::path> filePaths;

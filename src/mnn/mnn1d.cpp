@@ -12,7 +12,7 @@
  * @param order order of monomial
  * @param datasetpath path to dataset
  */
-mnn::mnn(int insize, int outsize, int layers, float order, std::string datasetpath) :
+mnn1d::mnn1d(int insize, int outsize, int layers, float order, std::string datasetpath) :
     order(order), inSize(insize), outSize(outsize), layers(layers), input(insize, 0.0f), 
     output(outsize, 0.0f), target(outsize, 0.0f), batchSize(1),
     epochs(100), iterations(0), learningRate(0.01f),
@@ -133,7 +133,7 @@ mnn::mnn(int insize, int outsize, int layers, float order, std::string datasetpa
  * @param layers Number of hidden layers.
  * @param order order of monomial
  */
-mnn::mnn(int insize, int outsize, int dim, int layers, float order, std::string datasetpath) :
+mnn1d::mnn1d(int insize, int outsize, int dim, int layers, float order, std::string datasetpath) :
     order(order), inSize(insize), outSize(outsize), layers(layers), input(insize, 0.0f), 
     output(outsize, 0.0f), target(outsize, 0.0f), batchSize(1),
     epochs(100), iterations(0), learningRate(0.01f),
@@ -251,7 +251,7 @@ mnn::mnn(int insize, int outsize, int dim, int layers, float order, std::string 
  * @param layers Number of hidden layers.
  * @param order order of monomial
  */
-mnn::mnn(int insize, int outsize, std::vector<int> width, float order, std::string datasetpath) : 
+mnn1d::mnn1d(int insize, int outsize, std::vector<int> width, float order, std::string datasetpath) : 
     order(order), inSize(insize), outSize(outsize), width(width), layers(width.size()),
     input(insize, 0.0f), output(outsize, 0.0f), target(outsize, 0.0f), batchSize(1),
     epochs(100), iterations(0), learningRate(0.01f),
@@ -359,7 +359,7 @@ mnn::mnn(int insize, int outsize, std::vector<int> width, float order, std::stri
  * @brief Create or load or resize binary file for weights and biases.
  * @param fileAddress Address of the binary file.
  */
-void mnn::makeBinFile(const std::string &fileAddress)
+void mnn1d::makeBinFile(const std::string &fileAddress)
 {
 	long expectedFileSize = (long)(this->param * sizeof(float));
 

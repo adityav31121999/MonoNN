@@ -12,7 +12,7 @@
  * @brief Backpropagation for mnn using CUDA.
  * @param expected The expected output vector.
  */
-void mnn::cuBackprop(const std::vector<float>& expected) {
+void mnn1d::cuBackprop(const std::vector<float>& expected) {
     try {
         dim3 block_1d(WORKSIZE_1D);
         dim3 block_2d(WORKSIZE_2D_X, WORKSIZE_2D_Y);
@@ -202,7 +202,7 @@ void mnn::cuBackprop(const std::vector<float>& expected) {
         }
     }
     catch (const std::runtime_error& e) {
-        throw std::runtime_error(std::string("Exception in mnn::cuBackprop: ") + e.what());
+        throw std::runtime_error(std::string("Exception in mnn1d::cuBackprop: ") + e.what());
     }
 }
 

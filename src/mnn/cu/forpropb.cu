@@ -10,7 +10,7 @@
  * @brief batch forprop for mnn using CUDA
  * @param input input vector
  */
-void mnn::cuForprop(const std::vector<std::vector<float>>& input)
+void mnn1d::cuForprop(const std::vector<std::vector<float>>& input)
 {
     try {
         this->batchSize = input.size();
@@ -112,7 +112,7 @@ void mnn::cuForprop(const std::vector<std::vector<float>>& input)
         }
     }
     catch (const std::runtime_error& e) {
-        throw std::runtime_error(std::string("Exception in mnn::cuForprop: ") + e.what());
+        throw std::runtime_error(std::string("Exception in mnn1d::cuForprop: ") + e.what());
     }
 }
 

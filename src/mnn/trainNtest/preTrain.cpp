@@ -16,7 +16,7 @@
  *  Forprop for fast execution.
  * @param dataSetPath path to complete dataset
  */
-void mnn::preTrainRun(const std::string &dataSetPath)
+void mnn1d::preTrainRun(const std::string &dataSetPath)
 {
     /*-----------------------
      --- Run on train set ---

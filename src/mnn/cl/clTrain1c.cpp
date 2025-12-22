@@ -14,7 +14,7 @@
  * @param target The target output vector.
  * @param useBuffer 0 for stand alone functions or 1 for all-buffers-in-single function 
  */
-void mnn::clTrain1c(const std::vector<float>& input, const std::vector<float>& target, bool useBuffer) {
+void mnn1d::clTrain1c(const std::vector<float>& input, const std::vector<float>& target, bool useBuffer) {
     if (useBuffer == 0) {
         // 1. Forward propagation
         clForprop(input);
@@ -89,7 +89,7 @@ void mnn::clTrain1c(const std::vector<float>& input, const std::vector<float>& t
             CL_CHECK(clCommandQueue.enqueueWriteBuffer(d_bweights[i], CL_TRUE, 0, flat_b.size() * sizeof(float), flat_b.data()));
         }
 
-        // --- Forward Propagation (adapted from mnn::clForprop) ---
+        // --- Forward Propagation (adapted from mnn1d::clForprop) ---
         cl::Buffer d_current_act = d_in;
         cl::Kernel kernelForward = kernels.at("kernelLayerForward2");
         cl::Kernel kernelSigmoid = kernels.at("sigmoid");

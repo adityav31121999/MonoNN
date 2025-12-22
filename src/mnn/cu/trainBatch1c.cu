@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <iostream>
 
-void mnn::cuTrainBatch1c(const std::vector<std::vector<float>> &inputs, const std::vector<std::vector<float>> &targets, bool useThreadOrBuffer) {
+void mnn1d::cuTrainBatch1c(const std::vector<std::vector<float>> &inputs, const std::vector<std::vector<float>> &targets, bool useThreadOrBuffer) {
     if (inputs.size() != targets.size() || inputs.empty()) {
         throw std::invalid_argument("Invalid batch training data.");
     }
@@ -220,7 +220,7 @@ void mnn::cuTrainBatch1c(const std::vector<std::vector<float>> &inputs, const st
                 }
             }
         } catch (const std::runtime_error& e) {
-            std::cerr << "Error during mnn::cuTrainBatch1c (CUDA): " << e.what() << std::endl;
+            std::cerr << "Error during mnn1d::cuTrainBatch1c (CUDA): " << e.what() << std::endl;
         }
 
         cudaFree(d_input_batch); cudaFree(d_target_batch);

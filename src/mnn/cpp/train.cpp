@@ -10,7 +10,7 @@
  * @param input The input vector.
  * @param target The target output vector.
  */
-void mnn::train(const std::vector<float>& input, const std::vector<float>& target) {
+void mnn1d::train(const std::vector<float>& input, const std::vector<float>& target) {
     int i = 0;
     while (1) {
         // 1. Forward propagation
@@ -43,7 +43,7 @@ void mnn::train(const std::vector<float>& input, const std::vector<float>& targe
  * @param inputs A vector of input vectors.
  * @param targets A vector of target vectors.
  */
-void mnn::trainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets) {
+void mnn1d::trainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets) {
     if (inputs.size() != targets.size()) {
         throw std::invalid_argument("Number of inputs and targets in batch must be the same.");
     }

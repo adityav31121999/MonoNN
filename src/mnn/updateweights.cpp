@@ -8,7 +8,7 @@
 #include "mnn2d.hpp"
 
 // zero out gradients for new backprop
-void mnn::zeroGradients() {
+void mnn1d::zeroGradients() {
     for(size_t i = 0; i < layers; ++i) {
         if (!cweights[i].empty()) {
             cgradients[i].assign(cweights[i].size(), std::vector<float>(cweights[i][0].size(), 0.0f));

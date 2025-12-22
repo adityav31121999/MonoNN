@@ -14,7 +14,7 @@
  * @param target The target output vector.
  * @param useBuffer 0 for stand alone functions or 1 for all-buffers-in-single function 
  */
-void mnn::cuTrain1c(const std::vector<float>& input, const std::vector<float>& target, bool useBuffer) {
+void mnn1d::cuTrain1c(const std::vector<float>& input, const std::vector<float>& target, bool useBuffer) {
     if (useBuffer == 0) {
         // 1. Forward propagation
         cuForprop(input);

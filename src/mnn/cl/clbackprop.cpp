@@ -11,7 +11,7 @@
  * @brief Backpropagation for mnn using OpenCL.
  * @param expected The expected output vector.
  */
-void mnn::clBackprop(const std::vector<float>& expected) {
+void mnn1d::clBackprop(const std::vector<float>& expected) {
     try {
         cl_int err;
         cl::NDRange local_1d(WORKSIZE_1D);
@@ -247,7 +247,7 @@ void mnn::clBackprop(const std::vector<float>& expected) {
         }
     }
     catch (const std::runtime_error& e) {
-        throw std::runtime_error(std::string("Exception in mnn::clBackprop: ") + e.what());
+        throw std::runtime_error(std::string("Exception in mnn1d::clBackprop: ") + e.what());
     }
 }
 

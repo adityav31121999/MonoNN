@@ -10,7 +10,7 @@
  * @param input The input vector.
  * @param target The target output vector.
  */
-void mnn::cuBufTrain(const std::vector<float>& input, const std::vector<float>& target) {
+void mnn1d::cuBufTrain(const std::vector<float>& input, const std::vector<float>& target) {
     // --- Buffer Allocation ---
     float *d_in = nullptr, *d_exp = nullptr, *d_out = nullptr, *d_err = nullptr, *d_ones = nullptr;
     std::vector<float*> d_cweights(layers), d_bweights(layers), d_gradC(layers), d_gradB(layers);

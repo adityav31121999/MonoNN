@@ -10,7 +10,7 @@
  * @brief batch forprop for mnn using OpenCL
  * @param input input vector
  */
-void mnn::clForprop(const std::vector<std::vector<float>>& input)
+void mnn1d::clForprop(const std::vector<std::vector<float>>& input)
 {
     try {
         this->batchSize = input.size();
@@ -122,7 +122,7 @@ void mnn::clForprop(const std::vector<std::vector<float>>& input)
         outputBatch = actBatch[layers-1];
     }
     catch (const std::runtime_error& e) {
-        throw std::runtime_error(std::string("Exception in mnn::clForprop: ") + e.what());
+        throw std::runtime_error(std::string("Exception in mnn1d::clForprop: ") + e.what());
     }
 }
 

@@ -18,7 +18,7 @@
  * @param dataSetPath path to training and testing data set
  * @param useThreadOrBuffer use thread/buffer based functions or not
  */
-void mnn::trainNtest(const std::string &dataSetPath, bool useThreadOrBuffer)
+void mnn1d::trainNtest(const std::string &dataSetPath, bool useThreadOrBuffer)
 {
     // Check if dataSetPath/mnn1d/traintest.csv exists or not. If not, create it.
     std::string trainTestCsvPath = dataSetPath + "/mnn1d/traintest.csv";

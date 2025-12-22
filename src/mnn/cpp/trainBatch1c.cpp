@@ -11,7 +11,7 @@
  * @param targets A vector of target vectors.
  * @param useThread 1 to use thread based faster execution else 0.
  */
-void mnn::trainBatch1c(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets, bool useThread) {
+void mnn1d::trainBatch1c(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets, bool useThread) {
     if (inputs.size() != targets.size()) {
         throw std::invalid_argument("Number of inputs and targets in batch must be the same.");
     }

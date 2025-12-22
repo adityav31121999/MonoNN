@@ -97,7 +97,7 @@ void setWeightsByLeCunn(std::vector<std::vector<std::vector<float>>>& weights, i
  *      -> 3: He initialisation
  *      -> 4: LeCunn initialisation
  */
-void mnn::initiateWeights(int type)
+void mnn1d::initiateWeights(int type)
 {
     switch (type)
     {

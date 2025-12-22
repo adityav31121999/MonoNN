@@ -11,7 +11,7 @@
  * @brief forprop for monomial neural network with vector input
  * @param input input vector
  */
-void mnn::forprop(const std::vector<float>& input)
+void mnn1d::forprop(const std::vector<float>& input)
 {
     // first layer
     layerForward(input, dotProds[0], cweights[0], bweights[0], order);
@@ -31,7 +31,7 @@ void mnn::forprop(const std::vector<float>& input)
  * @brief batch forprop for monomial neural network with vector input
  * @param input batch input vectors
  */
-void mnn::forprop(const std::vector<std::vector<float>>& input)
+void mnn1d::forprop(const std::vector<std::vector<float>>& input)
 {
     if (input.empty())
         throw std::runtime_error("Input vector is empty");

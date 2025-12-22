@@ -14,7 +14,7 @@
  * @brief test network on given dataset
  * @param dataSetPath path to test data set folder.
  */
-void mnn::test(const std::string &dataSetPath, bool useThreadOrBuffer)
+void mnn1d::test(const std::string &dataSetPath, bool useThreadOrBuffer)
 {
     // 1. Access all image files from the dataset path
     std::vector<std::filesystem::path> filePaths;

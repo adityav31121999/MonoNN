@@ -10,7 +10,7 @@
  * @brief batch backpropgation using opencl for mnn
  * @param expected expected result from forprop
  */
-void mnn::clBackprop(const std::vector<std::vector<float>>& expected) {
+void mnn1d::clBackprop(const std::vector<std::vector<float>>& expected) {
     try {
         cl_int err;
         int batchSize = expected.size();
@@ -312,7 +312,7 @@ void mnn::clBackprop(const std::vector<std::vector<float>>& expected) {
         }
     }
     catch (const std::runtime_error& e) {
-        throw std::runtime_error(std::string("Exception in mnn::clBackprop (batch): ") + e.what());
+        throw std::runtime_error(std::string("Exception in mnn1d::clBackprop (batch): ") + e.what());
     }
 }
 

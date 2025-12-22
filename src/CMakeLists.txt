@@ -9,7 +9,7 @@ set(MNN_SOURCES
     mnn/updateweights.cpp
     mnn/setweights.cpp
     mnn/schedLr.cpp
-    mnn/mnn.cpp
+    mnn/mnn1d.cpp
     mnn/mnn2d.cpp
     mnn/accessbin.cpp
     mnn/image.cpp

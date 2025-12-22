@@ -171,7 +171,7 @@ void deserializeWeights(std::vector<std::vector<std::vector<float>>>& cweights,
 
 
 // mnn: load data of networ from binary file
-void mnn::loadNetwork() {
+void mnn1d::loadNetwork() {
     std::vector<float> c(param/2, 0.0f);
     std::vector<float> b(param/2, 0.0f);
     deserializeWeights(c, b, binFileAddress);
@@ -189,7 +189,7 @@ void mnn::loadNetwork() {
 }
 
 // mnn: save data of network to binary file
-void mnn::saveNetwork() {
+void mnn1d::saveNetwork() {
     serializeWeights(cweights, bweights, binFileAddress);
 }
 

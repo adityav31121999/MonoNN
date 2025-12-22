@@ -11,7 +11,7 @@
  * @brief Backpropagation for the mnn class (1D data).
  * @param expected The expected output vector.
  */
-void mnn::backprop(const std::vector<float>& expected) {
+void mnn1d::backprop(const std::vector<float>& expected) {
     zeroGradients();
     std::vector<float> output_error(outSize, 0.0f);
     for(int i = 0; i < outSize; i++) {
@@ -41,7 +41,7 @@ void mnn::backprop(const std::vector<float>& expected) {
  *  by discrete gradient calculation and averaging final gradients.
  * @param expected The expected output vector.
  */
-void mnn::backprop(const std::vector<std::vector<float>>& expected)
+void mnn1d::backprop(const std::vector<std::vector<float>>& expected)
 {    
     zeroGradients();
     std::vector<std::vector<float>> output_error(expected.size(), std::vector<float>(outSize, 0.0f));

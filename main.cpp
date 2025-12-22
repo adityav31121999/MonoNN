@@ -40,7 +40,7 @@ int main() {
 
 #if TRAIN_2D == 0
         std::cout << "----------------------MNN----------------------" << std::endl;
-        mnn network1(inSize, outSize, hidden_layers1, order, digit);
+        mnn1d network1(inSize, outSize, hidden_layers1, order, digit);
         network1.weightUpdateType = 3;
         network1.trainPrg.sessionSize = 150;
         network1.trainNtest(digit, useThreadOrBuffer);
