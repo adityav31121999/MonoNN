@@ -11,13 +11,11 @@
 // for MNN
 
 /**
- * @brief pre-training results for weights(stats),set gradients (0 in stats) and prediction, perform with 
- *  both train + test files. This will be used in analysis of training and testing (epoch-wise). Uses batch
- *  Forprop for fast execution.
+ * @brief Post-training results.
  * @param dataSetPath path to complete dataset
  * @param isRGB if image is RGB 1, else 0 for grey image
  */
-void mnn::preTrainRun(const std::string &dataSetPath, bool isRGB)
+void mnn::postTrainRun(const std::string &dataSetPath, bool isRGB)
 {
     /*-----------------------
      --- Run on train set ---
@@ -38,11 +36,10 @@ void mnn::preTrainRun(const std::string &dataSetPath, bool isRGB)
         std::cout << "Warning: No files found in train dataset directory: " << trainPath << std::endl;
     }
     else {
-        std::cout << "\n--- Starting Pre-Train Run on Training Set (mnn) ---" << std::endl;
+        std::cout << "\n--- Starting PostTrain Run on Training Set (mnn) ---" << std::endl;
         std::cout << "Order of Monomials: " << order << std::endl;
-
-        int totalTrainFiles = trainFilePaths.size();
         std::sort(trainFilePaths.begin(), trainFilePaths.end());
+        int totalTrainFiles = trainFilePaths.size();
         unsigned int correctPredictions = 0;
         int factor = totalTrainFiles / 100;
         confusion.assign(outSize, std::vector<int>(outSize, 0));
@@ -52,18 +49,15 @@ void mnn::preTrainRun(const std::string &dataSetPath, bool isRGB)
         confData = {};
         int count = 0;
         trainPrg.accLoss = 0.0f;
-
         for(int i = 0; i < totalTrainFiles; i++) {
-            // get image and vectorise
             const auto& filePath = trainFilePaths[i];
-            input = flatten(image2matrix(filePath.string(), isRGB));
+            std::vector<float> input = flatten(image2matrix(filePath.string(), isRGB));
             std::string filename = filePath.stem().string();
             int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
             std::vector<float> exp(this->outSize, 0.0f);
             if (label < this->outSize) {
                 exp[label] = 1.0f;
             }
-            target = exp;
             for(size_t k = 0; k < input.size(); k++) {
                 input[k] /= 255.0f;
             }
@@ -77,19 +71,18 @@ void mnn::preTrainRun(const std::string &dataSetPath, bool isRGB)
                 clForprop(input);
             #endif
 
-            if(maxIndex(output) == maxIndex(exp)) {
+            if(maxIndex(this->output) == maxIndex(exp)) {
                 correctPredictions++;
             }
-            // Update confusion matrix
-            if (label < confusion.size() && maxIndex(output) < confusion[0].size()) {
-                confusion[label][maxIndex(output)]++;
+            if (label < confusion.size() && maxIndex(this->output) < confusion[0].size()) {
+                confusion[label][maxIndex(this->output)]++;
             }
-            trainPrg.accLoss += crossEntropy(target, exp);
-            getScore(output, exp, allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
+            trainPrg.accLoss += crossEntropy(this->output, exp);
+            getScore(this->output, exp, allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
 
             // for progress tracking
-            count += 1;
-            trainPrg.filesProcessed += 1;
+            count++;
+            trainPrg.filesProcessed++;
             if(count % factor == 0) {
                 std::cout << "Processed " << count << "/" << totalTrainFiles
                           << " files. Percent: " << static_cast<float>(count * 100) / totalTrainFiles << "%" << std::endl;
@@ -99,7 +92,7 @@ void mnn::preTrainRun(const std::string &dataSetPath, bool isRGB)
         float accuracy = (totalTrainFiles > 0) ? (static_cast<float>(correctPredictions) / totalTrainFiles) * 100.0f : 0.0f;
         float averageLoss = (totalTrainFiles > 0) ? trainPrg.accLoss / totalTrainFiles : 0.0f;
 
-        std::cout << "Pre-Train on Training Set Finished." << std::endl;
+        std::cout << "PostTrain on Training Set Finished." << std::endl;
         std::cout << "Total Files: " << totalTrainFiles << std::endl;
         std::cout << "Correct Predictions: " << correctPredictions << std::endl;
         std::cout << "Correct Predictions Percentage: " << accuracy << "%" << std::endl;
@@ -125,7 +118,7 @@ void mnn::preTrainRun(const std::string &dataSetPath, bool isRGB)
         allScores.ssr = allScores.totalSumOfRegression / totalTrainFiles;
         allScores.sst = allScores.totalSumOfSquares / totalTrainFiles;
         allScores.r2 = allScores.ssr / allScores.sst;
-        epochDataToCsv1(dataSetPath + "/mnn1d/pre", 0, false, weightStats, confusion, confData, allScores, preTrainProgress, 0);
+        epochDataToCsv1(dataSetPath + "/mnn1d/post", 0, false, weightStats, confusion, confData, allScores, preTrainProgress, 2);
     }
 
     /*----------------------
@@ -148,7 +141,7 @@ void mnn::preTrainRun(const std::string &dataSetPath, bool isRGB)
         return;
     }
     else {
-        std::cout << "\n--- Starting Pre-Train Run on Test Set (mnn) ---" << std::endl;
+        std::cout << "\n--- Starting PostTrain Run on Test Set (mnn) ---" << std::endl;
         std::sort(testFilePaths.begin(), testFilePaths.end());
         int totalTestFiles = testFilePaths.size();
         unsigned int correctPredictions = 0;
@@ -159,18 +152,15 @@ void mnn::preTrainRun(const std::string &dataSetPath, bool isRGB)
         allScores.r2 = 0.0f; allScores.sse = 0.0f; allScores.ssr = 0.0f; allScores.sst = 0.0f;
         int count = 0;
         trainPrg.accLoss = 0.0f;
-
         for(int i = 0; i < totalTestFiles; i++) {
-            // get image and vectorise
             const auto& filePath = testFilePaths[i];
-            input = flatten(image2matrix(filePath.string(), isRGB));
+            std::vector<float> input = flatten(image2matrix(filePath.string(), isRGB));
             std::string filename = filePath.stem().string();
             int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
             std::vector<float> exp(this->outSize, 0.0f);
             if (label < this->outSize) {
                 exp[label] = 1.0f;
             }
-            target = exp;
             for(size_t k = 0; k < input.size(); k++) {
                 input[k] /= 255.0f;
             }
@@ -184,18 +174,18 @@ void mnn::preTrainRun(const std::string &dataSetPath, bool isRGB)
                 clForprop(input);
             #endif
 
-            if(maxIndex(output) == maxIndex(exp)) {
+            if(maxIndex(this->output) == maxIndex(exp)) {
                 correctPredictions++;
             }
-            if (label < confusion.size() && maxIndex(output) < confusion[0].size()) {
-                confusion[label][maxIndex(output)]++;
+            if (label < confusion.size() && maxIndex(this->output) < confusion[0].size()) {
+                confusion[label][maxIndex(this->output)]++;
             }
-            trainPrg.accLoss += crossEntropy(output, exp);
-            getScore(output, exp, allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
+            trainPrg.accLoss += crossEntropy(this->output, exp);
+            getScore(this->output, exp, allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
 
             // for progress tracking
-            count += 1;
-            trainPrg.filesProcessed += 1;
+            count++;
+            trainPrg.filesProcessed++;
             if(count % factor == 0) {
                 std::cout << "Processed " << count << "/" << totalTestFiles
                           << " files. Percent: " << static_cast<float>(count * 100) / totalTestFiles << "%" << std::endl;
@@ -205,7 +195,7 @@ void mnn::preTrainRun(const std::string &dataSetPath, bool isRGB)
         float accuracy = (totalTestFiles > 0) ? (static_cast<float>(correctPredictions) / totalTestFiles) * 100.0f : 0.0f;
         float averageLoss = (totalTestFiles > 0) ? trainPrg.accLoss / totalTestFiles : 0.0f;
 
-        std::cout << "Pre-Train on Test Set Finished." << std::endl;
+        std::cout << "PostTrain on Test Set Finished." << std::endl;
         std::cout << "Total Files: " << totalTestFiles << std::endl;
         std::cout << "Correct Predictions: " << correctPredictions << std::endl;
         std::cout << "Accuracy: " << accuracy << "%" << std::endl;
@@ -229,21 +219,20 @@ void mnn::preTrainRun(const std::string &dataSetPath, bool isRGB)
         allScores.ssr = allScores.totalSumOfRegression / totalTestFiles;
         allScores.sst = allScores.totalSumOfSquares / totalTestFiles;
         allScores.r2 = allScores.ssr / allScores.sst;
-        epochDataToCsv(dataSetPath + "/mnn1d/pre", confusion, confData, allScores, preTestProgress, false);
+        epochDataToCsv(dataSetPath + "/mnn1d/post", confusion, confData, allScores, preTestProgress, 1);
     }
 
-    std::cout << "--- Pre-Training Run Finished (mnn) ---" << std::endl;
+    std::cout << "--- PostTraining Run Finished (mnn) ---" << std::endl;
 }
 
 // for MNN2D
 
 /**
- * @brief pre-training results for weights(stats),set gradients (0 in stats) and prediction, perform with 
- *  both train + test files. This will be used in analysis of training and testing (epoch-wise).
- * @param dataSetPath path to complete data 
+ * @brief Post-training results.
+ * @param dataSetPath path to complete data
  * @param isRGB if image is RGB 1, else 0 for grey image
  */
-void mnn2d::preTrainRun(const std::string &dataSetPath, bool isRGB)
+void mnn2d::postTrainRun(const std::string &dataSetPath, bool isRGB)
 {
     /*-----------------------
      --- Run on train set ---
@@ -264,7 +253,7 @@ void mnn2d::preTrainRun(const std::string &dataSetPath, bool isRGB)
         std::cout << "Warning: No files found in train dataset directory: " << trainPath << std::endl;
     }
     else {
-        std::cout << "\n--- Starting Pre-Train Run on Training Set (mnn) ---" << std::endl;
+        std::cout << "\n--- Starting PostTrain Run on Training Set (mnn) ---" << std::endl;
         std::cout << "Order of Monomials: " << order << std::endl;
         std::sort(trainFilePaths.begin(), trainFilePaths.end());
         int totalTrainFiles = trainFilePaths.size();
@@ -320,7 +309,7 @@ void mnn2d::preTrainRun(const std::string &dataSetPath, bool isRGB)
         float accuracy = (totalTrainFiles > 0) ? (static_cast<float>(correctPredictions) / totalTrainFiles) * 100.0f : 0.0f;
         float averageLoss = (totalTrainFiles > 0) ? accLoss / totalTrainFiles : 0.0f;
 
-        std::cout << "Pre-Train on Training Set Finished." << std::endl;
+        std::cout << "PostTrain on Training Set Finished." << std::endl;
         std::cout << "Total Files: " << totalTrainFiles << std::endl;
         std::cout << "Correct Predictions: " << correctPredictions << std::endl;
         std::cout << "Correct Predictions Percentage: " << accuracy << "%" << std::endl;
@@ -345,7 +334,7 @@ void mnn2d::preTrainRun(const std::string &dataSetPath, bool isRGB)
         allScores.ssr = allScores.totalSumOfRegression / totalTrainFiles;
         allScores.sst = allScores.totalSumOfSquares / totalTrainFiles;
         allScores.r2 = allScores.ssr / allScores.sst;
-        epochDataToCsv1(dataSetPath + "/mnn2d/pre", 0, false, weightStats, confusion, confData, allScores, preTrainProgress, 0);
+        epochDataToCsv1(dataSetPath + "/mnn2d/post", 0, false, weightStats, confusion, confData, allScores, preTrainProgress, 1);
     }
 
     /*----------------------
@@ -368,7 +357,7 @@ void mnn2d::preTrainRun(const std::string &dataSetPath, bool isRGB)
         return;
     }
     else {
-        std::cout << "\n--- Starting Pre-Train Run on Test Set (mnn2d) ---" << std::endl;
+        std::cout << "\n--- Starting PostTrain Run on Test Set (mnn2d) ---" << std::endl;
         std::sort(testFilePaths.begin(), testFilePaths.end());
         int totalTestFiles = testFilePaths.size();
         unsigned int correctPredictions = 0;
@@ -403,6 +392,7 @@ void mnn2d::preTrainRun(const std::string &dataSetPath, bool isRGB)
                 clForprop(inputMat);
             #endif
 
+            output = softmax(output, SOFTMAX_TEMP);
             if (maxIndex(output) == maxIndex(exp)) {
                 correctPredictions++;
             }
@@ -422,7 +412,7 @@ void mnn2d::preTrainRun(const std::string &dataSetPath, bool isRGB)
         float accuracy = (totalTestFiles > 0) ? (static_cast<float>(correctPredictions) / totalTestFiles) * 100.0f : 0.0f;
         float averageLoss = (totalTestFiles > 0) ? accLoss / totalTestFiles : 0.0f;
 
-        std::cout << "Pre-Train on Test Set Finished." << std::endl;
+        std::cout << "PostTrain on Test Set Finished." << std::endl;
         std::cout << "Total Files: " << totalTestFiles << std::endl;
         std::cout << "Correct Predictions: " << correctPredictions << std::endl;
         std::cout << "Accuracy: " << accuracy << "%" << std::endl;
@@ -446,8 +436,8 @@ void mnn2d::preTrainRun(const std::string &dataSetPath, bool isRGB)
         allScores.ssr = allScores.totalSumOfRegression / totalTestFiles;
         allScores.sst = allScores.totalSumOfSquares / totalTestFiles;
         allScores.r2 = allScores.ssr / allScores.sst;
-        epochDataToCsv(dataSetPath + "/mnn2d/pre", confusion, confData, allScores, preTestProgress, false);
+        epochDataToCsv(dataSetPath + "/mnn2d/post", confusion, confData, allScores, preTestProgress, 1);
     }
 
-    std::cout << "--- Pre-Training Run Finished (mnn2d) ---" << std::endl;
+    std::cout << "--- PostTraining Run Finished (mnn2d) ---" << std::endl;
 }

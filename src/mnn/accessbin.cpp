@@ -2,15 +2,14 @@
 #include <iostream>
 #include <fstream>
 #include <stdexcept>
-#include "mnn1d.hpp"
-#include "mnn2d.hpp"
+#include "operators.hpp"
 
 /**
  * @brief Create a binary file initialized with zeros for weights and biases.
  * @param fileAddress Address of the binary file.
  * @param param Total number of parameters (weights + biases).
  */
-void makeBinFile(const std::string& fileAddress, unsigned long long param) 
+void createBinFile(const std::string& fileAddress, unsigned long long param) 
 {
     FILE* file = nullptr;
     #if defined(_WIN32) || defined(_MSC_VER)
@@ -20,7 +19,7 @@ void makeBinFile(const std::string& fileAddress, unsigned long long param)
     #endif
 
     if (!file) {
-        throw std::runtime_error("makeBinFile: Could not open file for writing: " + fileAddress);
+        throw std::runtime_error("createBinFile: Could not open file for writing: " + fileAddress);
     }
 
     // Write in chunks to avoid allocating a potentially huge vector all at once.
@@ -167,51 +166,4 @@ void deserializeWeights(std::vector<std::vector<std::vector<float>>>& cweights,
     }
 
     fclose(file);
-}
-
-
-// mnn: load data of networ from binary file
-void mnn1d::loadNetwork() {
-    std::vector<float> c(param/2, 0.0f);
-    std::vector<float> b(param/2, 0.0f);
-    deserializeWeights(c, b, binFileAddress);
-    unsigned long long offset = 0;
-    for(int i = 0; i < cweights.size(); i++) {
-        for(int j = 0; j < cweights[i].size(); j++) {
-            for(int k = 0; k < cweights[i][j].size(); k++) {
-                cweights[i][j][k] = c[offset + (unsigned long long)j * cweights[i][j].size() + k];
-                bweights[i][j][k] = b[offset + (unsigned long long)j * cweights[i][j].size() + k];
-            }
-        }
-        offset += (unsigned long long)cweights[i].size() * cweights[i][0].size();
-    }
-    std::cout << "Binary File " << binFileAddress << " loaded successfully." << std::endl;
-}
-
-// mnn: save data of network to binary file
-void mnn1d::saveNetwork() {
-    serializeWeights(cweights, bweights, binFileAddress);
-}
-
-// mnn2d: load data of networ from binary file
-void mnn2d::loadNetwork() {
-    std::vector<float> c(param/2, 0.0f);
-    std::vector<float> b(param/2, 0.0f);
-    deserializeWeights(c, b, binFileAddress);
-    unsigned long long offset = 0;
-    for(int i = 0; i < cweights.size(); i++) {
-        for(int j = 0; j < cweights[i].size(); j++) {
-            for(int k = 0; k < cweights[i][j].size(); k++) {
-                cweights[i][j][k] = c[offset + (unsigned long long)j * cweights[i][j].size() + k];
-                bweights[i][j][k] = b[offset + (unsigned long long)j * cweights[i][j].size() + k];
-            }
-        }
-        offset += (unsigned long long)cweights[i].size() * cweights[i][0].size();
-    }
-    std::cout << "Binary File " << binFileAddress << " loaded successfully." << std::endl;
-}
-
-// mnn2d: save data of network to binary file
-void mnn2d::saveNetwork() {
-    serializeWeights(cweights, bweights, binFileAddress);
 }

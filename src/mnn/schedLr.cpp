@@ -5,14 +5,15 @@
 
 /**
  * @brief Cosine Annealing Learning Rate Scheduler. Implements the popular cosine annealing schedule (as used in SGDR).
- * The learning rate starts at initialLR and smoothly decreases to 0 following the cosine curve over totalEpochs.
- * Formula: lr = initialLR × 0.5 × (1 + cos(pi × epoch / totalEpochs))
- * @param initialLR Initial (maximum) learning rate. Typical range: 1e-4 to 1.0 (commonly 0.01 – 0.3)
+ * The learning rate starts at MAX_LR and smoothly decreases to MIN_LR following the cosine curve over totalEpochs.
+ * Formula: lr = MIN_LR + (MAX_LR - MIN_LR) × 0.5 × (1 + cos(pi × epoch / totalEpochs))
+ * @param MAX_LR Initial (maximum) learning rate. Typical range: 1e-4 to 1.0 (commonly 0.01 – 0.3)
+ * @param MIN_LR Minium Learning rate possible
  * @param epoch Current training epoch (0-based). Valid range: >= 0 (negative values are clamped to 0)
  * @param totalEpochs    Total number of epochs in one annealing cycle. Valid range: > 0 (recommended >= 10)
- * @return Annealed learning rate for the current epoch. Range: [0, initialLR]
+ * @return Annealed learning rate for the current epoch. Range: [MIN_LR, MAX_LR]
  */
-float cosineAnnealing(float initialLR, int epoch, int totalEpochs)
+float cosineAnnealing(float MAX_LR, float MIN_LR, int epoch, int totalEpochs)
 {
     // Input validation and clamping
     if (totalEpochs <= 0) totalEpochs = 1;
@@ -21,7 +22,7 @@ float cosineAnnealing(float initialLR, int epoch, int totalEpochs)
     float progress = static_cast<float>(epoch) / static_cast<float>(totalEpochs);
     float cosine = 0.5f * (1.0f + std::cos(PI * progress));
 
-    return initialLR * cosine;
+    return MIN_LR + (MAX_LR - MIN_LR) * cosine;
 }
 
 /**

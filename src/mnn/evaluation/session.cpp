@@ -9,8 +9,13 @@
  * @param dir2Ses directory to sessions data
  * @param epoch epoch of training
  * @param session session of training in current epoch
- * @param batchOrNot true for batch training, else 0
- * @param weightStats weights stats ()
+ * @param batchOrNot is batch training (1) or not (0)
+ * @param weightStats weights statistics (max, min, mean, std. dev) for weights, biases,
+ * gradients for weights and biases, and activations
+ * @param confusion confusion matrix
+ * @param cm classification data
+ * @param sc regression data
+ * @param p progress data
  */
 void sessionDataToCsv(const std::string& dir2Ses, int epoch, int session,
                 bool batchOrNot, const std::vector<std::vector<float>> &weightStats,
@@ -54,38 +59,38 @@ void sessionDataToCsv(const std::string& dir2Ses, int epoch, int session,
 
     // --- Weight Stats ---
     file << "\nWeightStats\n";
-    file << "property,layer,mean,std,min,max\n";
+    file << "property,layer,max, min, mean, std\n";
     size_t w = weightStats.size() / 5;
     for (size_t i = 0; i < w; ++i) {
-        file << "cweights" + std::to_string(i);
+        file << "cweights," << i;
         for (const auto& stat : weightStats[i]) {
             file << "," << stat;
         }
         file << "\n";
     }
     for (size_t i = 0; i < w; ++i) {
-        file << "bweights" + std::to_string(i);
+        file << "bweights," << i;
         for (const auto& stat : weightStats[w + i]) {
             file << "," << stat;
         }
         file << "\n";
     }
     for (size_t i = 0; i < w; ++i) {
-        file << "cgradients" + std::to_string(i);
+        file << "cgradients," << i;
         for (const auto& stat : weightStats[2*w + i]) {
             file << "," << stat;
         }
         file << "\n";
     }
     for (size_t i = 0; i < w; ++i) {
-        file << "bgradients" + std::to_string(i);
+        file << "bgradients," << i;
         for (const auto& stat : weightStats[3*w + i]) {
             file << "," << stat;
         }
         file << "\n";
     }
     for (size_t i = 0; i < w; ++i) {
-        file << "activations" + std::to_string(i);
+        file << "activations," << i;
         for (const auto& stat : weightStats[4*w + i]) {
             file << "," << stat;
         }
@@ -122,9 +127,16 @@ void sessionDataToCsv(const std::string& dir2Ses, int epoch, int session,
 }
 
 
-
 /**
- * @brief this is to store session-wise per epoch data for detailed analysis
+ * @brief this is to store epoch data for detailed analysis
+ * @param dir2Epoch directory to store epoch files
+ * @param epoch epoch number
+ * @param batchOrNot is batch training (1) or not (0)
+ * @param weightStats weights statistics (max, min, mean, std. dev) for weights and biases
+ * @param confusion confusion matrix
+ * @param cm classification data
+ * @param sc regression data
+ * @param p progress data
  */
 void sessionDataToCsv1(const std::string& dir2Ses, int epoch, int session,
                 bool batchOrNot, const std::vector<std::vector<float>> &weightStats,
@@ -140,7 +152,7 @@ void sessionDataToCsv1(const std::string& dir2Ses, int epoch, int session,
     }
 
     // file name = e_epoch_s_session_b_batchOrNot.csv
-    std::string newCsv = dir2Ses + "/e" + std::to_string(epoch) + "_s_" + std::to_string(session) + "_b_" + std::to_string(batchOrNot) + ".csv";
+    std::string newCsv = dir2Ses + "/epoch" + std::to_string(epoch) + "_b_" + std::to_string(batchOrNot) + ".csv";
     std::filesystem::create_directories(std::filesystem::path(newCsv).parent_path());
     std::ofstream file(newCsv);
 
@@ -168,17 +180,17 @@ void sessionDataToCsv1(const std::string& dir2Ses, int epoch, int session,
 
     // --- Weight Stats ---
     file << "\nWeightStats\n";
-    file << "property,layer,mean,std,min,max\n";
-    size_t w = weightStats.size() / 5;
+    file << "property,layer,max, min, mean, std\n";
+    size_t w = weightStats.size() / 2;
     for (size_t i = 0; i < w; ++i) {
-        file << "cweights" + std::to_string(i);
+        file << "cweights," << i;
         for (const auto& stat : weightStats[i]) {
             file << "," << stat;
         }
         file << "\n";
     }
     for (size_t i = 0; i < w; ++i) {
-        file << "bweights" + std::to_string(i);
+        file << "bweights," << i;
         for (const auto& stat : weightStats[w + i]) {
             file << "," << stat;
         }

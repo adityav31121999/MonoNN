@@ -1,9 +1,10 @@
 #ifdef USE_CL
-#include "mnn1d.hpp"
+#include "mnn.hpp"
 #include "mnn2d.hpp"
 #include <vector>
 #include <stdexcept>
 #include <algorithm> // For std::copy
+#include <cstdlib>   // For rand()
 #include <cmath> // For std::ceil
 #include <iostream>
 
@@ -11,7 +12,7 @@
  * @brief Backpropagation for mnn using OpenCL.
  * @param expected The expected output vector.
  */
-void mnn1d::clBackprop(const std::vector<float>& expected) {
+void mnn::clBackprop(const std::vector<float>& expected) {
     try {
         cl_int err;
         cl::NDRange local_1d(WORKSIZE_1D);
@@ -39,7 +40,17 @@ void mnn1d::clBackprop(const std::vector<float>& expected) {
         auto kernelVecxMat2Vec = kernels.at("vecxmat2vec");
         auto kernelTranspose = kernels.at("transpose");
         auto kernelHadamard = kernels.at("hadamard2");
-        auto kernelUpdateWeights = kernels.at("kernelUpdateWeightsElasticNet");
+
+        cl::Kernel kernelUpdateWeights;
+        switch (weightUpdateType) {
+            case 0: kernelUpdateWeights = kernels.at("kernelUpdateWeights"); break;
+            case 1: kernelUpdateWeights = kernels.at("kernelUpdateWeightsWithL1"); break;
+            case 2: kernelUpdateWeights = kernels.at("kernelUpdateWeightsWithL2"); break;
+            case 3: kernelUpdateWeights = kernels.at("kernelUpdateWeightsElasticNet"); break;
+            case 4: kernelUpdateWeights = kernels.at("kernelUpdateWeightsWithWeightDecay"); break;
+            case 5: kernelUpdateWeights = kernels.at("kernelUpdateWeightsDropout"); break;
+            default: throw std::runtime_error("Invalid weight update type");
+        }
 
         // load values to buffers
         d_in = cl::Buffer(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * inputSize, input.data(), &err); CL_CHECK(err);
@@ -53,8 +64,6 @@ void mnn1d::clBackprop(const std::vector<float>& expected) {
             size_t bweight_size = bweights[i].size() * bweights[i][0].size();
             d_cweights[i] = cl::Buffer(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * cweight_size, (void*)flatten(cweights[i]).data(), &err); CL_CHECK(err);
             d_bweights[i] = cl::Buffer(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * bweight_size, (void*)flatten(bweights[i]).data(), &err); CL_CHECK(err);
-            d_gradC[i] = cl::Buffer(clContext, CL_MEM_READ_WRITE, sizeof(float) * cweight_size); CL_CHECK(err);
-            d_gradB[i] = cl::Buffer(clContext, CL_MEM_READ_WRITE, sizeof(float) * bweight_size); CL_CHECK(err);
             // fill d_act and d_dotProds
             d_activate[i] = cl::Buffer(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * activate[i].size(), (void*)activate[i].data(), &err); CL_CHECK(err);
             d_dotProds[i] = cl::Buffer(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * dotProds[i].size(), (void*)dotProds[i].data(), &err); CL_CHECK(err);
@@ -221,20 +230,79 @@ void mnn1d::clBackprop(const std::vector<float>& expected) {
             // Update C weights using kernelUpdateWeights
             kernelUpdateWeights.setArg(0, d_cweights[i]);
             kernelUpdateWeights.setArg(1, d_gradC[i]);
-            kernelUpdateWeights.setArg(2, (int)cweight_size);
-            kernelUpdateWeights.setArg(3, learningRate);
-            kernelUpdateWeights.setArg(4, LAMBDA_L1);
-            kernelUpdateWeights.setArg(5, LAMBDA_L2);
+            switch (weightUpdateType) {
+                case 0:
+                    kernelUpdateWeights.setArg(2, learningRate);
+                    kernelUpdateWeights.setArg(3, (int)cweight_size);
+                    break;
+                case 1:
+                    kernelUpdateWeights.setArg(2, (int)cweight_size);
+                    kernelUpdateWeights.setArg(3, learningRate);
+                    kernelUpdateWeights.setArg(4, LAMBDA_L1);
+                    break;
+                case 2:
+                    kernelUpdateWeights.setArg(2, (int)cweight_size);
+                    kernelUpdateWeights.setArg(3, learningRate);
+                    kernelUpdateWeights.setArg(4, LAMBDA_L2);
+                    break;
+                case 3:
+                    kernelUpdateWeights.setArg(2, (int)cweight_size);
+                    kernelUpdateWeights.setArg(3, learningRate);
+                    kernelUpdateWeights.setArg(4, LAMBDA_L1);
+                    kernelUpdateWeights.setArg(5, LAMBDA_L2);
+                    break;
+                case 4:
+                    kernelUpdateWeights.setArg(2, (int)cweight_size);
+                    kernelUpdateWeights.setArg(3, learningRate);
+                    kernelUpdateWeights.setArg(4, WEIGHT_DECAY);
+                    break;
+                case 5:
+                    kernelUpdateWeights.setArg(2, (int)cweight_size);
+                    kernelUpdateWeights.setArg(3, learningRate);
+                    kernelUpdateWeights.setArg(4, DROPOUT_RATE);
+                    kernelUpdateWeights.setArg(5, (uint)rand());
+                    break;
+            }
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelUpdateWeights, cl::NullRange, globalWeightGrad, local_1d));
             // Update B weights using kernelUpdateWeights
             kernelUpdateWeights.setArg(0, d_bweights[i]);
             kernelUpdateWeights.setArg(1, d_gradB[i]);
-            kernelUpdateWeights.setArg(2, (int)bweight_size);
-            kernelUpdateWeights.setArg(3, learningRate);
-            kernelUpdateWeights.setArg(4, LAMBDA_L1);
-            kernelUpdateWeights.setArg(5, LAMBDA_L2);
+            switch (weightUpdateType) {
+                case 0:
+                    kernelUpdateWeights.setArg(2, learningRate);
+                    kernelUpdateWeights.setArg(3, (int)bweight_size);
+                    break;
+                case 1:
+                    kernelUpdateWeights.setArg(2, (int)bweight_size);
+                    kernelUpdateWeights.setArg(3, learningRate);
+                    kernelUpdateWeights.setArg(4, LAMBDA_L1);
+                    break;
+                case 2:
+                    kernelUpdateWeights.setArg(2, (int)bweight_size);
+                    kernelUpdateWeights.setArg(3, learningRate);
+                    kernelUpdateWeights.setArg(4, LAMBDA_L2);
+                    break;
+                case 3:
+                    kernelUpdateWeights.setArg(2, (int)bweight_size);
+                    kernelUpdateWeights.setArg(3, learningRate);
+                    kernelUpdateWeights.setArg(4, LAMBDA_L1);
+                    kernelUpdateWeights.setArg(5, LAMBDA_L2);
+                    break;
+                case 4:
+                    kernelUpdateWeights.setArg(2, (int)bweight_size);
+                    kernelUpdateWeights.setArg(3, learningRate);
+                    kernelUpdateWeights.setArg(4, WEIGHT_DECAY);
+                    break;
+                case 5:
+                    kernelUpdateWeights.setArg(2, (int)bweight_size);
+                    kernelUpdateWeights.setArg(3, learningRate);
+                    kernelUpdateWeights.setArg(4, DROPOUT_RATE);
+                    kernelUpdateWeights.setArg(5, (uint)rand());
+                    break;
+            }
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelUpdateWeights, cl::NullRange, globalWeightGrad, local_1d));
 
+            CL_CHECK(clCommandQueue.enqueueReadBuffer(d_activate[i], CL_TRUE, 0, sizeof(float) * activate[i].size(), (void*)activate[i].data()));
             // copy and reshape
             CL_CHECK(clCommandQueue.enqueueReadBuffer(d_cweights[i], CL_TRUE, 0, sizeof(float) * cweight_size, (void*)takeIn.data()));
             CL_CHECK(clCommandQueue.enqueueReadBuffer(d_bweights[i], CL_TRUE, 0, sizeof(float) * bweight_size, (void*)takeIn2.data()));
@@ -244,10 +312,11 @@ void mnn1d::clBackprop(const std::vector<float>& expected) {
             bweights[i] = reshape(takeIn2, bweights[i].size(), bweights[i][0].size());
             cgradients[i] = reshape(takeIn3, cgradients[i].size(), cgradients[i][0].size());
             bgradients[i] = reshape(takeIn4, bgradients[i].size(), bgradients[i][0].size());
+
         }
     }
     catch (const std::runtime_error& e) {
-        throw std::runtime_error(std::string("Exception in mnn1d::clBackprop: ") + e.what());
+        throw std::runtime_error(std::string("Exception in mnn::clBackprop: ") + e.what());
     }
 }
 
@@ -283,14 +352,25 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
 
         // Kernels
         auto kernelSub = kernels.at("subtract");
-        auto kernelSoftmaxDer = kernels.at("softmaxDer");
+        auto kernelReluDer = kernels.at("reluDer");
         auto kernelHadamard2 = kernels.at("hadamard2");
         auto kernelMatMul = kernels.at("matxmat2mat");
         auto kernelScale = kernels.at("scaleByValue");
-        auto kernelUpdateWeights = kernels.at("kernelUpdateWeightsElasticNet");
         auto kernelTranspose = kernels.at("transpose");
         auto kernelDPow = kernels.at("dPower");
         auto kernelPower = kernels.at("power");
+        auto kernelMeanPool = kernels.at("meanPool");
+
+        cl::Kernel kernelUpdateWeights;
+        switch (weightUpdateType) {
+            case 0: kernelUpdateWeights = kernels.at("kernelUpdateWeights"); break;
+            case 1: kernelUpdateWeights = kernels.at("kernelUpdateWeightsWithL1"); break;
+            case 2: kernelUpdateWeights = kernels.at("kernelUpdateWeightsWithL2"); break;
+            case 3: kernelUpdateWeights = kernels.at("kernelUpdateWeightsElasticNet"); break;
+            case 4: kernelUpdateWeights = kernels.at("kernelUpdateWeightsWithWeightDecay"); break;
+            case 5: kernelUpdateWeights = kernels.at("kernelUpdateWeightsDropout"); break;
+            default: throw std::runtime_error("Invalid weight update type");
+        }
 
         for (int i = 0; i < this->layers; ++i) {
             size_t c_size = cweights[i].size() * cweights[i][0].size();
@@ -298,10 +378,13 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
             size_t dot_size = dotProds[i].size() * dotProds[i][0].size();
             size_t act_size = activate[i].size() * activate[i][0].size();
 
+            // weights
             d_cweights[i] = cl::Buffer(clContext, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, c_size * sizeof(float), (void*)flatten(cweights[i]).data(), &err); CL_CHECK(err);
             d_bweights[i] = cl::Buffer(clContext, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, b_size * sizeof(float), (void*)flatten(bweights[i]).data(), &err); CL_CHECK(err);
+            // matrix products and activations
             d_dotProds[i] = cl::Buffer(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, dot_size * sizeof(float), (void*)flatten(dotProds[i]).data(), &err); CL_CHECK(err);
             d_activate[i] = cl::Buffer(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, act_size * sizeof(float), (void*)flatten(activate[i]).data(), &err); CL_CHECK(err);
+            // gradients
             d_gradC[i] = cl::Buffer(clContext, CL_MEM_READ_WRITE, c_size * sizeof(float)); CL_CHECK(err);
             d_gradB[i] = cl::Buffer(clContext, CL_MEM_READ_WRITE, b_size * sizeof(float)); CL_CHECK(err);
             d_incoming[i] = cl::Buffer(clContext, CL_MEM_READ_WRITE, act_size * sizeof(float)); CL_CHECK(err);
@@ -314,6 +397,17 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
             d_preoutgoing[i] = cl::Buffer(clContext, CL_MEM_READ_WRITE, act_size * sizeof(float)); CL_CHECK(err);
         }
 
+
+        int last_layer_rows = inHeight, last_layer_cols = outSize;
+        d_out = cl::Buffer(clContext, CL_MEM_WRITE_ONLY, sizeof(float) * last_layer_cols);
+        kernelMeanPool.setArg(0, d_activate[layers - 1]);
+        kernelMeanPool.setArg(1, d_out);
+        kernelMeanPool.setArg(2, last_layer_rows);
+        kernelMeanPool.setArg(3, last_layer_cols);
+        kernelMeanPool.setArg(4, 1);
+        cl::NDRange globalPool = calculate_global_1d(WORKSIZE_1D, last_layer_cols);
+        CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelMeanPool, cl::NullRange, globalPool, local_1d));
+
         // --- Backpropagation ---
         // Initial error (output - expected)
         kernelSub.setArg(0, d_out);
@@ -324,10 +418,16 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
         CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSub, cl::NullRange, globalSub, local_1d));
 
         // Distribute the error from d_err to each row of the last layer's incoming gradient buffer.
-        // This correctly reverses the mean-pooling operation, similar to the CUDA implementation.
         for(size_t i = 0; i < activate[layers-1].size(); ++i) {
             CL_CHECK(clCommandQueue.enqueueCopyBuffer(d_err, d_incoming[layers-1], 0, i * output.size() * sizeof(float), sizeof(float) * output.size()));
         }
+
+        // Scale the incoming gradient by 1/inHeight (Derivative of Mean Pool)
+        kernelScale.setArg(0, d_incoming[layers - 1]);
+        kernelScale.setArg(1, d_incoming[layers - 1]);
+        kernelScale.setArg(2, 1.0f / (float)activate[layers - 1].size());
+        kernelScale.setArg(3, (int)(activate[layers - 1].size() * output.size()));
+        CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelScale, cl::NullRange, calculate_global_1d(WORKSIZE_1D, activate[layers - 1].size() * output.size()), local_1d));
 
         // Backpropagation from last to second layer
         for (int layer = layers - 1; layer >= 1; --layer) {
@@ -368,54 +468,11 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
             cl::Buffer d_dprev_act(clContext, CL_MEM_READ_WRITE, prev_rows * prev_cols * sizeof(float));
             size_t prev_dot_size = dotProds[layer-1].size() * dotProds[layer-1][0].size();
 
-            if (prev_dot_size > WORKSIZE_1D) {
-                // Use multi-work-group approach for large sizes, mirroring the CUDA implementation for numerical stability.
-                cl::Kernel kernelSoftMaxReduce = kernels.at("softmax_reduce");
-                cl::Kernel kernelSoftMaxDerNormalize = kernels.at("softmaxDer_normalize");
-
-                size_t num_work_groups = (prev_dot_size + WORKSIZE_1D - 1) / WORKSIZE_1D;
-                size_t partial_results_buffer_size = num_work_groups * 2;
-
-                cl::Buffer d_partial_results(clContext, CL_MEM_READ_WRITE, sizeof(float) * partial_results_buffer_size);
-                CL_CHECK(err);
-
-                // Launch softmax_reduce kernel (same as in forprop)
-                kernelSoftMaxReduce.setArg(0, d_dotProds[layer-1]);
-                kernelSoftMaxReduce.setArg(1, d_partial_results);
-                kernelSoftMaxReduce.setArg(2, cl::Local(sizeof(float) * WORKSIZE_1D * 2)); // Combined local memory
-                kernelSoftMaxReduce.setArg(3, (int)prev_dot_size);
-                kernelSoftMaxReduce.setArg(4, SOFTMAX_TEMP);
-                cl::NDRange globalReduce = calculate_global_1d(WORKSIZE_1D, prev_dot_size);
-                cl::NDRange localReduce(WORKSIZE_1D);
-                CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSoftMaxReduce, cl::NullRange, globalReduce, localReduce));
-
-                std::vector<float> h_partial_results(partial_results_buffer_size);
-                CL_CHECK(clCommandQueue.enqueueReadBuffer(d_partial_results, CL_TRUE, 0, sizeof(float) * partial_results_buffer_size, h_partial_results.data()));
-
-                float global_max = -(std::numeric_limits<float>::max)();
-                float global_sum = 0.0f;
-                for (size_t k = 0; k < num_work_groups; ++k) {
-                    global_sum += h_partial_results[2 * k];
-                    global_max = (std::max)(global_max, h_partial_results[2 * k + 1]);
-                }
-
-                // Launch the new softmaxDer_normalize kernel
-                kernelSoftMaxDerNormalize.setArg(0, d_dotProds[layer-1]);
-                kernelSoftMaxDerNormalize.setArg(1, d_dprev_act);
-                kernelSoftMaxDerNormalize.setArg(2, (int)prev_dot_size);
-                kernelSoftMaxDerNormalize.setArg(3, SOFTMAX_TEMP);
-                kernelSoftMaxDerNormalize.setArg(4, global_max);
-                kernelSoftMaxDerNormalize.setArg(5, global_sum);
-                CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSoftMaxDerNormalize, cl::NullRange, globalReduce, localReduce));
-            }
-            else {
-                // Use single-work-group kernel for small sizes
-                kernelSoftmaxDer.setArg(0, d_dotProds[layer-1]);
-                kernelSoftmaxDer.setArg(1, d_dprev_act);
-                kernelSoftmaxDer.setArg(2, SOFTMAX_TEMP);
-                kernelSoftmaxDer.setArg(3, (int)prev_dot_size);
-                CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSoftmaxDer, cl::NullRange, calculate_global_1d(WORKSIZE_1D, prev_dot_size), local_1d));
-            }
+            // Use single-work-group kernel for small sizes
+            kernelReluDer.setArg(0, d_dotProds[layer-1]);
+            kernelReluDer.setArg(1, d_dprev_act);
+            kernelReluDer.setArg(2, (int)prev_dot_size);
+            CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelReluDer, cl::NullRange, calculate_global_1d(WORKSIZE_1D, prev_dot_size), local_1d));
 
             // outgoing = (dL/dz_l * C^T) . d(prev_p) . d(prev_act)
             kernelHadamard2.setArg(0, d_grad_x_CT);
@@ -544,20 +601,76 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
             // Update C weights using kernelUpdateWeights
             kernelUpdateWeights.setArg(0, d_cweights[i]);
             kernelUpdateWeights.setArg(1, d_gradC[i]);
-            kernelUpdateWeights.setArg(2, (int)cweight_size);
-            kernelUpdateWeights.setArg(3, learningRate);
-            kernelUpdateWeights.setArg(4, LAMBDA_L1);
-            kernelUpdateWeights.setArg(5, LAMBDA_L2);
+            switch (weightUpdateType) {
+                case 0:
+                    kernelUpdateWeights.setArg(2, learningRate);
+                    kernelUpdateWeights.setArg(3, (int)cweight_size);
+                    break;
+                case 1:
+                    kernelUpdateWeights.setArg(2, (int)cweight_size);
+                    kernelUpdateWeights.setArg(3, learningRate);
+                    kernelUpdateWeights.setArg(4, LAMBDA_L1);
+                    break;
+                case 2:
+                    kernelUpdateWeights.setArg(2, (int)cweight_size);
+                    kernelUpdateWeights.setArg(3, learningRate);
+                    kernelUpdateWeights.setArg(4, LAMBDA_L2);
+                    break;
+                case 3:
+                    kernelUpdateWeights.setArg(2, (int)cweight_size);
+                    kernelUpdateWeights.setArg(3, learningRate);
+                    kernelUpdateWeights.setArg(4, LAMBDA_L1);
+                    kernelUpdateWeights.setArg(5, LAMBDA_L2);
+                    break;
+                case 4:
+                    kernelUpdateWeights.setArg(2, (int)cweight_size);
+                    kernelUpdateWeights.setArg(3, learningRate);
+                    kernelUpdateWeights.setArg(4, WEIGHT_DECAY);
+                    break;
+                case 5:
+                    kernelUpdateWeights.setArg(2, (int)cweight_size);
+                    kernelUpdateWeights.setArg(3, learningRate);
+                    kernelUpdateWeights.setArg(4, DROPOUT_RATE);
+                    kernelUpdateWeights.setArg(5, (uint)rand());
+                    break;
+            }
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelUpdateWeights, cl::NullRange, globalCWeightGrad, local_1d));
             // Update B weights using kernelUpdateWeights
             kernelUpdateWeights.setArg(0, d_bweights[i]);
             kernelUpdateWeights.setArg(1, d_gradB[i]);
-            kernelUpdateWeights.setArg(2, (int)bweight_size);
-            // The learningRate, LAMBDA_L1, and LAMBDA_L2 are already set from the C weights update
-            // and don't need to be set again if they are the same.
-            kernelUpdateWeights.setArg(3, learningRate);
-            kernelUpdateWeights.setArg(4, LAMBDA_L1);
-            kernelUpdateWeights.setArg(5, LAMBDA_L2);
+            switch (weightUpdateType) {
+                case 0:
+                    kernelUpdateWeights.setArg(2, learningRate);
+                    kernelUpdateWeights.setArg(3, (int)bweight_size);
+                    break;
+                case 1:
+                    kernelUpdateWeights.setArg(2, (int)bweight_size);
+                    kernelUpdateWeights.setArg(3, learningRate);
+                    kernelUpdateWeights.setArg(4, LAMBDA_L1);
+                    break;
+                case 2:
+                    kernelUpdateWeights.setArg(2, (int)bweight_size);
+                    kernelUpdateWeights.setArg(3, learningRate);
+                    kernelUpdateWeights.setArg(4, LAMBDA_L2);
+                    break;
+                case 3:
+                    kernelUpdateWeights.setArg(2, (int)bweight_size);
+                    kernelUpdateWeights.setArg(3, learningRate);
+                    kernelUpdateWeights.setArg(4, LAMBDA_L1);
+                    kernelUpdateWeights.setArg(5, LAMBDA_L2);
+                    break;
+                case 4:
+                    kernelUpdateWeights.setArg(2, (int)bweight_size);
+                    kernelUpdateWeights.setArg(3, learningRate);
+                    kernelUpdateWeights.setArg(4, WEIGHT_DECAY);
+                    break;
+                case 5:
+                    kernelUpdateWeights.setArg(2, (int)bweight_size);
+                    kernelUpdateWeights.setArg(3, learningRate);
+                    kernelUpdateWeights.setArg(4, DROPOUT_RATE);
+                    kernelUpdateWeights.setArg(5, (uint)rand());
+                    break;
+            }
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelUpdateWeights, cl::NullRange, globalBWeightGrad, local_1d));
 
             // copy and reshape
@@ -569,6 +682,9 @@ void mnn2d::clBackprop(const std::vector<float>& expected) {
             bweights[i] = reshape(takeIn2, bweights[i].size(), bweights[i][0].size());
             cgradients[i] = reshape(takeIn3, cweights[i].size(), cgradients[i][0].size());
             bgradients[i] = reshape(takeIn4, bweights[i].size(), bgradients[i][0].size());
+            std::vector<float> acti(activate[i].size() * activate[i][0].size());
+            CL_CHECK(clCommandQueue.enqueueReadBuffer(d_activate[i], CL_TRUE, 0, sizeof(float) * acti.size(), (void*)acti.data()));
+            activate[i] = reshape(acti, activate[i].size(), activate[i][0].size());
         }
     }
     catch (const std::runtime_error& e) {

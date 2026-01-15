@@ -1,14 +1,10 @@
 #include <stdexcept>
 #include <iostream>
 #include <filesystem>
-#include <vector>
-#include <chrono>
 #include <string>
-#include <algorithm>
-#include <random>
 #include <fstream>
 #include <sstream>
-#include "mnn1d.hpp"
+#include "mnn.hpp"
 #include "mnn2d.hpp"
 
 // for MNN
@@ -17,11 +13,57 @@
  * @brief train and test mnn neural network
  * @param dataSetPath path to training and testing data set
  * @param useThreadOrBuffer use thread/buffer based functions or not
+ * @param isRGB if image is RGB 1, else 0 for grey image
+ * @param typeOfTrain 0 for fullDataSetTraining, 1 for onlineTraining, 2 for miniBatchTraining
  */
-void mnn1d::trainNtest(const std::string &dataSetPath, bool useThreadOrBuffer)
+void mnn::trainNtest(const std::string &dataSetPath, bool isRGB, bool useThreadOrBuffer, int typeOfTrain)
 {
     // Check if dataSetPath/mnn1d/traintest.csv exists or not. If not, create it.
     std::string trainTestCsvPath = dataSetPath + "/mnn1d/traintest.csv";
+    std::vector<std::filesystem::path> filePaths;
+    std::string trainPath = dataSetPath + "/train";
+
+    try {
+        for (const auto& entry : std::filesystem::directory_iterator(trainPath)) {
+            if (entry.is_regular_file()) {
+                filePaths.push_back(entry.path());
+            }
+        }
+    }
+    catch (const std::filesystem::filesystem_error& e) {
+        throw std::runtime_error("Failed to read dataset directory: " + std::string(e.what()));
+    }
+
+    if (filePaths.empty()) {
+        std::cout << "Warning: No files found in dataset directory: " << trainPath << std::endl;
+        return;
+    }
+
+    std::cout << "Training files: " << std::endl;
+    printClassDistribution(filePaths, outSize);
+
+    std::vector<std::filesystem::path> filePathstest;
+    std::string testPath = dataSetPath + "/test";
+
+    try {
+        for (const auto& entry : std::filesystem::directory_iterator(testPath)) {
+            if (entry.is_regular_file()) {
+                filePathstest.push_back(entry.path());
+            }
+        }
+    }
+    catch (const std::filesystem::filesystem_error& e) {
+        throw std::runtime_error("Failed to read dataset directory: " + std::string(e.what()));
+    }
+
+    if (filePathstest.empty()) {
+        std::cout << "Warning: No files found in dataset directory: " << testPath << std::endl;
+        return;
+    }
+
+    std::cout << "Training files: " << std::endl;
+    printClassDistribution(filePathstest, outSize);
+
     try {
         if (!std::filesystem::exists(trainTestCsvPath)) {
             std::filesystem::create_directories(dataSetPath + "/mnn1d");
@@ -48,16 +90,20 @@ void mnn1d::trainNtest(const std::string &dataSetPath, bool useThreadOrBuffer)
         if (stage.status == 1) continue;
 
         if (stage.id == 1) {
-            preTrainRun(dataSetPath);
+            preTrainRun(dataSetPath, isRGB);
         }
         else if (stage.id == 2) {
             std::cout << "Pre-training run completed in previous stage." << std::endl;
-            fullDataSetTraining(dataSetPath, useThreadOrBuffer);
+            if (typeOfTrain == 0) fullDataSetTraining(dataSetPath, isRGB, useThreadOrBuffer);
+            else if (typeOfTrain == 1) onlineTraining(dataSetPath, isRGB, useThreadOrBuffer);
+            else if (typeOfTrain == 2) miniBatchTraining(dataSetPath, isRGB, useThreadOrBuffer);
+            else
+                throw std::runtime_error("Invalid typeOfTrain value: " + std::to_string(typeOfTrain));
         }
         else if (stage.id == 3) {
             std::cout << "Pre-training run completed in previous stage." << std::endl;
             std::cout << "Training completed in previous stage." << std::endl;
-            test(dataSetPath, useThreadOrBuffer);
+            test(dataSetPath, isRGB, useThreadOrBuffer);
         }
         stage.status = 1;
         writeTrainTestCsv(trainTestCsvPath, stages);
@@ -71,11 +117,57 @@ void mnn1d::trainNtest(const std::string &dataSetPath, bool useThreadOrBuffer)
  * @brief train and test mnn2d neural network
  * @param dataSetPath path to training and testing data set
  * @param useThreadOrBuffer use thread/buffer based functions or not
+ * @param isRGB if image is RGB 1, else 0 for grey image
+ * @param typeOfTrain 0 for fullDataSetTraining, 1 for onlineTraining, 2 for miniBatchTraining
  */
-void mnn2d::trainNtest(const std::string &dataSetPath, bool useThreadOrBuffer)
+void mnn2d::trainNtest(const std::string &dataSetPath, bool isRGB, bool useThreadOrBuffer, int typeOfTrain)
 {
-    // Check if dataSetPath/mnn2d/traintest.csv exists or not. If not, create it.
+    // Check if dataSetPath/mnn1d/traintest.csv exists or not. If not, create it.
     std::string trainTestCsvPath = dataSetPath + "/mnn2d/traintest.csv";
+    std::vector<std::filesystem::path> filePaths;
+    std::string trainPath = dataSetPath + "/train";
+
+    try {
+        for (const auto& entry : std::filesystem::directory_iterator(trainPath)) {
+            if (entry.is_regular_file()) {
+                filePaths.push_back(entry.path());
+            }
+        }
+    }
+    catch (const std::filesystem::filesystem_error& e) {
+        throw std::runtime_error("Failed to read dataset directory: " + std::string(e.what()));
+    }
+
+    if (filePaths.empty()) {
+        std::cout << "Warning: No files found in dataset directory: " << trainPath << std::endl;
+        return;
+    }
+
+    std::cout << "Training files: " << std::endl;
+    printClassDistribution(filePaths, outSize);
+
+    std::vector<std::filesystem::path> filePathstest;
+    std::string testPath = dataSetPath + "/test";
+
+    try {
+        for (const auto& entry : std::filesystem::directory_iterator(testPath)) {
+            if (entry.is_regular_file()) {
+                filePathstest.push_back(entry.path());
+            }
+        }
+    }
+    catch (const std::filesystem::filesystem_error& e) {
+        throw std::runtime_error("Failed to read dataset directory: " + std::string(e.what()));
+    }
+
+    if (filePathstest.empty()) {
+        std::cout << "Warning: No files found in dataset directory: " << testPath << std::endl;
+        return;
+    }
+
+    std::cout << "Training files: " << std::endl;
+    printClassDistribution(filePathstest, outSize);
+
     try {
         if (!std::filesystem::exists(trainTestCsvPath)) {
             std::filesystem::create_directories(dataSetPath + "/mnn2d");
@@ -102,16 +194,20 @@ void mnn2d::trainNtest(const std::string &dataSetPath, bool useThreadOrBuffer)
         if (stage.status == 1) continue;
 
         if (stage.id == 1) {
-            preTrainRun(dataSetPath);
+            preTrainRun(dataSetPath, isRGB);
         }
         else if (stage.id == 2) {
             std::cout << "Pre-training run completed in previous stage." << std::endl;
-            fullDataSetTraining(dataSetPath, useThreadOrBuffer);
+            if (typeOfTrain == 0) fullDataSetTraining(dataSetPath, isRGB, useThreadOrBuffer);
+            else if (typeOfTrain == 1) onlineTraining(dataSetPath, isRGB, useThreadOrBuffer);
+            else if (typeOfTrain == 2) miniBatchTraining(dataSetPath, isRGB, useThreadOrBuffer);
+            else
+                throw std::runtime_error("Invalid typeOfTrain value: " + std::to_string(typeOfTrain));
         }
         else if (stage.id == 3) {
             std::cout << "Pre-training run completed in previous stage." << std::endl;
             std::cout << "Training completed in previous stage." << std::endl;
-            test(dataSetPath, useThreadOrBuffer);
+            test(dataSetPath, isRGB, useThreadOrBuffer);
         }
         stage.status = 1;
         writeTrainTestCsv(trainTestCsvPath, stages);

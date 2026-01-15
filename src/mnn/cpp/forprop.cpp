@@ -1,5 +1,5 @@
 #ifdef USE_CPU
-#include "mnn1d.hpp"
+#include "mnn.hpp"
 #include "mnn2d.hpp"
 #include <vector>
 #include <stdexcept>
@@ -11,7 +11,7 @@
  * @brief forprop for monomial neural network with vector input
  * @param input input vector
  */
-void mnn1d::forprop(const std::vector<float>& input)
+void mnn::forprop(const std::vector<float>& input)
 {
     // first layer
     layerForward(input, dotProds[0], cweights[0], bweights[0], order);
@@ -23,7 +23,7 @@ void mnn1d::forprop(const std::vector<float>& input)
         activate[i] = sigmoid(dotProds[i]);
     }
 
-    output = activate[layers - 1];
+    output = softmax(activate[layers - 1]);
 }
 
 
@@ -31,7 +31,7 @@ void mnn1d::forprop(const std::vector<float>& input)
  * @brief batch forprop for monomial neural network with vector input
  * @param input batch input vectors
  */
-void mnn1d::forprop(const std::vector<std::vector<float>>& input)
+void mnn::forprop(const std::vector<std::vector<float>>& input)
 {
     if (input.empty())
         throw std::runtime_error("Input vector is empty");
@@ -70,7 +70,9 @@ void mnn1d::forprop(const std::vector<std::vector<float>>& input)
         }
     }
 
-    outputBatch = actBatch[layers-1];
+    for(int i = 0; i < batchSize; i++) {
+        outputBatch[i] = sigmoid(actBatch[layers-1][i]);
+    }
 }
 
 // forprop for mnn2d
@@ -83,15 +85,15 @@ void mnn2d::forprop(const std::vector<std::vector<float>>& input)
 {
     // first layer
     layerForward(input, dotProds[0], cweights[0], bweights[0], order);
-    activate[0] = reshape(softmax(flatten(dotProds[0])), dotProds[0].size(), dotProds[0][0].size());
+    activate[0] = relu(dotProds[0]);
     // from 2nd to last
     for(int i = 1; i < layers; i++) {
         layerForward(activate[i-1], dotProds[i], cweights[i], bweights[i], order);
-        activate[i] = reshape(softmax(flatten(dotProds[i])), dotProds[i].size(), dotProds[i][0].size());
+        activate[i] = relu(dotProds[i]);
     }
 
     // apply mean pooling to the final activation layer to get output
-    output = meanPool(activate[layers - 1]);
+    output = softmax(meanPool(activate[layers - 1]));
 }
 
 
@@ -128,20 +130,20 @@ void mnn2d::forprop(const std::vector<std::vector<std::vector<float>>>& input)
     // first layer
     layerForwardBatch(input, dotBatch[0], cweights[0], bweights[0], order);
     for(int i = 0; i < batchSize; i++) {
-        actBatch[0][i] = reshape(softmax(flatten(dotBatch[0][i])), dotBatch[0][i].size(), dotBatch[0][i][0].size());
+        actBatch[0][i] = relu(dotBatch[0][i]);
     }
 
     // from 2nd to last
     for(int j = 1; j < layers; j++) {
         layerForwardBatch(actBatch[j-1], dotBatch[j], cweights[j], bweights[j], order);
         for(int i = 0; i < batchSize; i++) {
-            actBatch[j][i] = reshape(softmax(flatten(dotBatch[j][i])), dotBatch[j][i].size(), dotBatch[j][i][0].size());
+            actBatch[j][i] = relu(dotBatch[j][i]);
         }
     }
 
     // assign output batch
     for(int i = 0; i < batchSize; i++) {
-        outputBatch[i] = meanPool(actBatch[layers-1][i]);
+        outputBatch[i] = softmax(meanPool(actBatch[layers-1][i]));
     }
 }
 

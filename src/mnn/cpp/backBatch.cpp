@@ -1,5 +1,5 @@
 #ifdef USE_CPU
-#include "mnn1d.hpp"
+#include "mnn.hpp"
 #include "mnn2d.hpp"
 #include <vector>
 #include <stdexcept>
@@ -568,11 +568,7 @@ void layerBackwardBatchThread(const std::vector<std::vector<std::vector<float>>>
                 // Helper: dprevAct logic (Sequential within thread, but parallel across batches)
                 // Note: reshape/softmaxDer/flatten are expensive. 
                 // We assume these functions (mnn2d.hpp) are thread-safe (stateless).
-                std::vector<std::vector<float>> dprevAct = reshape(
-                    softmaxDer(flatten(dotProds[b])), 
-                    dotProds[b].size(), 
-                    dotProds[b][0].size()
-                );
+                std::vector<std::vector<float>> dprevAct = sigmoid(dotProds[b]);
 
                 outgoing[b].resize(numRows, std::vector<float>(inFeatures));
 

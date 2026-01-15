@@ -1,5 +1,5 @@
 #ifdef USE_CPU
-#include "mnn1d.hpp"
+#include "mnn.hpp"
 #include "mnn2d.hpp"
 #include <vector>
 #include <stdexcept>
@@ -146,7 +146,7 @@ void layerForwardBatch(const std::vector<std::vector<std::vector<float>>>& input
     int batchSize = input.size();
     int inHeight = input[0].size();
     int inWidth = input[0][0].size();
-    int outWidth = cweights[0].size();
+    int outSize = cweights[0].size();
 
     for(int b=0; b<batchSize; ++b) {
         std::vector<std::vector<float>> powerIn = power(input[b], n);
@@ -154,7 +154,7 @@ void layerForwardBatch(const std::vector<std::vector<std::vector<float>>>& input
         for(int r=0; r<inHeight; ++r) {
             for(int k=0; k<inWidth; ++k) {
                 float in_val = powerIn[r][k];
-                for(int c=0; c<outWidth; ++c) {
+                for(int c=0; c<outSize; ++c) {
                     output[b][r][c] += (in_val * cweights[k][c]) + bweights[k][c];
                 }
             }
@@ -334,7 +334,7 @@ void layerForwardBatchThread(const std::vector<std::vector<std::vector<float>>>&
     size_t batchSize = input.size();
     size_t inHeight = input[0].size();
     size_t inWidth = input[0][0].size();
-    size_t outWidth = cweights[0].size();
+    size_t outSize = cweights[0].size();
 
     // 1. Thread Setup
     unsigned int num_threads = std::thread::hardware_concurrency();
@@ -350,7 +350,7 @@ void layerForwardBatchThread(const std::vector<std::vector<std::vector<float>>>&
             for(size_t r = 0; r < inHeight; ++r) {
                 // Optimization: Loop c (output col) then k (input col) 
                 // to use local register for accumulation before writing to memory
-                for(size_t c = 0; c < outWidth; ++c) {
+                for(size_t c = 0; c < outSize; ++c) {
                     float sum = 0.0f;
                     for(size_t k = 0; k < inWidth; ++k) {
                         float in_val = powerIn[r][k];

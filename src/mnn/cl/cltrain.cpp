@@ -1,5 +1,5 @@
 #ifdef USE_CL
-#include "mnn1d.hpp"
+#include "mnn.hpp"
 #include "mnn2d.hpp"
 #include <vector>
 #include <stdexcept>
@@ -10,7 +10,7 @@
  * @param input The input vector.
  * @param target The target output vector.
  */
-void mnn1d::clTrain(const std::vector<float>& input, const std::vector<float>& target) {
+void mnn::clTrain(const std::vector<float>& input, const std::vector<float>& target) {
     int i = 0;
     float initialLR = this->learningRate;
     while (1) {
@@ -27,8 +27,8 @@ void mnn1d::clTrain(const std::vector<float>& input, const std::vector<float>& t
         // check for error and break if acceptable
         currloss = crossEntropy(output, target);
         // if (i > 1) this->learningRate *= (currloss > prevloss) ? 0.95 : 1.01;
-        std::cout << "Current CE Loss at epoch " << i << " : " << currloss << std::endl;
-                  // << "\nOpting for new learning rate: " << this->learningRate << std::endl;
+        // std::cout << "Current CE Loss at epoch " << i << " : " << currloss << std::endl;
+        //           << "\nOpting for new learning rate: " << this->learningRate << std::endl;
 
         // 2. Backward propagation
         this->target = target;
@@ -39,7 +39,7 @@ void mnn1d::clTrain(const std::vector<float>& input, const std::vector<float>& t
     }
 
     this->learningRate = initialLR; // reset learning rate after clTraining
-    std::cout << "Training complete for this input-target pair." << std::endl;
+    // std::cout << "Training complete for this input-target pair." << std::endl;
 }
 
 
@@ -48,7 +48,7 @@ void mnn1d::clTrain(const std::vector<float>& input, const std::vector<float>& t
  * @param inputs A vector of input vectors.
  * @param targets A vector of target vectors.
  */
-void mnn1d::clTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets) {
+void mnn::clTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets) {
     if (inputs.size() != targets.size()) {
         throw std::invalid_argument("Number of inputs and targets in batch must be the same.");
     }
@@ -109,7 +109,7 @@ void mnn1d::clTrainBatch(const std::vector<std::vector<float>>& inputs, const st
             break;
         }
         else {
-            std::cout << "Correct Predictions: ";
+            // std::cout << "Correct Predictions: ";
             for (size_t i = 0; i < inputs.size(); ++i) {
                 std::cout << correct[i] << " ";
             }
@@ -118,8 +118,8 @@ void mnn1d::clTrainBatch(const std::vector<std::vector<float>>& inputs, const st
                 total_loss += crossEntropy(outputBatch[i], targets[i]);
             }
             currloss = static_cast<float>(total_loss / BATCH_SIZE);
-            std::cout << "-> Epoch: " << totalEpochs << "\tPredictions: " << correct_predictions << "/" << inputs.size() 
-                      << "\tAvg. CE Loss: " << currloss << std::endl;
+            // std::cout << "-> Epoch: " << totalEpochs << "\tPredictions: " << correct_predictions << "/" << inputs.size() 
+            //           << "\tAvg. CE Loss: " << currloss << std::endl;
         }
 
         if (totalEpochs >= this->epochs) {
@@ -155,7 +155,7 @@ void mnn2d::clTrain(const std::vector<std::vector<float>>& input, const std::vec
         // check for error and break if acceptable
         currloss = crossEntropy(output, target);
         // if (i > 1) this->learningRate *= (currloss > prevloss) ? 0.95 : 1.01;
-        std::cout << "Current CE Loss at epoch " << i << " : " << currloss << std::endl;
+        // std::cout << "Current CE Loss at epoch " << i << " : " << currloss << std::endl;
                   // << "\nOpting for new learning rate: " << this->learningRate << std::endl;
 
         // if (i == EPOCH) break;
@@ -166,7 +166,7 @@ void mnn2d::clTrain(const std::vector<std::vector<float>>& input, const std::vec
     }
 
     this->learningRate = initialLR; // reset learning rate after clTraining
-    std::cout << "Training complete for this input-target pair." << std::endl;
+    // std::cout << "Training complete for this input-target pair." << std::endl;
 }
 
 
@@ -182,7 +182,7 @@ void mnn2d::clTrainBatch(const std::vector<std::vector<std::vector<float>>>& inp
     if (inputs.empty()) {
         return; // Nothing to clTrain
     }
-    if (inputs[0].size() != inHeight || inputs[0][0].size() != inWidth || targets[0].size() != outWidth) {
+    if (inputs[0].size() != inHeight || inputs[0][0].size() != inWidth || targets[0].size() != outSize) {
         throw std::invalid_argument("Input or target dimensions do not match network configuration.");
     }
  
@@ -207,8 +207,8 @@ void mnn2d::clTrainBatch(const std::vector<std::vector<std::vector<float>>>& inp
     if (outputBatch.size() != batchSize) {
         outputBatch.resize(batchSize);
         targetBatch.resize(batchSize);
-        for(int i=0; i<batchSize; ++i) outputBatch[i].resize(outWidth);
-        for(int i=0; i<batchSize; ++i) targetBatch[i].resize(outWidth);
+        for(int i=0; i<batchSize; ++i) outputBatch[i].resize(outSize);
+        for(int i=0; i<batchSize; ++i) targetBatch[i].resize(outSize);
     }
 
     int totalEpochs = 0;

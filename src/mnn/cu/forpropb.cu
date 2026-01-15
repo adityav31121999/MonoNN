@@ -1,5 +1,5 @@
 #ifdef USE_CU
-#include "mnn1d.hpp"
+#include "mnn.hpp"
 #include "mnn2d.hpp"
 #include <vector>
 #include <stdexcept>
@@ -10,7 +10,7 @@
  * @brief batch forprop for mnn using CUDA
  * @param input input vector
  */
-void mnn1d::cuForprop(const std::vector<std::vector<float>>& input)
+void mnn::cuForprop(const std::vector<std::vector<float>>& input)
 {
     try {
         this->batchSize = input.size();
@@ -101,6 +101,9 @@ void mnn1d::cuForprop(const std::vector<std::vector<float>>& input)
             }
         }
         outputBatch = actBatch[layers-1];
+        for (int i = 0; i < batchSize; ++i) {
+            outputBatch[i] = softmax(outputBatch[i], SOFTMAX_TEMP);
+        }
 
         // Free device memory
         cudaFree(d_input);
@@ -112,7 +115,7 @@ void mnn1d::cuForprop(const std::vector<std::vector<float>>& input)
         }
     }
     catch (const std::runtime_error& e) {
-        throw std::runtime_error(std::string("Exception in mnn1d::cuForprop: ") + e.what());
+        throw std::runtime_error(std::string("Exception in mnn::cuForprop: ") + e.what());
     }
 }
 
@@ -174,8 +177,8 @@ void mnn2d::cuForprop(const std::vector<std::vector<std::vector<float>>>& input)
         // Activation for first layer
         size_t dotprod_size_layer0 = batchSize * inHeight * width[0];
         dim3 blockSoftmax(WORKSIZE_1D, 1, 1);
-        dim3 gridSoftmax((dotprod_size_layer0 + WORKSIZE_1D - 1) / WORKSIZE_1D, 1, 1);
-        softmax<<<gridSoftmax, blockSoftmax>>>(d_dotProds[0], d_activate[0], SOFTMAX_TEMP, dotprod_size_layer0);
+        dim3 gridRelu((dotprod_size_layer0 + WORKSIZE_1D - 1) / WORKSIZE_1D, 1, 1);
+        relu<<<gridRelu, blockSoftmax>>>(d_dotProds[0], d_activate[0], dotprod_size_layer0);
         CU_CHECK(cudaGetLastError());
 
         // hidden layers
@@ -187,26 +190,32 @@ void mnn2d::cuForprop(const std::vector<std::vector<std::vector<float>>>& input)
 
             // softmax to the flattened dot product
             size_t dotprod_size_layer_i = batchSize * inHeight * width[i];
-            gridSoftmax = dim3((dotprod_size_layer_i + WORKSIZE_1D - 1) / WORKSIZE_1D, 1, 1);
-            softmax<<<gridSoftmax, blockSoftmax>>>(d_dotProds[i], d_activate[i], SOFTMAX_TEMP, dotprod_size_layer_i);
+            gridRelu = dim3((dotprod_size_layer_i + WORKSIZE_1D - 1) / WORKSIZE_1D, 1, 1);
+            relu<<<gridRelu, blockSoftmax>>>(d_dotProds[i], d_activate[i], dotprod_size_layer_i);
             CU_CHECK(cudaGetLastError());
         }
 
         // Mean pool the final activation layer
         float* d_final_output;
-        CU_CHECK(cudaMalloc((void**)&d_final_output, sizeof(float) * batchSize * outWidth));
+        CU_CHECK(cudaMalloc((void**)&d_final_output, sizeof(float) * batchSize * outSize));
         dim3 blockPool(WORKSIZE_1D, 1, 1);
-        dim3 gridPool(outWidth / WORKSIZE_1D + 1, batchSize, 1);
-        meanPool<<<gridPool, blockPool>>>(d_activate[layers-1], d_final_output, inHeight, outWidth, batchSize);
+        dim3 gridPool(outSize / WORKSIZE_1D + 1, batchSize, 1);
+        meanPool<<<gridPool, blockPool>>>(
+            d_activate[layers-1],
+            d_final_output,
+            inHeight,
+            outSize,
+            batchSize
+        );
         CU_CHECK(cudaGetLastError());
 
         // Read final output and intermediate results back to host
-        std::vector<float> final_output_flat(batchSize * outWidth);
+        std::vector<float> final_output_flat(batchSize * outSize);
         CU_CHECK(cudaMemcpy(final_output_flat.data(), d_final_output, sizeof(float) * final_output_flat.size(), cudaMemcpyDeviceToHost));
         for(int i=0; i<batchSize; ++i) {
-            std::copy(final_output_flat.begin() + i * outWidth, final_output_flat.begin() + (i+1) * outWidth, outputBatch[i].begin());
+            std::copy(final_output_flat.begin() + i * outSize, final_output_flat.begin() + (i+1) * outSize, outputBatch[i].begin());
         }
-        outputBatch = reshape(final_output_flat, batchSize, outWidth);
+        outputBatch = reshape(final_output_flat, batchSize, outSize);
 
         // copy dot and acts
         for(int i=0; i<layers; ++i) {
@@ -223,6 +232,10 @@ void mnn2d::cuForprop(const std::vector<std::vector<std::vector<float>>>& input)
                 dotBatch[i][j] = reshape(single_dot, inHeight, width[i]);
                 actBatch[i][j] = reshape(single_act, inHeight, width[i]);
             }
+        }
+
+        for(int i=0; i<batchSize; ++i) {
+            outputBatch[i] = softmax(outputBatch[i], SOFTMAX_TEMP);
         }
 
         // Free device memory

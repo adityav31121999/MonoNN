@@ -1,5 +1,5 @@
 #ifdef USE_CPU
-#include "mnn1d.hpp"
+#include "mnn.hpp"
 #include "mnn2d.hpp"
 #include <vector>
 #include <stdexcept>
@@ -11,7 +11,7 @@
  * @param targets A vector of target vectors.
  * @param useThread 1 to use thread based faster execution else 0.
  */
-void mnn1d::trainBatch1c(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets, bool useThread) {
+void mnn::trainBatch1c(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets, bool useThread) {
     if (inputs.size() != targets.size()) {
         throw std::invalid_argument("Number of inputs and targets in batch must be the same.");
     }
@@ -95,7 +95,9 @@ void mnn1d::trainBatch1c(const std::vector<std::vector<float>>& inputs, const st
                 actBatch[j][i] = sigmoid(dotBatch[j][i]);
             }
         }
-        outputBatch = actBatch[layers-1];
+        for(int i = 0; i < batchSize; i++) {
+            outputBatch[i] = softmax(actBatch[layers-1][i]);
+        }
 
         int correct_predictions = 0;
         for (size_t i = 0; i < inputs.size(); ++i) {
@@ -130,7 +132,7 @@ void mnn1d::trainBatch1c(const std::vector<std::vector<float>>& inputs, const st
             std::vector<std::vector<float>> output_error(targets.size(), std::vector<float>(outSize, 0.0f));
             for(int i = 0; i < targets.size(); i++) {
                 for(int j = 0; j < outSize; j++) {
-                    output_error[i][j] = outputBatch[i][j] - targets[i][j];
+                    output_error[i][j] = actBatch[layers-1][i][j] - targets[i][j];
                 }
             }
             
@@ -168,7 +170,7 @@ void mnn2d::trainBatch1c(const std::vector<std::vector<std::vector<float>>>& inp
     if (inputs.empty()) {
         return; // Nothing to train
     }
-    if (inputs[0].size() != inHeight || inputs[0][0].size() != inWidth || targets[0].size() != outWidth) {
+    if (inputs[0].size() != inHeight || inputs[0][0].size() != inWidth || targets[0].size() != outSize) {
         throw std::invalid_argument("Input or target dimensions do not match network configuration.");
     }
  
@@ -192,7 +194,7 @@ void mnn2d::trainBatch1c(const std::vector<std::vector<std::vector<float>>>& inp
     }
     if (outputBatch.size() != batchSize) {
         outputBatch.resize(batchSize);
-        for(int i=0; i<batchSize; ++i) outputBatch[i].resize(outWidth);
+        for(int i=0; i<batchSize; ++i) outputBatch[i].resize(outSize);
     }
 
     if (this->epochs < 1) this->epochs = 100;
@@ -235,20 +237,20 @@ void mnn2d::trainBatch1c(const std::vector<std::vector<std::vector<float>>>& inp
         // first layer
         layerForwardBatchThread(inputBatch, dotBatch[0], cweights[0], bweights[0], order);
         for(int i = 0; i < batchSize; i++) {
-            actBatch[0][i] = reshape(softmax(flatten(dotBatch[0][i])), dotBatch[0][i].size(), dotBatch[0][i][0].size());
+            actBatch[0][i] = relu(dotBatch[0][i]);
         }
 
         // from 2nd to last
         for(int j = 1; j < layers; j++) {
             layerForwardBatchThread(actBatch[j-1], dotBatch[j], cweights[j], bweights[j], order);
             for(int i = 0; i < batchSize; i++) {
-                actBatch[j][i] = reshape(softmax(flatten(dotBatch[j][i])), dotBatch[j][i].size(), dotBatch[j][i][0].size());
+                actBatch[j][i] = relu(dotBatch[j][i]);
             }
         }
 
         // assign output batch
         for(int i = 0; i < batchSize; i++) {
-            outputBatch[i] = meanPool(actBatch[layers-1][i]);
+            outputBatch[i] = softmax(meanPool(actBatch[layers-1][i]));
         }
 
         int correct_predictions = 0;
@@ -279,19 +281,23 @@ void mnn2d::trainBatch1c(const std::vector<std::vector<std::vector<float>>>& inp
                         << "\tAvg. CE Loss: " << currloss << std::endl;
 
             zeroGradients();
+            std::vector<std::vector<float>> meanpooled(targets.size(), std::vector<float>(targets[0].size(), 0.0f));
+            for(int i; i < targets.size(); i++) {
+                meanpooled[i] = meanPool(actBatch[layers-1][i]);
+            }
             std::vector<std::vector<float>> output_error(targets.size(), std::vector<float>(targets[0].size(), 0.0f));
             for(int i = 0; i < targets.size(); i++) {
                 for(int j = 0; j < targets[i].size(); j++) {
-                    output_error[i][j] = outputBatch[i][j] - targets[i][j];
+                    output_error[i][j] = meanpooled[i][j] - targets[i][j];
                 }
             }
-            std::vector<std::vector<std::vector<float>>> incoming_gradient(batchSize);
 
             // Distribute output error to incoming gradient for mean pool
+            std::vector<std::vector<std::vector<float>>> incoming_gradient(batchSize);
             for(int i = 0; i < batchSize; i++) {
                 incoming_gradient[i].resize(actBatch[layers-1][i].size(), std::vector<float>(actBatch[layers-1][i][0].size()));
                 for(size_t j = 0; j < actBatch[layers-1][i].size(); j++) {
-                    for(size_t k = 0; k < outWidth; k++) {
+                    for(size_t k = 0; k < outSize; k++) {
                         incoming_gradient[i][j][k] = output_error[i][k];
                     }
                 }

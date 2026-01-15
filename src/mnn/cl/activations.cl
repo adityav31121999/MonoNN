@@ -60,6 +60,24 @@ __kernel void sigmoidDer(__global float* x, __global float* out, int size)
     }
 }
 
+__kernel void relu(__global float* x, __global float* out, int size)
+{
+    int i = get_global_id(0);
+    if (i < size) {
+        float val = (x[i] > 0) ? x[i] : 0;
+        out[i] = val;
+    }
+}
+
+__kernel void reluDer(__global float* x, __global float* out, int size)
+{
+    int i = get_global_id(0);
+    if (i < size) {
+        float val = (x[i] > 0.0f) ? 1.0f : 0.0f;
+        out[i] = val;
+    }
+}
+
 /*
  * KERNEL 1: REDUCTION STEP
  * This kernel finds the max value and the sum of exponentials.

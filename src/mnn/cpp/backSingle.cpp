@@ -1,5 +1,5 @@
 #ifdef USE_CPU
-#include "mnn1d.hpp"
+#include "mnn.hpp"
 #include "mnn2d.hpp"
 #include <vector>
 #include <stdexcept>
@@ -171,7 +171,7 @@ void layerBackward(const std::vector<std::vector<float>>& incoming,
                     });
     }
     // derivativ of prevAct (activation is softmax)
-    std::vector<std::vector<float>> dprevAct = reshape(softmaxDer(flatten(dotProds)), dotProds.size(), dotProds[0].size());
+    std::vector<std::vector<float>> dprevAct = reluDer(dotProds);
     // gradc = prev_p^T x dl/dz_l, gradc = (1 - alpha) * v1^T x dl/dz_l
     gradc = multiply(transpose(prev_p), incoming);
     gradb = multiply(v1T, incoming);
@@ -534,7 +534,7 @@ void layerBackwardThread(const std::vector<std::vector<float>>& incoming,
     // dprevAct: (softmaxDer(flatten(dotProds))) -> reshape
     std::vector<std::vector<float>> dprevAct;
     try {
-        dprevAct = reshape(softmaxDer(flatten(dotProds)), batch_size, in_features);
+        dprevAct = reluDer(dotProds);
     } catch (const std::exception& e) {
         std::cerr << "ERROR in softmaxDer/reshape: " << e.what() << std::endl;
         return;

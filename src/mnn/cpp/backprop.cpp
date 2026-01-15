@@ -1,5 +1,5 @@
 #ifdef USE_CPU
-#include "mnn1d.hpp"
+#include "mnn.hpp"
 #include "mnn2d.hpp"
 #include <numeric>
 #include <vector>
@@ -11,11 +11,11 @@
  * @brief Backpropagation for the mnn class (1D data).
  * @param expected The expected output vector.
  */
-void mnn1d::backprop(const std::vector<float>& expected) {
+void mnn::backprop(const std::vector<float>& expected) {
     zeroGradients();
     std::vector<float> output_error(outSize, 0.0f);
     for(int i = 0; i < outSize; i++) {
-        output_error[i] = output[i] - expected[i];
+        output_error[i] = activate[layers-1][i] - expected[i];
     }
     std::vector<float> incoming_gradient = output_error;
     // Backpropagate the error
@@ -41,13 +41,13 @@ void mnn1d::backprop(const std::vector<float>& expected) {
  *  by discrete gradient calculation and averaging final gradients.
  * @param expected The expected output vector.
  */
-void mnn1d::backprop(const std::vector<std::vector<float>>& expected)
+void mnn::backprop(const std::vector<std::vector<float>>& expected)
 {    
     zeroGradients();
     std::vector<std::vector<float>> output_error(expected.size(), std::vector<float>(outSize, 0.0f));
     for(int i = 0; i < expected.size(); i++) {
         for(int j = 0; j < outSize; j++) {
-            output_error[i][j] = outputBatch[i][j] - expected[i][j];
+            output_error[i][j] = actBatch[layers-1][i][j] - expected[i][j];
         }
     }
     
@@ -78,15 +78,17 @@ void mnn1d::backprop(const std::vector<std::vector<float>>& expected)
  */
 void mnn2d::backprop(const std::vector<float>& expected) {
     zeroGradients();
+    std::vector<float> meanpooled(target.size(), 0.0f);
+    meanpooled = meanPool(activate[layers-1]);
     std::vector<float> output_error(target.size(), 0.0f);
-    for(int i = 0; i < outWidth; i++) {
-        output_error[i] = output[i] - expected[i];
+    for(int i = 0; i < outSize; i++) {
+        output_error[i] = meanpooled[i] - expected[i];
     }
     // output was mean pooled from activate[layers-1]
     std::vector<std::vector<float>> incoming_gradient(activate[layers-1].size(), 
                                             std::vector<float>(activate[layers-1][0].size(), 0.0f));
     for(int i = 0; i < activate[layers-1].size(); i++) {
-        for(int j = 0; j < outWidth; j++) {
+        for(int j = 0; j < outSize; j++) {
             incoming_gradient[i][j] = output_error[j];
         }
     }
@@ -115,10 +117,14 @@ void mnn2d::backprop(const std::vector<float>& expected) {
  */
 void mnn2d::backprop(const std::vector<std::vector<float>>& expected) {
     zeroGradients();
+    std::vector<std::vector<float>> meanpooled(expected.size(), std::vector<float>(expected[0].size(), 0.0f));
+    for(int i; i < expected.size(); i++) {
+        meanpooled[i] = meanPool(actBatch[layers-1][i]);
+    }
     std::vector<std::vector<float>> output_error(expected.size(), std::vector<float>(expected[0].size(), 0.0f));
     for(int i = 0; i < expected.size(); i++) {
         for(int j = 0; j < expected[i].size(); j++) {
-            output_error[i][j] = outputBatch[i][j] - expected[i][j];
+            output_error[i][j] = meanpooled[i][j] - expected[i][j];
         }
     }
     std::vector<std::vector<std::vector<float>>> incoming_gradient(batchSize);
@@ -127,7 +133,7 @@ void mnn2d::backprop(const std::vector<std::vector<float>>& expected) {
     for(int i = 0; i < batchSize; i++) {
         incoming_gradient[i].resize(actBatch[layers-1][i].size(), std::vector<float>(actBatch[layers-1][i][0].size()));
         for(size_t j = 0; j < actBatch[layers-1][i].size(); j++) {
-            for(size_t k = 0; k < outWidth; k++) {
+            for(size_t k = 0; k < outSize; k++) {
                 incoming_gradient[i][j][k] = output_error[i][k];
             }
         }

@@ -4,11 +4,11 @@
 #include <iostream>
 #include <fstream>
 #include <filesystem>
-#include "mnn1d.hpp"
+#include "mnn.hpp"
 #include "mnn2d.hpp"
 
 // zero out gradients for new backprop
-void mnn1d::zeroGradients() {
+void mnn::zeroGradients() {
     for(size_t i = 0; i < layers; ++i) {
         if (!cweights[i].empty()) {
             cgradients[i].assign(cweights[i].size(), std::vector<float>(cweights[i][0].size(), 0.0f));
@@ -184,4 +184,62 @@ void updateWeights(std::vector<std::vector<float>> &weights, std::vector<std::ve
             std::cout << "Invalid update type" << std::endl;
             break;
     }
+}
+
+void mnn::getLayerVariance(const std::string& csvad)
+{
+    std::vector<float> c(param/2, 0.0f);
+    std::vector<float> b(param/2, 0.0f);
+    deserializeWeights(c, b, initialValues);
+    
+    std::vector<std::vector<std::vector<float>>> orw(cweights.size());
+    std::vector<std::vector<std::vector<float>>> orb(bweights.size());
+    unsigned long long offset = 0;
+
+    for(size_t i = 0; i < cweights.size(); i++) {
+        size_t rows = cweights[i].size();
+        size_t cols = cweights[i].empty() ? 0 : cweights[i][0].size();
+
+        orw[i].resize(rows, std::vector<float>(cols));
+        orb[i].resize(rows, std::vector<float>(cols));
+
+        for(size_t j = 0; j < rows; j++) {
+            for(size_t k = 0; k < cols; k++) {
+                orw[i][j][k] = c[offset + j * cols + k];
+                orb[i][j][k] = b[offset + j * cols + k];
+            }
+        }
+        offset += rows * cols;
+    }
+    std::cout << "Binary File " << initialValues << " loaded successfully." << std::endl;
+    computeLayerVariance(orw, orb, cweights, bweights, csvad);
+}
+
+void mnn2d::getLayerVariance(const std::string& stats)
+{
+    std::vector<float> c(param/2, 0.0f);
+    std::vector<float> b(param/2, 0.0f);
+    deserializeWeights(c, b, initialValues);
+    
+    std::vector<std::vector<std::vector<float>>> orw(cweights.size());
+    std::vector<std::vector<std::vector<float>>> orb(bweights.size());
+    unsigned long long offset = 0;
+
+    for(size_t i = 0; i < cweights.size(); i++) {
+        size_t rows = cweights[i].size();
+        size_t cols = cweights[i].empty() ? 0 : cweights[i][0].size();
+
+        orw[i].resize(rows, std::vector<float>(cols));
+        orb[i].resize(rows, std::vector<float>(cols));
+
+        for(size_t j = 0; j < rows; j++) {
+            for(size_t k = 0; k < cols; k++) {
+                orw[i][j][k] = c[offset + j * cols + k];
+                orb[i][j][k] = b[offset + j * cols + k];
+            }
+        }
+        offset += rows * cols;
+    }
+    std::cout << "Binary File " << initialValues << " loaded successfully." << std::endl;
+    computeLayerVariance(orw, orb, cweights, bweights, stats);
 }

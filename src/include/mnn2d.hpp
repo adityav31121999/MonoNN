@@ -8,6 +8,22 @@
 #include "progress.hpp"
 
 /**
+ *           _____________inWidth_____________
+ *          |                                 |
+ *          |                                 |
+ * inHeight |           Input Matrix          |
+ *          |                                 |
+ *          |_________________________________|
+ * 
+ *           _______outSize_______
+ *          |                      |
+ *          |                      |
+ * inHeight |Last Activation Matrix|
+ *          |                      |
+ *          |______________________|
+ */
+
+/**
  * @brief Class representing a Monomial Neural Network (MNN) for 2D input and 1D output.
  *      - The monomial is of the form f(x) = c*(x^m) + b
  *          - n: order of monomials
@@ -21,7 +37,7 @@ public:
     float order;                    // order of neurons
     int inWidth;                    // input matrix width
     int inHeight;                   // input matrix height
-    int outWidth;                   // output matrix width
+    int outSize;                   // output matrix width
     int layers;                     // number of hidden layers
     int batchSize;                  // batch size for training
     int epochs;                     // number of epochs
@@ -76,7 +92,7 @@ public:
     mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, std::string binFileAddress);
 
     void makeBinFile(const std::string& fileAddress);
-    void initiateWeights(int type);
+    void initiateWeights(int type, bool mixedOrLayered);
     void loadNetwork();
     void saveNetwork();
     friend void serializeWeights(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights, 
@@ -131,16 +147,19 @@ public:
 
     #endif
 
+    void getLayerVariance(const std::string& stats);
     void zeroGradients();
-    void preTrainRun(const std::string& dataSetPath);
-    void onlineTraining(const std::string& dataSetPath, bool useThreadOrBuffer);
-    void miniBatchTraining(const std::string& dataSetPath, bool useThreadOrBuffer);
-    void fullDataSetTraining(const std::string& dataSetPath, bool useThreadOrBuffer);
-    void test(const std::string& dataSetPath, bool useThreadOrBuffer);
-    void trainNtest(const std::string& dataSetPath, bool useThreadOrBuffer);
+    void preTrainRun(const std::string& dataSetPath, bool isRGB);
+    void onlineTraining(const std::string& dataSetPath, bool isRGB, bool useThreadOrBuffer);
+    void miniBatchTraining(const std::string& dataSetPath, bool isRGB, bool useThreadOrBuffer);
+    void fullDataSetTraining(const std::string& dataSetPath, bool isRGB, bool useThreadOrBuffer);
+    void test(const std::string& dataSetPath, bool isRGB, bool useThreadOrBuffer);
+    void trainNtest(const std::string& dataSetPath, bool isRGB, bool useThreadOrBuffer, int trainType);
+    void testOnAllWeights(std::string dataSetPath, bool isRGB, bool useThreadOrBuffer);
+    void postTrainRun(const std::string& dataSetPath, bool isRGB);
 
 // destructor
     ~mnn2d() = default;
 };
 
-#endif // MNN_HPP
+#endif // MNN2D_HPP

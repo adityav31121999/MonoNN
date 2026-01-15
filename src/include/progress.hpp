@@ -3,18 +3,18 @@
 #include <vector>
 #include <string>
 
-#define LEARNING_MAX 0.01 f         // maximum learning rate allowed
+#define LEARNING_MAX 0.01f          // maximum learning rate allowed
 #define LEARNING_MIN 0.00001f       // minimum learning rate allowed
 #define LAMBDA_L1 0.0001f           // L1 regularization parameter
-#define LAMBDA_L2 0.0025f           // L2 regularization parameter
+#define LAMBDA_L2 0.0016f           // L2 regularization parameter
 #define DROPOUT_RATE 0.50f          // dropout rate
 #define DECAY_RATE 0.0025f          // weight decay rate
 #define WEIGHT_DECAY 0.001f         // weight decay parameter
 #define SOFTMAX_TEMP 1.05f          // softmax temperature
-#define EPOCH 50                    // epochs for single set training
-#define SESSION_SIZE 150            // number of batches in single session
-#define BATCH_SIZE 100              // number of inputs in single batch
-#define ALPHA 0.80f                 // gradient splitting factor
+#define EPOCH 100                   // epochs for single set training
+#define SESSION_SIZE 10             // number of batches in single session
+#define BATCH_SIZE 500              // number of inputs in single batch
+#define ALPHA 0.70f                 // gradient splitting factor
 
 
 // struct to hold statistical information about data
@@ -56,7 +56,7 @@ struct scores {
 // struct to save and access information on training of neural network
 // single session will have fixed number of batches or files to be trained on
 struct progress {
-    unsigned int epoch;                         // for full data training epoch (for mini-batch and full dataset)
+    unsigned int epoch;                         // for full data training epoch (for mini-batch and full dataset, 0-based index)
     unsigned int sessionSize;                   // number of batches to be trained in single session (1 or many)
     unsigned int filesProcessed;                // number of files processed in training so far
     unsigned int batchSize;                     // number of files in single batch (1 or many, for mini-batch)
@@ -92,6 +92,15 @@ struct StageInfo {
 
 // progress evaluation functions
 
+float calculateMean(const std::vector<std::vector<float>>& matrix);
+float covariance(const std::vector<std::vector<float>>& A, const std::vector<std::vector<float>>& B);
+float pearsonCorrelation(const std::vector<std::vector<float>>& A, const std::vector<std::vector<float>>& B);
+void computeLayerVariance(const std::vector<std::vector<std::vector<float>>>& orw,
+                          const std::vector<std::vector<std::vector<float>>>& orb,
+                          const std::vector<std::vector<std::vector<float>>>& cweights,
+                          const std::vector<std::vector<std::vector<float>>>& bweights,
+                          const std::string& stats);
+
 Statistics computeStats(const std::vector<float>& data);
 Statistics computeStats(const std::vector<std::vector<float>>& data);
 Statistics computeStats(const std::vector<std::vector<std::vector<float>>>& data);
@@ -105,17 +114,17 @@ void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, 
 void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights,
         const std::vector<std::vector<std::vector<float>>>& cgrad, const std::vector<std::vector<std::vector<float>>>& bgrad,
         const std::vector<std::vector<std::vector<std::vector<float>>>>& act);
-void computeStatsForCsv(const std::vector<std::vector<std::vector<float>>> &cweights, const std::vector<std::vector<std::vector<float>>> &bweights,
+void computeStatsForCsv(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights,
                         std::vector<std::vector<float>> &stats);
 void computeStatsForCsv(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights,
         const std::vector<std::vector<std::vector<float>>>& cgrad, const std::vector<std::vector<std::vector<float>>>& bgrad,
         std::vector<std::vector<float>>& stats);
-void computeStatsForCsv(const std::vector<std::vector<std::vector<float>>> &cweights, const std::vector<std::vector<std::vector<float>>> &bweights,
-        const std::vector<std::vector<std::vector<float>>> &cgrad, const std::vector<std::vector<std::vector<float>>> &bgrad,
+void computeStatsForCsv(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights,
+        const std::vector<std::vector<std::vector<float>>>& cgrad, const std::vector<std::vector<std::vector<float>>>& bgrad,
         const std::vector<std::vector<float>> &activations, std::vector<std::vector<float>> &stats);
-void computeStatsForCsv(const std::vector<std::vector<std::vector<float>>> &cweights, const std::vector<std::vector<std::vector<float>>> &bweights,
-        const std::vector<std::vector<std::vector<float>>> &cgrad, const std::vector<std::vector<std::vector<float>>> &bgrad,
-        const std::vector<std::vector<std::vector<float>>> &activations, std::vector<std::vector<float>> &stats);
+void computeStatsForCsv(const std::vector<std::vector<std::vector<float>>>& cweights, const std::vector<std::vector<std::vector<float>>>& bweights,
+        const std::vector<std::vector<std::vector<float>>>& cgrad, const std::vector<std::vector<std::vector<float>>>& bgrad,
+        const std::vector<std::vector<std::vector<float>>>& activations, std::vector<std::vector<float>> &stats);
 confMat confusionMatrixFunc(const std::vector<std::vector<int>>& confusionMatrix);
 void printConfusionMatrix(const std::vector<std::vector<int>>& confusionMatrix);
 void printClassificationReport(const confMat& cm, const std::vector<std::string>& classNames = {});
@@ -132,6 +141,7 @@ bool logProgressToCSV(const progress& p, const std::string& filePath);
 bool loadLastProgress(progress& p, const std::string& filePath);
 bool logTestProgressToCSV(const test_progress& p, const std::string& filePath);
 bool loadLastTestProgress(test_progress& p, const std::string& filePath);
+bool loadSessionConfusionMatrix(std::vector<std::vector<int>>& confusion, const std::string& filePath);
 void sessionDataToCsv(const std::string& dir2Ses, int epoch, int session, bool batchOrNot, const std::vector<std::vector<float>> &weightStats,
                     const std::vector<std::vector<int>> &confusion, const confMat &cm, const scores &sc, const progress &p);
 void sessionDataToCsv1(const std::string& dir2Ses, int epoch, int session, bool batchOrNot, const std::vector<std::vector<float>> &weightStats,
@@ -141,6 +151,10 @@ void epochDataToCsv(const std::string &path2dir, const int epoch, bool batchOrNo
 void epochDataToCsv(const std::string& dataSetAddress, const std::vector<std::vector<int>>& confusion, const confMat& cm, const scores& sc,
                     const test_progress& p, bool isTestOrPre);
 void epochDataToCsv1(const std::string &path2dir, const int epoch, bool batchOrNot, const std::vector<std::vector<float>> &weightStats,
+                    const std::vector<std::vector<int>> &confusion, const confMat &cm, const scores &sc, const progress &p, int type);
+void epochDataToCsv1(const std::string &path2dir, const int epoch, bool batchOrNot, const std::vector<std::vector<float>> &weightStats,
                     const std::vector<std::vector<int>> &confusion, const confMat &cm, const scores &sc, const progress &p, bool isTrainOrPre);
+void epochDataToCsv1(const std::string& path2dir, const std::vector<std::vector<int>>& confusion,
+					const confMat& cm, const scores& sc, const test_progress& p);
 
 #endif // PROGRESS_HPP

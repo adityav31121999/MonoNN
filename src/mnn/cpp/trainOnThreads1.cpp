@@ -1,8 +1,8 @@
 #ifdef USE_CPU
-#include "mnn1d.hpp"
+#include "mnn.hpp"
 #include "mnn2d.hpp"
 
-void mnn1d::threadTrain(const std::vector<float> &input, const std::vector<float> &target)
+void mnn::threadTrain(const std::vector<float> &input, const std::vector<float> &target)
 {
     int i = 0;
     float initialLR = this->learningRate;
@@ -16,7 +16,7 @@ void mnn1d::threadTrain(const std::vector<float> &input, const std::vector<float
             layerForwardThread(activate[i-1], dotProds[i], cweights[i], bweights[i], order);
             activate[i] = sigmoid(dotProds[i]);
         }
-        output = activate[layers - 1];
+        output = softmax(activate[layers - 1]);
 
         if(maxIndex(output) == maxIndex(target)) {
             std::cout << "Correct output predicted :) at epoch " << i << " with loss " << crossEntropy(output, target) << "." << std::endl;
@@ -71,14 +71,14 @@ void mnn2d::threadTrain(const std::vector<std::vector<float>> &input, const std:
         this->input = softmax(input);
         // first layer
         layerForward(input, dotProds[0], cweights[0], bweights[0], order);
-        activate[0] = reshape(softmax(flatten(dotProds[0])), dotProds[0].size(), dotProds[0][0].size());
+        activate[0] = relu(dotProds[0]);
         // from 2nd to last
         for(int i = 1; i < layers; i++) {
             layerForward(activate[i-1], dotProds[i], cweights[i], bweights[i], order);
-            activate[i] = reshape(softmax(flatten(dotProds[i])), dotProds[i].size(), dotProds[i][0].size());
+            activate[i] = relu(dotProds[i]);
         }
         // apply mean pooling to the final activation layer to get output
-        output = meanPool(activate[layers - 1]);
+        output = softmax(meanPool(activate[layers - 1]));
 
         if(maxIndex(output) == maxIndex(target)) {
             std::cout << "Correct output predicted :) at epoch " << i << "." << std::endl;
@@ -96,15 +96,18 @@ void mnn2d::threadTrain(const std::vector<std::vector<float>> &input, const std:
         // 2. Backward propagation
         this->target = target;
         zeroGradients();
+        std::vector<float> meanpooled(target.size(), 0.0f);
+        meanpooled = meanPool(activate[layers-1]);
         std::vector<float> output_error(target.size(), 0.0f);
-        for(int i = 0; i < outWidth; i++) {
-            output_error[i] = output[i] - target[i];
+        for(int i = 0; i < outSize; i++) {
+            output_error[i] = meanpooled[i] - target[i];
+            output_error[i] /= inHeight;
         }
         // output was mean pooled from activate[layers-1]
         std::vector<std::vector<float>> incoming_gradient(activate[layers-1].size(), 
                                                 std::vector<float>(activate[layers-1][0].size(), 0.0f));
         for(int i = 0; i < activate[layers-1].size(); i++) {
-            for(int j = 0; j < outWidth; j++) {
+            for(int j = 0; j < outSize; j++) {
                 incoming_gradient[i][j] = output_error[j];
             }
         }

@@ -22,37 +22,25 @@ int main() {
     #endif
 
     std::string digit       =   path2Folder + "/digits_mnist";
+    std::string kmnist      =   path2Folder + "/kmnist";
     std::string fashion     =   path2Folder + "/fashion_mnist";
-    std::string cifar10     =   path2Folder + "/cifar10";
 
-    int inSize = 784;
-    int inh = 28, inw = 28;
+    int inSize1 = 784;
+    int inh1 = 28, inw1 = 28;
     int outSize = 10;
     float order = 1.4f;
-    bool useThreadOrBuffer = 0;
-    std::vector<int> hidden_layers1 = { 784, 392, outSize };
-    std::vector<int> hidden_layers2 = { 28, 56, 112, 112, 56, 28, outSize };
-    std::vector<int> hidden_layers3 = { 1024, 512, 256, outSize };
-    std::vector<int> hidden_layers4 = { 32, 64, 128, 256, 128, 64, 32, outSize };
+    bool useThreadOrBuffer = 1;
+    bool isGreyOrRGB = 0;
+    std::vector<int> width_mnn = {784, outSize};
+    std::vector<int> width_mnn1 = {784, 448, 112, outSize};
 
     try {
         std::cout << "THIS IS MONOMIAL NEURAL NETWORK IMPLEMENTATION" << std::endl;
 
-#if TRAIN_2D == 0
         std::cout << "----------------------MNN----------------------" << std::endl;
-        mnn1d network1(inSize, outSize, hidden_layers1, order, digit);
-        network1.weightUpdateType = 3;
-        network1.trainPrg.sessionSize = 150;
-        network1.trainNtest(digit, useThreadOrBuffer);
-        // network1.test(digit, useThreadOrBuffer);
-#else
-        std::cout << "---------------------MNN2D---------------------" << std::endl;
-        mnn2d network2(inh, inw, outSize, hidden_layers2, order, digit);
-        network2.weightUpdateType = 3;
-        network2.trainPrg.sessionSize = 150;
-        network2.trainNtest(digit, useThreadOrBuffer);
-        // network2.test(digit, useThreadOrBuffer);
-#endif
+        mnn network1(inSize1, outSize, width_mnn, order, digit);
+        network1.weightUpdateType = 0; network1.learningRate = LEARNING_MAX;
+        network1.trainNtest(digit, isGreyOrRGB, useThreadOrBuffer, 0);
     }
     catch (const std::exception& e) {
         std::cerr << "An exception occurred in main: " << e.what() << std::endl;

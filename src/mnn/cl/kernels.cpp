@@ -29,6 +29,8 @@ const std::vector<std::string> kernelNames = {
     // actvations and derivative
     "sigmoid",
     "sigmoidDer",
+    "relu",
+    "reluDer",
     "softmax_reduce",
     "softmax_normalize",
     "softmax",

@@ -5,6 +5,14 @@
 #include <cuda_runtime.h>
 #include "device_functions.cuh" // Include the new header for device functions
 #include <cuda.h>
+#include <curand_kernel.h>
+
+extern "C" __global__ void setupCurandStates(curandState* states, unsigned long long seed, int numElements) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < numElements) {
+        curand_init(seed, i, 0, &states[i]);
+    }
+}
 
 /// ----------------- Math Functions ----------------- ///
 
@@ -289,7 +297,6 @@ extern "C" __global__ void kernelUpdateWeightsWithWeightDecay(float* weights,
     }
 }
 
-// NOTE: For robust random number generation in CUDA, the cuRAND library is recommended.
 // This is a direct translation of the simple LCG for demonstration.
 extern "C" __global__ void kernelUpdateWeightsDropout(float* weights,
                                          float* gweights,
@@ -300,14 +307,39 @@ extern "C" __global__ void kernelUpdateWeightsDropout(float* weights,
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < totalElements) {
+        // LCG
         unsigned int seed = base_seed + i;
         seed = (seed * 1664525u + 1013904223u);
         float rand_val = (float)(seed) / (float)(0xFFFFFFFF);
 
+        // for dropping update of weights or not
         if (rand_val >= dropout_rate) {
             weights[i] = valueCorrection(weights[i] - learning_rate * gweights[i]);
         }
     }
 }
+
+/*
+// For a robust dropout implementation, you should use the cuRAND library.
+// 1. In your host code, initialize cuRAND generator states for each thread.
+// 2. Pass the array of states to the kernel.
+// 3. In the kernel, each thread uses its own state to generate a random number.
+// NOTE: For robust random number generation in CUDA, the cuRAND library is recommended.
+extern "C" __global__ void kernelUpdateWeightsDropout(float* weights,
+                                         float* gweights,
+                                         int totalElements,
+                                         float learning_rate,
+                                         float dropout_rate,
+                                         curandState* states) // Pass cuRAND states
+{
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < totalElements) {
+        float rand_val = curand_uniform(&states[i]); // Generate random number per-thread
+        if (rand_val >= dropout_rate) {
+            weights[i] = valueCorrection(weights[i] - learning_rate * gweights[i]);
+        }
+    }
+}
+*/
 
 #endif // USE_CU

@@ -1,5 +1,5 @@
 #ifdef USE_CL
-#include "mnn1d.hpp"
+#include "mnn.hpp"
 #include "mnn2d.hpp"
 #include <vector>
 #include <stdexcept>
@@ -13,7 +13,7 @@
  * @param input The input vector.
  * @param target The target output vector.
  */
-void mnn1d::clBufTrain(const std::vector<float>& input, const std::vector<float>& target) {
+void mnn::clBufTrain(const std::vector<float>& input, const std::vector<float>& target) {
     cl_int err;
     cl::NDRange local_1d(WORKSIZE_1D);
     cl::NDRange local_2d(WORKSIZE_2DX, WORKSIZE_2DY);
@@ -24,6 +24,7 @@ void mnn1d::clBufTrain(const std::vector<float>& input, const std::vector<float>
     std::vector<cl::Buffer> d_cweights(layers), d_bweights(layers), d_gradC(layers), d_gradB(layers);
     std::vector<cl::Buffer> d_dotProds(layers), d_activate(layers), d_incoming(layers);
     cl::Buffer d_ones, d_preoutgoing_l, d_outgoing_l, d_dpow_l, d_dact_l;
+    cl::Buffer d_C_T_buf; // Reusable buffer for transposed weights
 
     try {
         // Allocate input/output/target buffers
@@ -38,6 +39,10 @@ void mnn1d::clBufTrain(const std::vector<float>& input, const std::vector<float>
         max_layer_width = std::max(max_layer_width, output.size());
         std::vector<float> v1(max_layer_width, 1.0f);
         d_ones = cl::Buffer(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * max_layer_width, v1.data(), &err); CL_CHECK(err);
+
+        size_t max_weight_size = 0;
+        for(const auto& w : cweights) max_weight_size = std::max(max_weight_size, w.size() * w[0].size());
+        d_C_T_buf = cl::Buffer(clContext, CL_MEM_READ_WRITE, sizeof(float) * max_weight_size); CL_CHECK(err);
 
         // Allocate layer-specific buffers
         for (int i = 0; i < layers; ++i) {
@@ -62,9 +67,10 @@ void mnn1d::clBufTrain(const std::vector<float>& input, const std::vector<float>
 
         int epoch = 0;
         float initialLR = this->learningRate;
+        int maxEpochs = 2000;
 
         // --- Training Loop ---
-        while (true) {
+        while (epoch < maxEpochs) {
             // Copy weights H2D for current iteration
             for (int i = 0; i < layers; ++i) {
                 std::vector<float> flat_c = flatten(cweights[i]);
@@ -73,7 +79,7 @@ void mnn1d::clBufTrain(const std::vector<float>& input, const std::vector<float>
                 CL_CHECK(clCommandQueue.enqueueWriteBuffer(d_bweights[i], CL_TRUE, 0, flat_b.size() * sizeof(float), flat_b.data()));
             }
 
-            // --- Forward Propagation (adapted from mnn1d::clForprop) ---
+            // --- Forward Propagation (adapted from mnn::clForprop) ---
             cl::Buffer d_current_act = d_in;
             cl::Kernel kernelForward = kernels.at("kernelLayerForward2");
             cl::Kernel kernelSigmoid = kernels.at("sigmoid");
@@ -122,6 +128,7 @@ void mnn1d::clBufTrain(const std::vector<float>& input, const std::vector<float>
 
             // Copy output D2H to check for correctness and loss
             CL_CHECK(clCommandQueue.enqueueReadBuffer(d_activate[layers - 1], CL_TRUE, 0, output.size() * sizeof(float), output.data()));
+            output = softmax(output, SOFTMAX_TEMP);
 
             if (maxIndex(output) == maxIndex(target)) {
                 std::cout << "Correct output predicted at epoch " << epoch << " with loss " << crossEntropy(output, target) << "." << std::endl;
@@ -131,7 +138,7 @@ void mnn1d::clBufTrain(const std::vector<float>& input, const std::vector<float>
             currloss = crossEntropy(output, target);
             std::cout << "Current CE Loss at epoch " << epoch << " : " << currloss << std::endl;
 
-            // --- Backward Propagation (adapted from mnn1d::clBackprop) ---
+            // --- Backward Propagation (adapted from mnn::clBackprop) ---
             cl::Kernel kernelSub = kernels.at("subtract");
             cl::Kernel kernelSigmoidDer = kernels.at("sigmoidDer");
             cl::Kernel kernelScale = kernels.at("scaleByValue");
@@ -140,7 +147,17 @@ void mnn1d::clBufTrain(const std::vector<float>& input, const std::vector<float>
             cl::Kernel kernelVecxMat2Vec = kernels.at("vecxmat2vec");
             cl::Kernel kernelTranspose = kernels.at("transpose");
             cl::Kernel kernelHadamard = kernels.at("hadamard2");
-            cl::Kernel kernelUpdateWeights = kernels.at("kernelUpdateWeightsElasticNet");
+            
+            cl::Kernel kernelUpdateWeights;
+            switch (weightUpdateType) {
+                case 0: kernelUpdateWeights = kernels.at("kernelUpdateWeights"); break;
+                case 1: kernelUpdateWeights = kernels.at("kernelUpdateWeightsWithL1"); break;
+                case 2: kernelUpdateWeights = kernels.at("kernelUpdateWeightsWithL2"); break;
+                case 3: kernelUpdateWeights = kernels.at("kernelUpdateWeightsElasticNet"); break;
+                case 4: kernelUpdateWeights = kernels.at("kernelUpdateWeightsWithWeightDecay"); break;
+                case 5: kernelUpdateWeights = kernels.at("kernelUpdateWeightsDropout"); break;
+                default: throw std::runtime_error("Invalid weight update type");
+            }
 
             // Calculate initial error (output - expected)
             kernelSub.setArg(0, d_out);
@@ -193,9 +210,8 @@ void mnn1d::clBufTrain(const std::vector<float>& input, const std::vector<float>
                 CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelScale, cl::NullRange, globalWeightGrad, local_1d));
 
                 // --- Outgoing Gradient Calculation (for layer-1) ---
-                cl::Buffer d_C_T(clContext, CL_MEM_READ_WRITE, cweight_flat_size * sizeof(float)); CL_CHECK(err);
                 kernelTranspose.setArg(0, d_cweights[layer]);
-                kernelTranspose.setArg(1, d_C_T);
+                kernelTranspose.setArg(1, d_C_T_buf);
                 kernelTranspose.setArg(2, cweight_rows);
                 kernelTranspose.setArg(3, cweight_cols);
                 cl::NDRange globalTranspose = calculate_global_2d(size2d, cweight_rows, cweight_cols);
@@ -203,7 +219,7 @@ void mnn1d::clBufTrain(const std::vector<float>& input, const std::vector<float>
 
                 // incoming gradient x C^T
                 kernelVecxMat2Vec.setArg(0, d_incoming[layer]);
-                kernelVecxMat2Vec.setArg(1, d_C_T);
+                kernelVecxMat2Vec.setArg(1, d_C_T_buf);
                 kernelVecxMat2Vec.setArg(2, d_preoutgoing_l);
                 kernelVecxMat2Vec.setArg(3, cweight_cols); // matRows
                 kernelVecxMat2Vec.setArg(4, cweight_rows); // matCols
@@ -280,18 +296,76 @@ void mnn1d::clBufTrain(const std::vector<float>& input, const std::vector<float>
                 // Update C weights using kernelUpdateWeights
                 kernelUpdateWeights.setArg(0, d_cweights[i]);
                 kernelUpdateWeights.setArg(1, d_gradC[i]);
-                kernelUpdateWeights.setArg(2, (int)c_size);
-                kernelUpdateWeights.setArg(3, learningRate);
-                kernelUpdateWeights.setArg(4, LAMBDA_L1);
-                kernelUpdateWeights.setArg(5, LAMBDA_L2);
+                switch (weightUpdateType) {
+                    case 0:
+                        kernelUpdateWeights.setArg(2, learningRate);
+                        kernelUpdateWeights.setArg(3, (int)c_size);
+                        break;
+                    case 1:
+                        kernelUpdateWeights.setArg(2, (int)c_size);
+                        kernelUpdateWeights.setArg(3, learningRate);
+                        kernelUpdateWeights.setArg(4, LAMBDA_L1);
+                        break;
+                    case 2:
+                        kernelUpdateWeights.setArg(2, (int)c_size);
+                        kernelUpdateWeights.setArg(3, learningRate);
+                        kernelUpdateWeights.setArg(4, LAMBDA_L2);
+                        break;
+                    case 3:
+                        kernelUpdateWeights.setArg(2, (int)c_size);
+                        kernelUpdateWeights.setArg(3, learningRate);
+                        kernelUpdateWeights.setArg(4, LAMBDA_L1);
+                        kernelUpdateWeights.setArg(5, LAMBDA_L2);
+                        break;
+                    case 4:
+                        kernelUpdateWeights.setArg(2, (int)c_size);
+                        kernelUpdateWeights.setArg(3, learningRate);
+                        kernelUpdateWeights.setArg(4, WEIGHT_DECAY);
+                        break;
+                    case 5:
+                        kernelUpdateWeights.setArg(2, (int)c_size);
+                        kernelUpdateWeights.setArg(3, learningRate);
+                        kernelUpdateWeights.setArg(4, DROPOUT_RATE);
+                        kernelUpdateWeights.setArg(5, (uint)rand());
+                        break;
+                }
                 CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelUpdateWeights, cl::NullRange, globalUpdate, local_1d));
                 // Update B weights using kernelUpdateWeights
                 kernelUpdateWeights.setArg(0, d_bweights[i]);
                 kernelUpdateWeights.setArg(1, d_gradB[i]);
-                kernelUpdateWeights.setArg(2, (int)b_size);
-                kernelUpdateWeights.setArg(3, learningRate);
-                kernelUpdateWeights.setArg(4, LAMBDA_L1);
-                kernelUpdateWeights.setArg(5, LAMBDA_L2);
+                switch (weightUpdateType) {
+                    case 0:
+                        kernelUpdateWeights.setArg(2, learningRate);
+                        kernelUpdateWeights.setArg(3, (int)b_size);
+                        break;
+                    case 1:
+                        kernelUpdateWeights.setArg(2, (int)b_size);
+                        kernelUpdateWeights.setArg(3, learningRate);
+                        kernelUpdateWeights.setArg(4, LAMBDA_L1);
+                        break;
+                    case 2:
+                        kernelUpdateWeights.setArg(2, (int)b_size);
+                        kernelUpdateWeights.setArg(3, learningRate);
+                        kernelUpdateWeights.setArg(4, LAMBDA_L2);
+                        break;
+                    case 3:
+                        kernelUpdateWeights.setArg(2, (int)b_size);
+                        kernelUpdateWeights.setArg(3, learningRate);
+                        kernelUpdateWeights.setArg(4, LAMBDA_L1);
+                        kernelUpdateWeights.setArg(5, LAMBDA_L2);
+                        break;
+                    case 4:
+                        kernelUpdateWeights.setArg(2, (int)b_size);
+                        kernelUpdateWeights.setArg(3, learningRate);
+                        kernelUpdateWeights.setArg(4, WEIGHT_DECAY);
+                        break;
+                    case 5:
+                        kernelUpdateWeights.setArg(2, (int)b_size);
+                        kernelUpdateWeights.setArg(3, learningRate);
+                        kernelUpdateWeights.setArg(4, DROPOUT_RATE);
+                        kernelUpdateWeights.setArg(5, (uint)rand());
+                        break;
+                }
                 CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelUpdateWeights, cl::NullRange, globalUpdate, local_1d));
 
                 // copy and reshape
@@ -304,6 +378,9 @@ void mnn1d::clBufTrain(const std::vector<float>& input, const std::vector<float>
         }
 
         this->learningRate = initialLR;
+        if (epoch == maxEpochs) {
+            std::cout << "Max epochs reached without convergence." << std::endl;
+        }
         std::cout << "Training complete for this input-target pair." << std::endl;
 
     } catch (const std::runtime_error& e) {
@@ -312,7 +389,7 @@ void mnn1d::clBufTrain(const std::vector<float>& input, const std::vector<float>
 
     // --- Buffer Cleanup ---
     d_in = cl::Buffer(); d_exp = cl::Buffer(); d_out = cl::Buffer(); d_err = cl::Buffer(); d_ones = cl::Buffer();
-    d_preoutgoing_l = cl::Buffer(); d_outgoing_l = cl::Buffer(); d_dpow_l = cl::Buffer(); d_dact_l = cl::Buffer();
+    d_preoutgoing_l = cl::Buffer(); d_outgoing_l = cl::Buffer(); d_dpow_l = cl::Buffer(); d_dact_l = cl::Buffer(); d_C_T_buf = cl::Buffer();
     for (int i = 0; i < layers; ++i) {
         d_cweights[i] = cl::Buffer(); d_bweights[i] = cl::Buffer();
         d_gradC[i] = cl::Buffer(); d_gradB[i] = cl::Buffer();
@@ -338,6 +415,8 @@ void mnn2d::clBufTrain(const std::vector<std::vector<float>>& input, const std::
     std::vector<cl::Buffer> d_dotProds(layers), d_activate(layers), d_incoming(layers);
     std::vector<cl::Buffer> d_dpow(layers > 1 ? layers - 1 : 0), d_dact(layers > 1 ? layers - 1 : 0);
     cl::Buffer d_grad_x_CT_buf, d_dprev_p_buf, d_dprev_act_buf;
+    cl::Buffer d_final_output;
+    cl::Buffer d_C_T_buf, d_prev_p_T_buf, d_ones_all_buf, d_partial_results_buf;
 
     try {
         std::vector<float> flat_input = flatten(input);
@@ -351,7 +430,17 @@ void mnn2d::clBufTrain(const std::vector<std::vector<float>>& input, const std::
         max_act_size = std::max(max_act_size, (size_t)inHeight * inWidth);
         d_grad_x_CT_buf = cl::Buffer(clContext, CL_MEM_READ_WRITE, sizeof(float) * max_act_size); CL_CHECK(err);
         d_dprev_p_buf = cl::Buffer(clContext, CL_MEM_READ_WRITE, sizeof(float) * max_act_size); CL_CHECK(err);
+        d_prev_p_T_buf = cl::Buffer(clContext, CL_MEM_READ_WRITE, sizeof(float) * max_act_size); CL_CHECK(err);
         d_dprev_act_buf = cl::Buffer(clContext, CL_MEM_READ_WRITE, sizeof(float) * max_act_size); CL_CHECK(err);
+        d_final_output = cl::Buffer(clContext, CL_MEM_WRITE_ONLY, sizeof(float) * outSize); CL_CHECK(err);
+        d_partial_results_buf = cl::Buffer(clContext, CL_MEM_READ_WRITE, sizeof(float) * max_act_size); CL_CHECK(err);
+
+        std::vector<float> all_ones(max_act_size, 1.0f);
+        d_ones_all_buf = cl::Buffer(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * max_act_size, all_ones.data(), &err); CL_CHECK(err);
+
+        size_t max_weight_size = 0;
+        for(const auto& w : cweights) max_weight_size = std::max(max_weight_size, w.size() * w[0].size());
+        d_C_T_buf = cl::Buffer(clContext, CL_MEM_READ_WRITE, sizeof(float) * max_weight_size); CL_CHECK(err);
 
         for (int i = 0; i < layers; ++i) {
             size_t c_size = cweights[i].size() * cweights[i][0].size();
@@ -372,9 +461,10 @@ void mnn2d::clBufTrain(const std::vector<std::vector<float>>& input, const std::
 
         int epoch = 0;
         float initialLR = this->learningRate;
+        int maxEpochs = 2000;
 
         // --- Training Loop ---
-        while (true) {
+        while (epoch < maxEpochs) {
             for (int i = 0; i < layers; ++i) {
                 std::vector<float> flat_c = flatten(cweights[i]);
                 std::vector<float> flat_b = flatten(bweights[i]);
@@ -389,16 +479,16 @@ void mnn2d::clBufTrain(const std::vector<std::vector<float>>& input, const std::
             cl::Kernel kernelMeanPool = kernels.at("meanPool");
 
             // First layer
-            int currentInHeight = inHeight, currentInWidth = inWidth, currentOutWidth = width[0];
+            int currentInHeight = inHeight, currentInWidth = inWidth, currentoutSize = width[0];
             kernelForward.setArg(0, d_current_act);
             kernelForward.setArg(1, d_dotProds[0]);
             kernelForward.setArg(2, d_cweights[0]);
             kernelForward.setArg(3, d_bweights[0]);
             kernelForward.setArg(4, currentInHeight);
             kernelForward.setArg(5, currentInWidth);
-            kernelForward.setArg(6, currentOutWidth);
+            kernelForward.setArg(6, currentoutSize);
             kernelForward.setArg(7, order);
-            cl::NDRange globalForward = calculate_global_2d(size2d, currentInHeight, currentOutWidth);
+            cl::NDRange globalForward = calculate_global_2d(size2d, currentInHeight, currentoutSize);
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelForward, cl::NullRange, globalForward, local_2d));
 
             size_t dotprod_size_layer0 = inHeight * width[0];
@@ -413,16 +503,16 @@ void mnn2d::clBufTrain(const std::vector<std::vector<float>>& input, const std::
             for (int i = 1; i < layers; ++i) {
                 d_current_act = d_activate[i - 1];
                 currentInWidth = width[i - 1];
-                currentOutWidth = width[i];
+                currentoutSize = width[i];
                 kernelForward.setArg(0, d_current_act);
                 kernelForward.setArg(1, d_dotProds[i]);
                 kernelForward.setArg(2, d_cweights[i]);
                 kernelForward.setArg(3, d_bweights[i]);
                 kernelForward.setArg(4, inHeight);
                 kernelForward.setArg(5, currentInWidth);
-                kernelForward.setArg(6, currentOutWidth);
+                kernelForward.setArg(6, currentoutSize);
                 kernelForward.setArg(7, order);
-                globalForward = calculate_global_2d(size2d, inHeight, currentOutWidth);
+                globalForward = calculate_global_2d(size2d, inHeight, currentoutSize);
                 CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelForward, cl::NullRange, globalForward, local_2d));
 
                 size_t dotprod_size_layer_i = inHeight * width[i];
@@ -435,19 +525,18 @@ void mnn2d::clBufTrain(const std::vector<std::vector<float>>& input, const std::
             }
 
             // Mean pool the final activation layer
-            cl::Buffer d_final_output(clContext, CL_MEM_WRITE_ONLY, sizeof(float) * outWidth); CL_CHECK(err);
             kernelMeanPool.setArg(0, d_activate[layers - 1]);
             kernelMeanPool.setArg(1, d_final_output);
             kernelMeanPool.setArg(2, inHeight);
-            kernelMeanPool.setArg(3, outWidth);
+            kernelMeanPool.setArg(3, outSize);
             kernelMeanPool.setArg(4, 1);
-            cl::NDRange globalPool = calculate_global_1d(WORKSIZE_1D, outWidth);
+            cl::NDRange globalPool = calculate_global_1d(WORKSIZE_1D, outSize);
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelMeanPool, cl::NullRange, globalPool, local_1d));
             CL_CHECK(clCommandQueue.finish());
 
             // Copy output D2H to check for correctness and loss
             CL_CHECK(clCommandQueue.enqueueReadBuffer(d_final_output, CL_TRUE, 0, output.size() * sizeof(float), output.data()));
-            d_final_output = cl::Buffer();
+            output = softmax(output, SOFTMAX_TEMP);
 
             if (maxIndex(output) == maxIndex(target)) {
                 std::cout << "Correct output predicted at epoch " << epoch << "." << std::endl;
@@ -459,11 +548,21 @@ void mnn2d::clBufTrain(const std::vector<std::vector<float>>& input, const std::
 
             // --- Backward Propagation (adapted from mnn2d::clBackprop) ---
             cl::Kernel kernelSub = kernels.at("subtract");
-            cl::Kernel kernelSoftmaxDer = kernels.at("softmaxDer");
+            cl::Kernel KernelReluDer = kernels.at("reluDer");
             cl::Kernel kernelHadamard2 = kernels.at("hadamard2");
             cl::Kernel kernelMatMul = kernels.at("matxmat2mat");
             cl::Kernel kernelScale = kernels.at("scaleByValue");
-            cl::Kernel kernelUpdateWeights = kernels.at("kernelUpdateWeightsElasticNet");
+            
+            cl::Kernel kernelUpdateWeights;
+            switch (weightUpdateType) {
+                case 0: kernelUpdateWeights = kernels.at("kernelUpdateWeights"); break;
+                case 1: kernelUpdateWeights = kernels.at("kernelUpdateWeightsWithL1"); break;
+                case 2: kernelUpdateWeights = kernels.at("kernelUpdateWeightsWithL2"); break;
+                case 3: kernelUpdateWeights = kernels.at("kernelUpdateWeightsElasticNet"); break;
+                case 4: kernelUpdateWeights = kernels.at("kernelUpdateWeightsWithWeightDecay"); break;
+                case 5: kernelUpdateWeights = kernels.at("kernelUpdateWeightsDropout"); break;
+                default: throw std::runtime_error("Invalid weight update type");
+            }
             cl::Kernel kernelTranspose = kernels.at("transpose");
             cl::Kernel kernelDPow = kernels.at("dPower");
             cl::Kernel kernelPower = kernels.at("power");
@@ -488,16 +587,15 @@ void mnn2d::clBufTrain(const std::vector<std::vector<float>>& input, const std::
                 int curr_rows = activate[layer].size();
                 int curr_cols = activate[layer][0].size();
 
-                cl::Buffer d_C_T(clContext, CL_MEM_READ_WRITE, cweights[layer].size() * cweights[layer][0].size() * sizeof(float)); CL_CHECK(err);
                 kernelTranspose.setArg(0, d_cweights[layer]);
-                kernelTranspose.setArg(1, d_C_T);
+                kernelTranspose.setArg(1, d_C_T_buf);
                 kernelTranspose.setArg(2, cweights[layer].size());
                 kernelTranspose.setArg(3, cweights[layer][0].size());
                 cl::NDRange globalTranspose = calculate_global_2d(size2d, cweights[layer].size(), cweights[layer][0].size());
                 CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelTranspose, cl::NullRange, globalTranspose, local_2d));
 
                 kernelMatMul.setArg(0, d_incoming[layer]);
-                kernelMatMul.setArg(1, d_C_T);
+                kernelMatMul.setArg(1, d_C_T_buf);
                 kernelMatMul.setArg(2, d_grad_x_CT_buf);
                 kernelMatMul.setArg(3, curr_rows);
                 kernelMatMul.setArg(4, curr_cols);
@@ -512,11 +610,10 @@ void mnn2d::clBufTrain(const std::vector<std::vector<float>>& input, const std::
                 CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelDPow, cl::NullRange, calculate_global_1d(WORKSIZE_1D, prev_rows * prev_cols), local_1d));
 
                 size_t prev_dot_size = dotProds[layer - 1].size() * dotProds[layer - 1][0].size();
-                kernelSoftmaxDer.setArg(0, d_dotProds[layer - 1]);
-                kernelSoftmaxDer.setArg(1, d_dprev_act_buf);
-                kernelSoftmaxDer.setArg(2, SOFTMAX_TEMP);
-                kernelSoftmaxDer.setArg(3, (int)prev_dot_size);
-                CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSoftmaxDer, cl::NullRange, calculate_global_1d(WORKSIZE_1D, prev_dot_size), local_1d));
+                KernelReluDer.setArg(0, d_dotProds[layer - 1]);
+                KernelReluDer.setArg(1, d_dprev_act_buf);
+                KernelReluDer.setArg(2, (int)prev_dot_size);
+                CL_CHECK(clCommandQueue.enqueueNDRangeKernel(KernelReluDer, cl::NullRange, calculate_global_1d(WORKSIZE_1D, prev_dot_size), local_1d));
 
                 kernelHadamard2.setArg(0, d_grad_x_CT_buf);
                 kernelHadamard2.setArg(1, d_dprev_p_buf);
@@ -526,21 +623,19 @@ void mnn2d::clBufTrain(const std::vector<std::vector<float>>& input, const std::
                 kernelHadamard2.setArg(5, prev_cols);
                 CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelHadamard2, cl::NullRange, calculate_global_1d(WORKSIZE_1D, prev_rows * prev_cols), local_1d));
 
-                cl::Buffer d_prev_p(clContext, CL_MEM_READ_WRITE, prev_rows * prev_cols * sizeof(float)); CL_CHECK(err);
                 kernelPower.setArg(0, d_activate[layer - 1]);
-                kernelPower.setArg(1, d_prev_p);
+                kernelPower.setArg(1, d_dprev_p_buf); // Reuse d_dprev_p_buf as temp for prev_p
                 kernelPower.setArg(2, order);
                 kernelPower.setArg(3, (int)(prev_rows * prev_cols));
                 CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelPower, cl::NullRange, calculate_global_1d(WORKSIZE_1D, prev_rows * prev_cols), local_1d));
 
-                cl::Buffer d_prev_p_T(clContext, CL_MEM_READ_WRITE, prev_cols * prev_rows * sizeof(float)); CL_CHECK(err);
-                kernelTranspose.setArg(0, d_prev_p);
-                kernelTranspose.setArg(1, d_prev_p_T);
+                kernelTranspose.setArg(0, d_dprev_p_buf);
+                kernelTranspose.setArg(1, d_prev_p_T_buf);
                 kernelTranspose.setArg(2, prev_rows);
                 kernelTranspose.setArg(3, prev_cols);
                 CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelTranspose, cl::NullRange, calculate_global_2d(size2d, prev_rows, prev_cols), local_2d));
 
-                kernelMatMul.setArg(0, d_prev_p_T);
+                kernelMatMul.setArg(0, d_prev_p_T_buf);
                 kernelMatMul.setArg(1, d_incoming[layer]);
                 kernelMatMul.setArg(2, d_gradC[layer]);
                 kernelMatMul.setArg(3, prev_cols);
@@ -553,9 +648,7 @@ void mnn2d::clBufTrain(const std::vector<std::vector<float>>& input, const std::
                 kernelScale.setArg(3, (int)(prev_cols * curr_cols));
                 CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelScale, cl::NullRange, calculate_global_1d(WORKSIZE_1D, prev_cols * curr_cols), local_1d));
 
-                std::vector<float> ones_vec(prev_cols * prev_rows, 1.0f);
-                cl::Buffer d_onesT(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * ones_vec.size(), ones_vec.data(), &err); CL_CHECK(err);
-                kernelMatMul.setArg(0, d_onesT);
+                kernelMatMul.setArg(0, d_ones_all_buf); // Use pre-filled ones buffer
                 kernelMatMul.setArg(1, d_incoming[layer]);
                 kernelMatMul.setArg(2, d_gradB[layer]);
                 kernelMatMul.setArg(3, prev_cols);
@@ -567,8 +660,6 @@ void mnn2d::clBufTrain(const std::vector<std::vector<float>>& input, const std::
                 kernelScale.setArg(2, 1.0f - ALPHA);
                 kernelScale.setArg(3, (int)(prev_cols * curr_cols));
                 CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelScale, cl::NullRange, calculate_global_1d(WORKSIZE_1D, prev_cols * curr_cols), local_1d));
-
-                d_C_T = cl::Buffer(); d_prev_p = cl::Buffer(); d_prev_p_T = cl::Buffer(); d_onesT = cl::Buffer();
             }
 
             // Backpropagation for the first layer
@@ -576,21 +667,19 @@ void mnn2d::clBufTrain(const std::vector<std::vector<float>>& input, const std::
             int in_w = input[0].size();
             int first_layer_cols = activate[0][0].size();
 
-            cl::Buffer d_input_p(clContext, CL_MEM_READ_WRITE, in_h * in_w * sizeof(float)); CL_CHECK(err);
             kernelPower.setArg(0, d_in);
-            kernelPower.setArg(1, d_input_p);
+            kernelPower.setArg(1, d_dprev_p_buf); // Reuse temp buffer
             kernelPower.setArg(2, order);
             kernelPower.setArg(3, (int)(in_h * in_w));
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelPower, cl::NullRange, calculate_global_1d(WORKSIZE_1D, in_h * in_w), local_1d));
 
-            cl::Buffer d_input_p_T(clContext, CL_MEM_READ_WRITE, in_w * in_h * sizeof(float)); CL_CHECK(err);
-            kernelTranspose.setArg(0, d_input_p);
-            kernelTranspose.setArg(1, d_input_p_T);
+            kernelTranspose.setArg(0, d_dprev_p_buf);
+            kernelTranspose.setArg(1, d_prev_p_T_buf);
             kernelTranspose.setArg(2, in_h);
             kernelTranspose.setArg(3, in_w);
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelTranspose, cl::NullRange, calculate_global_2d(size2d, in_h, in_w), local_2d));
 
-            kernelMatMul.setArg(0, d_input_p_T);
+            kernelMatMul.setArg(0, d_prev_p_T_buf);
             kernelMatMul.setArg(1, d_incoming[0]);
             kernelMatMul.setArg(2, d_gradC[0]);
             kernelMatMul.setArg(3, in_w);
@@ -603,9 +692,7 @@ void mnn2d::clBufTrain(const std::vector<std::vector<float>>& input, const std::
             kernelScale.setArg(3, (int)(in_w * first_layer_cols));
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelScale, cl::NullRange, calculate_global_1d(WORKSIZE_1D, in_w * first_layer_cols), local_1d));
 
-            std::vector<float> ones_vec(in_w * in_h, 1.0f);
-            cl::Buffer d_ones_T(clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * ones_vec.size(), ones_vec.data(), &err); CL_CHECK(err);
-            kernelMatMul.setArg(0, d_ones_T);
+            kernelMatMul.setArg(0, d_ones_all_buf);
             kernelMatMul.setArg(1, d_incoming[0]);
             kernelMatMul.setArg(2, d_gradB[0]);
             kernelMatMul.setArg(3, in_w);
@@ -619,8 +706,6 @@ void mnn2d::clBufTrain(const std::vector<std::vector<float>>& input, const std::
             CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelScale, cl::NullRange, calculate_global_1d(WORKSIZE_1D, in_w * first_layer_cols), local_1d));
             CL_CHECK(clCommandQueue.finish());
 
-            d_input_p = cl::Buffer(); d_input_p_T = cl::Buffer(); d_ones_T = cl::Buffer();
-
             // Update weights and copy to host vectors
             for (int i = 0; i < this->layers; ++i) {
                 size_t c_size = cweights[i].size() * cweights[i][0].size();
@@ -629,15 +714,76 @@ void mnn2d::clBufTrain(const std::vector<std::vector<float>>& input, const std::
 
                 kernelUpdateWeights.setArg(0, d_cweights[i]);
                 kernelUpdateWeights.setArg(1, d_gradC[i]);
-                kernelUpdateWeights.setArg(2, (int)c_size);
-                kernelUpdateWeights.setArg(3, learningRate);
-                kernelUpdateWeights.setArg(4, LAMBDA_L1);
-                kernelUpdateWeights.setArg(5, LAMBDA_L2);
+                switch (weightUpdateType) {
+                    case 0:
+                        kernelUpdateWeights.setArg(2, learningRate);
+                        kernelUpdateWeights.setArg(3, (int)c_size);
+                        break;
+                    case 1:
+                        kernelUpdateWeights.setArg(2, (int)c_size);
+                        kernelUpdateWeights.setArg(3, learningRate);
+                        kernelUpdateWeights.setArg(4, LAMBDA_L1);
+                        break;
+                    case 2:
+                        kernelUpdateWeights.setArg(2, (int)c_size);
+                        kernelUpdateWeights.setArg(3, learningRate);
+                        kernelUpdateWeights.setArg(4, LAMBDA_L2);
+                        break;
+                    case 3:
+                        kernelUpdateWeights.setArg(2, (int)c_size);
+                        kernelUpdateWeights.setArg(3, learningRate);
+                        kernelUpdateWeights.setArg(4, LAMBDA_L1);
+                        kernelUpdateWeights.setArg(5, LAMBDA_L2);
+                        break;
+                    case 4:
+                        kernelUpdateWeights.setArg(2, (int)c_size);
+                        kernelUpdateWeights.setArg(3, learningRate);
+                        kernelUpdateWeights.setArg(4, WEIGHT_DECAY);
+                        break;
+                    case 5:
+                        kernelUpdateWeights.setArg(2, (int)c_size);
+                        kernelUpdateWeights.setArg(3, learningRate);
+                        kernelUpdateWeights.setArg(4, DROPOUT_RATE);
+                        kernelUpdateWeights.setArg(5, (uint)rand());
+                        break;
+                }
                 CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelUpdateWeights, cl::NullRange, globalUpdate, local_1d));
 
                 kernelUpdateWeights.setArg(0, d_bweights[i]);
                 kernelUpdateWeights.setArg(1, d_gradB[i]);
-                kernelUpdateWeights.setArg(2, (int)b_size);
+                switch (weightUpdateType) {
+                    case 0:
+                        kernelUpdateWeights.setArg(2, learningRate);
+                        kernelUpdateWeights.setArg(3, (int)b_size);
+                        break;
+                    case 1:
+                        kernelUpdateWeights.setArg(2, (int)b_size);
+                        kernelUpdateWeights.setArg(3, learningRate);
+                        kernelUpdateWeights.setArg(4, LAMBDA_L1);
+                        break;
+                    case 2:
+                        kernelUpdateWeights.setArg(2, (int)b_size);
+                        kernelUpdateWeights.setArg(3, learningRate);
+                        kernelUpdateWeights.setArg(4, LAMBDA_L2);
+                        break;
+                    case 3:
+                        kernelUpdateWeights.setArg(2, (int)b_size);
+                        kernelUpdateWeights.setArg(3, learningRate);
+                        kernelUpdateWeights.setArg(4, LAMBDA_L1);
+                        kernelUpdateWeights.setArg(5, LAMBDA_L2);
+                        break;
+                    case 4:
+                        kernelUpdateWeights.setArg(2, (int)b_size);
+                        kernelUpdateWeights.setArg(3, learningRate);
+                        kernelUpdateWeights.setArg(4, WEIGHT_DECAY);
+                        break;
+                    case 5:
+                        kernelUpdateWeights.setArg(2, (int)b_size);
+                        kernelUpdateWeights.setArg(3, learningRate);
+                        kernelUpdateWeights.setArg(4, DROPOUT_RATE);
+                        kernelUpdateWeights.setArg(5, (uint)rand());
+                        break;
+                }
                 CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelUpdateWeights, cl::NullRange, globalUpdate, local_1d));
 
                 std::vector<float> c_upd(c_size), b_upd(b_size);
@@ -649,6 +795,9 @@ void mnn2d::clBufTrain(const std::vector<std::vector<float>>& input, const std::
         }
 
         this->learningRate = initialLR;
+        if (epoch == maxEpochs) {
+            std::cout << "Max epochs reached without convergence." << std::endl;
+        }
         std::cout << "Training complete for this input-target pair." << std::endl;
 
     } catch (const std::runtime_error& e) {
@@ -657,6 +806,7 @@ void mnn2d::clBufTrain(const std::vector<std::vector<float>>& input, const std::
 
     // --- Buffer Cleanup ---
     d_in = cl::Buffer(); d_exp = cl::Buffer(); d_out = cl::Buffer(); d_err = cl::Buffer();
+    d_final_output = cl::Buffer(); d_C_T_buf = cl::Buffer(); d_prev_p_T_buf = cl::Buffer(); d_ones_all_buf = cl::Buffer(); d_partial_results_buf = cl::Buffer();
     d_grad_x_CT_buf = cl::Buffer(); d_dprev_p_buf = cl::Buffer(); d_dprev_act_buf = cl::Buffer();
     for (int i = 0; i < layers; ++i) {
         d_cweights[i] = cl::Buffer(); d_bweights[i] = cl::Buffer();

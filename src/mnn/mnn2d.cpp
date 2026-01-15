@@ -14,8 +14,8 @@
  * @param order Order of the monomial.
  */
 mnn2d::mnn2d(int inw, int inh, int outw, int layers, float order, std::string datasetpath) :
-    order(order), inWidth(inw), inHeight(inh), outWidth(outw), layers(layers),
-    batchSize(1), binFileAddress(datasetpath + "/mnn2d/weights.bin"), 
+    order(order), inWidth(inw), inHeight(inh), outSize(outw), layers(layers),
+    batchSize(1), binFileAddress(datasetpath + "/mnn2d/trainedWeights.bin"), 
     initialValues(datasetpath + "/mnn2d/initialisedWeights.bin"),
     epochs(100), iterations(0), learningRate(0.01f)
 {
@@ -154,8 +154,8 @@ mnn2d::mnn2d(int inw, int inh, int outw, int layers, float order, std::string da
  * @param order Order of the monomial.
  */
 mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::string datasetpath) :
-    order(order), inWidth(inw), inHeight(inh), outWidth(outw), layers(layers),
-    batchSize(1), binFileAddress(datasetpath + "/mnn2d/weights.bin"), 
+    order(order), inWidth(inw), inHeight(inh), outSize(outw), layers(layers),
+    batchSize(1), binFileAddress(datasetpath + "/mnn2d/trainedWeights.bin"), 
     initialValues(datasetpath + "/mnn2d/initialisedWeights.bin"),
     epochs(100), iterations(0), learningRate(0.01f)
 {
@@ -285,8 +285,8 @@ mnn2d::mnn2d(int inw, int inh, int outw, int dim, int layers, float order, std::
  * @param dim Dimension of hidden layers.
  */
 mnn2d::mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, std::string datasetpath) :
-    order(order), inWidth(inw), inHeight(inh), outWidth(outw), layers(width.size()),
-    width(width), batchSize(1), binFileAddress(datasetpath + "/mnn2d/weights.bin"), 
+    order(order), inWidth(inw), inHeight(inh), outSize(outw), layers(width.size()),
+    width(width), batchSize(1), binFileAddress(datasetpath + "/mnn2d/trainedWeights.bin"), 
     initialValues(datasetpath + "/mnn2d/initialisedWeights.bin"),
     epochs(100), iterations(0), learningRate(0.01f)
 {
@@ -323,7 +323,7 @@ mnn2d::mnn2d(int inw, int inh, int outw, std::vector<int> width, float order, st
         cgradients[i].resize(width[i-1], std::vector<float>(width[i], 0.0f));
         bgradients[i].resize(width[i-1], std::vector<float>(width[i], 0.0f));
     }
-    // dimension = width[i] * outw
+    // dimension = width[layers-2] * outw
     cweights[layers-1].resize(width[layers-2], std::vector<float>(outw, 0.0f));
     bweights[layers-1].resize(width[layers-2], std::vector<float>(outw, 0.0f));
     cgradients[layers-1].resize(width[layers-2], std::vector<float>(outw, 0.0f));
@@ -485,8 +485,10 @@ void mnn2d::makeBinFile(const std::string &fileAddress)
             std::cout << "Binary file created successfully." << std::endl;
             std::cout << "Provide weight initialisation type: ";
             std::cin >> weightUpdateType;
-            std::cout << std::endl;
-            initiateWeights(weightUpdateType);
+            bool mixedOrLayered;
+            std::cout << "Provide weight initialisation: Mixed(1) or Layered(0): ";
+            std::cin >> mixedOrLayered;
+            initiateWeights(weightUpdateType, mixedOrLayered);
             serializeWeights(cweights, bweights, fileAddress);
 		}
 	}
@@ -519,9 +521,36 @@ void mnn2d::makeBinFile(const std::string &fileAddress)
         std::cout << "Binary file created successfully." << std::endl;
         std::cout << "Provide weight initialisation type: ";
         std::cin >> weightUpdateType;
-        std::cout << std::endl;
-        initiateWeights(weightUpdateType);
+        bool mixedOrLayered;
+        std::cout << "Provide weight initialisation: Mixed(1) or Layered(0): ";
+        std::cin >> mixedOrLayered;
+        initiateWeights(weightUpdateType, mixedOrLayered);
         serializeWeights(cweights, bweights, fileAddress);
     }
     saveNetwork();
+}
+
+
+// mnn2d: load data of networ from binary file
+void mnn2d::loadNetwork() {
+    std::vector<float> c(param/2, 0.0f);
+    std::vector<float> b(param/2, 0.0f);
+    deserializeWeights(c, b, binFileAddress);
+    unsigned long long offset = 0;
+    for(int i = 0; i < cweights.size(); i++) {
+        for(int j = 0; j < cweights[i].size(); j++) {
+            for(int k = 0; k < cweights[i][j].size(); k++) {
+                cweights[i][j][k] = c[offset + (unsigned long long)j * cweights[i][j].size() + k];
+                bweights[i][j][k] = b[offset + (unsigned long long)j * cweights[i][j].size() + k];
+            }
+        }
+        offset += (unsigned long long)cweights[i].size() * cweights[i][0].size();
+    }
+    std::cout << "Binary File " << binFileAddress << " loaded successfully." << std::endl;
+}
+
+
+// mnn2d: save data of network to binary file
+void mnn2d::saveNetwork() {
+    serializeWeights(cweights, bweights, binFileAddress);
 }

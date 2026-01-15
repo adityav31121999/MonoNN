@@ -2,6 +2,7 @@
 #define OPERATORS_HPP 1
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 #include <vector>
 #include <cmath>
 #include <string>
@@ -18,10 +19,11 @@ inline unsigned int get_thread_count(size_t work_size) {
     return num == 0 ? 2 : std::min<unsigned int>(num, static_cast<unsigned int>(work_size));
 }
 
+void printClassDistribution(const std::vector<std::filesystem::path>& filePaths, int outSize);
 
 // file operations for weights serialization
 
-void makeBinFile(const std::string& fileAddress, unsigned long long param);
+void createBinFile(const std::string& fileAddress, unsigned long long param);
 void serializeWeights(const std::vector<std::vector<std::vector<float>>>& cweights,
                         const std::vector<std::vector<std::vector<float>>>& bweights,
                         const std::string& fileAddress);
@@ -75,7 +77,7 @@ float categoricalCrossEntropy(const std::vector<std::vector<float>>& output, con
 
 // learning rate schedulers
 
-float cosineAnnealing(float initialLR, int epoch, int totalEpochs);
+float cosineAnnealing(float MAX_LR, float MIN_LR, int epoch, int totalEpochs);
 float learningRateOnPlateau(float currentLR, float previousLoss, float currentLoss, int& patienceCounter, int patience, float factor);
 
 // math operators
@@ -210,6 +212,7 @@ void layerBackwardBatchThread(const std::vector<std::vector<std::vector<float>>>
 std::vector<std::vector<float>> cvMat2vec(const cv::Mat& mat);
 cv::Mat vec2cvMat(const std::vector<std::vector<float>>& vec);
 cv::Mat image2grey(const std::string& path2image);
+std::vector<std::vector<float>> image2matrix(const std::string& path2image, bool isGreyOrRGB);
 std::vector<std::vector<std::vector<float>>> image2channels(const std::string& path2image);
 
 #ifdef USE_CL
@@ -332,6 +335,7 @@ inline const char* oclErrorString(cl_int error) {
 
 #include <cuda_runtime.h> // For cudaError_t, cudaGetErrorString, etc.
 #include <stdexcept>      // For std::runtime_error
+#include <curand_kernel.h>
 
 // --- CUDA Error Checking Macro ---
 #define CU_CHECK(call)                                                        \
@@ -366,6 +370,8 @@ inline dim3 calculate_grid_2d(int dim_x, int dim_y, int block_x, int block_y) {
 // actvations and derivative
 extern "C" __global__ void sigmoid(const float* x, float* out, int size);
 extern "C" __global__ void sigmoidDer(const float* x, float* out, int size);
+extern "C" __global__ void relu(const float* x, float* out, int size);
+extern "C" __global__ void reluDer(const float* x, float* out, int size);
 extern "C" __global__ void softmax_reduce(const float* input, float* partial_results, int size, float temp);
 extern "C" __global__ void softmax_normalize(const float* input, float* output, int size, float temp, float global_max, float global_sum);
 extern "C" __global__ void softmaxDer_normalize(const float* input, float* output, int size, float temp, float global_max, float global_sum);
@@ -409,14 +415,14 @@ extern "C" __global__ void kernelLayerForwardBatch4(const float* input, float* o
                                   int batchSize, int inHeight, int inWidth, int outSize, float n);
 // update weights
 extern "C" __global__ void kernelUpdateWeights(float* weights, float* gweights, float learning_rate,
-                                    int totalElements);
+                                int totalElements);
 extern "C" __global__ void kernelUpdateWeightsWithL1(float* weights, float* gweights, int totalElements, float learning_rate, float lambda_l1);
 extern "C" __global__ void kernelUpdateWeightsWithL2(float* weights, float* gweights, int totalElements, float learning_rate, float lambda_l2);
 extern "C" __global__ void kernelUpdateWeightsElasticNet(float* weights, float* gweights, int totalElements, float learning_rate,
-                                            float lambda_l1, float lambda_l2);
+                                float lambda_l1, float lambda_l2);
 extern "C" __global__ void kernelUpdateWeightsWithWeightDecay(float* weights, float* gweights, int totalElements, float learning_rate, float decay_rate);
-extern "C" __global__ void kernelUpdateWeightsDropout(float* weights, float* gweights, int totalElements, float learning_rate,
-                                         float dropout_rate, unsigned int base_seed);
+extern "C" __global__ void kernelUpdateWeightsDropout(float* weights, float* gweights, int totalElements, float learning_rate, float dropout_rate,
+                                unsigned int);
 
 #endif
 

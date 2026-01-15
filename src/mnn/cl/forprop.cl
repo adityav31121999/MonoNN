@@ -16,7 +16,7 @@ __kernel void kernelLayerForward1(__global const float* input, __global float* o
         }
 
         // Accumulate into the existing output value, as per the C++ code's `output[j] += ...`
-        output[j] = output[j] + sum;
+        output[j] = sum;
     }
 }
 
@@ -37,7 +37,7 @@ __kernel void kernelLayerForward2(__global const float* input, __global float* o
         }
 
         // Accumulate into the existing output value
-        output[j] = output[j] + sum;
+        output[j] = sum;
     }
 }
 
@@ -99,7 +99,7 @@ __kernel void kernelLayerForwardBatch1(__global const float* input, __global flo
         }
 
         // Accumulate into the existing output value, as per the C++ code's `output[j] += ...`
-        output[output_offset + j] = output[output_offset + j] + sum;
+        output[output_offset + j] = sum;
     }
 }
 
@@ -123,7 +123,7 @@ __kernel void kernelLayerForwardBatch2(__global const float* input, __global flo
         }
 
         // Accumulate into the existing output value
-        output[output_offset + j] = output[output_offset + j] + sum;
+        output[output_offset + j] = sum;
     }
 }
 

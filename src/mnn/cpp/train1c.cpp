@@ -1,5 +1,5 @@
 #ifdef USE_CPU
-#include "mnn1d.hpp"
+#include "mnn.hpp"
 #include "mnn2d.hpp"
 #include <vector>
 #include <stdexcept>
@@ -11,7 +11,7 @@
  * @param target The target output vector.
  * @param useThread 1 to use thread based faster execution else 0.
  */
-void mnn1d::train1c(const std::vector<float>& input, const std::vector<float>& target, bool useThread) {
+void mnn::train1c(const std::vector<float>& input, const std::vector<float>& target, bool useThread) {
     // single cycle training
     if (useThread == 0) {
         // 1. Forward propagation
@@ -40,7 +40,7 @@ void mnn1d::train1c(const std::vector<float>& input, const std::vector<float>& t
             layerForwardThread(activate[i-1], dotProds[i], cweights[i], bweights[i], order);
             activate[i] = sigmoid(dotProds[i]);
         }
-        output = activate[layers - 1];
+        output = softmax(activate[layers - 1]);
 
         if(maxIndex(output) == maxIndex(target)) {
             float loss = crossEntropy(output, target);
@@ -56,7 +56,7 @@ void mnn1d::train1c(const std::vector<float>& input, const std::vector<float>& t
             zeroGradients();
             std::vector<float> output_error(outSize, 0.0f);
             for(int i = 0; i < outSize; i++) {
-                output_error[i] = output[i] - target[i];
+                output_error[i] = activate[layers-1][i] - target[i];
             }
             std::vector<float> incoming_gradient = output_error;
             // Backpropagate the error
@@ -109,14 +109,14 @@ void mnn2d::train1c(const std::vector<std::vector<float>>& input, const std::vec
         // 1. Forward propagation
         // first layer
         layerForwardThread(input, dotProds[0], cweights[0], bweights[0], order);
-        activate[0] = reshape(softmax(flatten(dotProds[0])), dotProds[0].size(), dotProds[0][0].size());
+        activate[0] = relu(dotProds[0]);
         // from 2nd to last
         for(int i = 1; i < layers; i++) {
             layerForwardThread(activate[i-1], dotProds[i], cweights[i], bweights[i], order);
-            activate[i] = reshape(softmax(flatten(dotProds[i])), dotProds[i].size(), dotProds[i][0].size());
+            activate[i] = relu(dotProds[i]);
         }
         // apply mean pooling to the final activation layer to get output
-        output = meanPool(activate[layers - 1]);
+        output = softmax(meanPool(activate[layers - 1]));
 
         if(maxIndex(output) == maxIndex(target)) {
             float loss = crossEntropy(output, target);
@@ -131,15 +131,18 @@ void mnn2d::train1c(const std::vector<std::vector<float>>& input, const std::vec
             // if (i == EPOCH) break;
             // 2. Backward propagation
             zeroGradients();
+            std::vector<float> meanpooled(target.size(), 0.0f);
+            meanpooled = meanPool(activate[layers-1]);
             std::vector<float> output_error(target.size(), 0.0f);
-            for(int i = 0; i < outWidth; i++) {
-                output_error[i] = output[i] - target[i];
+            for(int i = 0; i < outSize; i++) {
+                output_error[i] = meanpooled[i] - target[i];
+                output_error[i] /= inHeight;
             }
             // output was mean pooled from activate[layers-1]
             std::vector<std::vector<float>> incoming_gradient(activate[layers-1].size(), 
                                                     std::vector<float>(activate[layers-1][0].size(), 0.0f));
             for(int i = 0; i < activate[layers-1].size(); i++) {
-                for(int j = 0; j < outWidth; j++) {
+                for(int j = 0; j < outSize; j++) {
                     incoming_gradient[i][j] = output_error[j];
                 }
             }

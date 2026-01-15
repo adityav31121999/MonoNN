@@ -1,5 +1,5 @@
 #ifdef USE_CU
-#include "mnn1d.hpp"
+#include "mnn.hpp"
 #include "mnn2d.hpp"
 #include <cuda_runtime.h>
 #include <vector>
@@ -10,7 +10,7 @@
  * @brief forprop for mnn using CUDA
  * @param input input vector
  */
-void mnn1d::cuForprop(const std::vector<float>& input)
+void mnn::cuForprop(const std::vector<float>& input)
 {
     try {
         // --- Device Memory Pointers ---
@@ -77,6 +77,7 @@ void mnn1d::cuForprop(const std::vector<float>& input)
 
         int final_output_size = (int)output.size();
         CU_CHECK(cudaMemcpy(output.data(), d_activate[layers - 1], final_output_size * sizeof(float), cudaMemcpyDeviceToHost));
+        output = softmax(output, SOFTMAX_TEMP);
 
         // free memory
         CU_CHECK(cudaFree(d_input));
@@ -88,7 +89,7 @@ void mnn1d::cuForprop(const std::vector<float>& input)
         }
     }
     catch (const std::runtime_error& e) {
-        throw std::runtime_error(std::string("Exception in mnn1d::cuForprop: ") + e.what());
+        throw std::runtime_error(std::string("Exception in mnn::cuForprop: ") + e.what());
     }
 }
 
@@ -145,9 +146,9 @@ void mnn2d::cuForprop(const std::vector<std::vector<float>>& input)
                 currentInWidth = activate[i-1][0].size();
             }
 
-            int currentOutWidth = cweights[i][0].size();
+            int currentoutSize = cweights[i][0].size();
             dim3 block_2d(WORKSIZE_2D_X, WORKSIZE_2D_Y);
-            dim3 grid_forward = calculate_grid_2d(currentOutWidth, currentInHeight, WORKSIZE_2D_X, WORKSIZE_2D_Y);
+            dim3 grid_forward = calculate_grid_2d(currentoutSize, currentInHeight, WORKSIZE_2D_X, WORKSIZE_2D_Y);
             
             kernelLayerForward4<<<grid_forward, block_2d>>>(
                 current_input_ptr,
@@ -156,57 +157,21 @@ void mnn2d::cuForprop(const std::vector<std::vector<float>>& input)
                 d_blayers[i],
                 currentInHeight,
                 currentInWidth,
-                currentOutWidth,
+                currentoutSize,
                 order
             );
 
             int dotprod_size = dotProds[i].size() * dotProds[i][0].size();
 
-            if (dotprod_size <= WORKSIZE_1D) {
-                // Use the single-block reduction for small inputs
-                dim3 block_softmax(dotprod_size);
-                dim3 grid_softmax(1);
+            // Use the single-block reduction for small inputs
+            dim3 block_softmax(dotprod_size);
+            dim3 grid_softmax(1);
 
-                softmax<<<grid_softmax, block_softmax>>>(
-                    d_dotProds[i],
-                    d_activate[i],
-                    SOFTMAX_TEMP,
-                    dotprod_size
-                );
-            }
-            else {
-                // Use the two-stage reduction for large inputs
-                dim3 block_reduce(WORKSIZE_1D);
-                dim3 grid_reduce = calculate_grid_1d(dotprod_size, WORKSIZE_1D);
-                int num_work_groups = grid_reduce.x;
-                size_t partial_results_size = num_work_groups * 2;
-
-                float* d_partial_results = nullptr;
-                CU_CHECK(cudaMalloc(&d_partial_results, partial_results_size * sizeof(float)));
-
-                // Launch reduction kernel
-                size_t shared_mem_size = WORKSIZE_1D * sizeof(float) * 2; // For local_max and local_sum
-                softmax_reduce<<<grid_reduce, block_reduce, shared_mem_size>>>(
-                    d_dotProds[i], d_partial_results, dotprod_size, SOFTMAX_TEMP
-                );
-
-                // Copy partial results to host to find global max and sum
-                std::vector<float> h_partial_results(partial_results_size);
-                CU_CHECK(cudaMemcpy(h_partial_results.data(), d_partial_results, partial_results_size * sizeof(float), cudaMemcpyDeviceToHost));
-
-                float global_max = -FLT_MAX;
-                float global_sum = 0.0f;
-                for (int k = 0; k < num_work_groups; ++k) {
-                    global_sum += h_partial_results[2 * k];
-                    global_max = std::max(global_max, h_partial_results[2 * k + 1]);
-                }
-
-                softmax_normalize<<<grid_reduce, block_reduce>>>(
-                    d_dotProds[i], d_activate[i], dotprod_size, SOFTMAX_TEMP, global_max, global_sum
-                );
-
-                CU_CHECK(cudaFree(d_partial_results));
-            }
+            relu<<<grid_softmax, block_softmax>>>(
+                d_dotProds[i],
+                d_activate[i],
+                dotprod_size
+            );
 
             size_t activate_size_bytes = dotprod_size * sizeof(float);
             CU_CHECK(cudaMemcpy(flatten(dotProds[i]).data(), d_dotProds[i], activate_size_bytes, cudaMemcpyDeviceToHost));
@@ -233,6 +198,7 @@ void mnn2d::cuForprop(const std::vector<std::vector<float>>& input)
 
         // --- D2H: Final Output ---
         CU_CHECK(cudaMemcpy(output.data(), d_output, output_size_bytes, cudaMemcpyDeviceToHost));
+        output = softmax(output, SOFTMAX_TEMP);
 
         // free memory
         CU_CHECK(cudaFree(d_input));

@@ -1,4 +1,4 @@
-#include "mnn1d.hpp"
+#include "mnn.hpp"
 #include <stdexcept>
 #include <iostream>
 #include <fstream>
@@ -12,11 +12,11 @@
  * @param order order of monomial
  * @param datasetpath path to dataset
  */
-mnn1d::mnn1d(int insize, int outsize, int layers, float order, std::string datasetpath) :
+mnn::mnn(int insize, int outsize, int layers, float order, std::string datasetpath) :
     order(order), inSize(insize), outSize(outsize), layers(layers), input(insize, 0.0f), 
     output(outsize, 0.0f), target(outsize, 0.0f), batchSize(1),
     epochs(100), iterations(0), learningRate(0.01f),
-    binFileAddress(datasetpath + "/mnn1d/trainedWeigts.bin"),
+    binFileAddress(datasetpath + "/mnn1d/trainedWeights.bin"),
     initialValues(datasetpath + "/mnn1d/initialisedWeights.bin")
 {
     trainPrg = {};
@@ -133,11 +133,11 @@ mnn1d::mnn1d(int insize, int outsize, int layers, float order, std::string datas
  * @param layers Number of hidden layers.
  * @param order order of monomial
  */
-mnn1d::mnn1d(int insize, int outsize, int dim, int layers, float order, std::string datasetpath) :
+mnn::mnn(int insize, int outsize, int dim, int layers, float order, std::string datasetpath) :
     order(order), inSize(insize), outSize(outsize), layers(layers), input(insize, 0.0f), 
     output(outsize, 0.0f), target(outsize, 0.0f), batchSize(1),
     epochs(100), iterations(0), learningRate(0.01f),
-    binFileAddress(datasetpath + "/mnn1d/trainedWeigts.bin"),
+    binFileAddress(datasetpath + "/mnn1d/trainedWeights.bin"),
     initialValues(datasetpath + "/mnn1d/initialisedWeights.bin")
 {
     trainPrg = {};
@@ -251,11 +251,11 @@ mnn1d::mnn1d(int insize, int outsize, int dim, int layers, float order, std::str
  * @param layers Number of hidden layers.
  * @param order order of monomial
  */
-mnn1d::mnn1d(int insize, int outsize, std::vector<int> width, float order, std::string datasetpath) : 
+mnn::mnn(int insize, int outsize, std::vector<int> width, float order, std::string datasetpath) : 
     order(order), inSize(insize), outSize(outsize), width(width), layers(width.size()),
     input(insize, 0.0f), output(outsize, 0.0f), target(outsize, 0.0f), batchSize(1),
     epochs(100), iterations(0), learningRate(0.01f),
-    binFileAddress(datasetpath + "/mnn1d/trainedWeigts.bin"),
+    binFileAddress(datasetpath + "/mnn1d/trainedWeights.bin"),
     initialValues(datasetpath + "/mnn1d/initialisedWeights.bin")
 {
     trainPrg = {};
@@ -359,7 +359,7 @@ mnn1d::mnn1d(int insize, int outsize, std::vector<int> width, float order, std::
  * @brief Create or load or resize binary file for weights and biases.
  * @param fileAddress Address of the binary file.
  */
-void mnn1d::makeBinFile(const std::string &fileAddress)
+void mnn::makeBinFile(const std::string &fileAddress)
 {
 	long expectedFileSize = (long)(this->param * sizeof(float));
 
@@ -425,8 +425,10 @@ void mnn1d::makeBinFile(const std::string &fileAddress)
             std::cout << "Binary file created successfully." << std::endl;
             std::cout << "Provide weight initialisation type: ";
             std::cin >> weightUpdateType;
-            std::cout << std::endl;
-            initiateWeights(weightUpdateType);
+            bool mixedOrLayered;
+            std::cout << "Provide weight initialisation: Mixed(1) or Layered(0): ";
+            std::cin >> mixedOrLayered;
+            initiateWeights(weightUpdateType, mixedOrLayered);
             serializeWeights(cweights, bweights, fileAddress);
 		}
 	}
@@ -459,9 +461,36 @@ void mnn1d::makeBinFile(const std::string &fileAddress)
         std::cout << "Binary file created successfully." << std::endl;
         std::cout << "Provide weight initialisation type: ";
         std::cin >> weightUpdateType;
-        std::cout << std::endl;
-        initiateWeights(weightUpdateType);
+        bool mixedOrLayered;
+        std::cout << "Provide weight initialisation: Mixed(1) or Layered(0): ";
+        std::cin >> mixedOrLayered;
+        initiateWeights(weightUpdateType, mixedOrLayered);
         serializeWeights(cweights, bweights, fileAddress);
     }
     saveNetwork();
+}
+
+
+// mnn: load data of networ from binary file
+void mnn::loadNetwork() {
+    std::vector<float> c(param/2, 0.0f);
+    std::vector<float> b(param/2, 0.0f);
+    deserializeWeights(c, b, binFileAddress);
+    unsigned long long offset = 0;
+    for(int i = 0; i < cweights.size(); i++) {
+        for(int j = 0; j < cweights[i].size(); j++) {
+            for(int k = 0; k < cweights[i][j].size(); k++) {
+                cweights[i][j][k] = c[offset + (unsigned long long)j * cweights[i][j].size() + k];
+                bweights[i][j][k] = b[offset + (unsigned long long)j * cweights[i][j].size() + k];
+            }
+        }
+        offset += (unsigned long long)cweights[i].size() * cweights[i][0].size();
+    }
+    std::cout << "Binary File " << binFileAddress << " loaded successfully." << std::endl;
+}
+
+
+// mnn: save data of network to binary file
+void mnn::saveNetwork() {
+    serializeWeights(cweights, bweights, binFileAddress);
 }

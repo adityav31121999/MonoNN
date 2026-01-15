@@ -1,3 +1,14 @@
+void atomicAdd(__global float* address, float val)
+{
+    unsigned int old = as_uint(*address);
+    unsigned int assumed;
+    do {
+        assumed = old;
+        old = atomic_cmpxchg((volatile __global unsigned int*)address, assumed,
+                             as_uint(as_float(assumed) + val));
+    } while (assumed != old);
+}
+
 /// ----------------- Math Functions ----------------- ///
 
 __kernel void add(__global float* x, __global float* y, __global float* out, int size)
@@ -28,7 +39,9 @@ __kernel void power(__global float* x, __global float* out, float n, int size)
 {
     int i = get_global_id(0);
     if (i < size) {
-        out[i] = pow(x[i], n);
+        // Handle negative bases for fractional powers (e.g. 1.4) to avoid NaNs
+        float val = x[i];
+        out[i] = (val >= 0 ? 1.0f : -1.0f) * pow(fabs(val), n);
     }
 }
 
@@ -36,14 +49,19 @@ __kernel void dPower(__global float* x, __global float* out, float n, int size)
 {
     int i = get_global_id(0);
     if (i < size) {
-        out[i] = n * pow(x[i], n - 1.0f);
+        // Derivative of sgn(x)*|x|^n is n*|x|^(n-1)
+        out[i] = n * pow(fabs(x[i]), n - 1.0f);
     }
 }
 
 
 __kernel void meanPool(__global float* in, __global float* out, int inRows, int inCols, int poolSize)
 {
-    int c = get_global_id(0); // c is the column index.
+    // This kernel performs global average pooling over the rows for each column,
+    // mimicking the C++ `meanPool` function.
+    // Each work-item computes the mean for one column.
+    int c = get_global_id(0); // Column index
+
     if (c < inCols) {
         float sum = 0.0f;
         for (int r = 0; r < inRows; ++r) {
@@ -53,24 +71,18 @@ __kernel void meanPool(__global float* in, __global float* out, int inRows, int 
     }
 }
 
-
 __kernel void maxPool(__global float* in, __global float* out, int inRows, int inCols, int poolSize) {
-    int r = get_global_id(0); // Current row in the output
-    int c = get_global_id(1); // Current column in the output
+    // This kernel performs global max pooling over the rows for each column,
+    // mimicking the C++ `maxPool` function.
+    // Each work-item computes the max for one column.
+    int c = get_global_id(0); // Column index
 
-    int outRows = inRows / poolSize;
-    int outCols = inCols / poolSize;
-
-    if (r < outRows && c < outCols) {
-        float max_val = -FLT_MAX; // Initialize with a very small number
-        for (int i = 0; i < poolSize; ++i) {
-            for (int j = 0; j < poolSize; ++j) {
-                int in_row = r * poolSize + i;
-                int in_col = c * poolSize + j;
-                max_val = max(max_val, in[in_row * inCols + in_col]);
-            }
+    if (c < inCols) {
+        float max_val = -FLT_MAX;
+        for (int r = 0; r < inRows; ++r) {
+            max_val = max(max_val, in[r * inCols + c]);
         }
-        out[r * outCols + c] = max_val;
+        out[c] = max_val;
     }
 }
 

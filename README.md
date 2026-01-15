@@ -175,6 +175,52 @@ Similar to the perceptron, the whole mechanism follows similar math, though for 
 - **Error Propagation (to Layer $l-1$):**
   $\delta^{(l-1, k)} = (\delta^{(l, k)} \times C_l^T) \odot (m \cdot a^{(l-1, k)})^{(m-1)} \odot a'^{(l-1, k)}$
 
+## Kernel Optimisation (opencl)
+
+### Accurate Kernels
+```OpenCL
+__kernel void dPower(__global float* x, __global float* out, float n, int size)
+{
+    int i = get_global_id(0);
+    if (i < size) {
+        out[i] = n * pow(x[i], n - 1.0f);
+    }
+}
+
+__kernel void meanPool(__global float* in, __global float* out, int inRows, int inCols, int poolSize)
+{
+    int c = get_global_id(0); // c is the column index.
+    if (c < inCols) {
+        float sum = 0.0f;
+        for (int r = 0; r < inRows; ++r) {
+            sum += in[r * inCols + c];
+        }
+        out[c] = sum / (float)inRows;
+    }
+}
+```
+
+### Optimised Kernels
+```OpenCL
+__kernel void power(__global float* x, __global float* out, float n, int size)
+{
+    int i = get_global_id(0);
+    if (i < size) {
+        // Handle negative bases for fractional powers (e.g. 1.4) to avoid NaNs
+        float val = x[i];
+        out[i] = (val >= 0 ? 1.0f : -1.0f) * pow(fabs(val), n);
+    }
+}
+
+__kernel void dPower(__global float* x, __global float* out, float n, int size)
+{
+    int i = get_global_id(0);
+    if (i < size) {
+        // Derivative of sgn(x)*|x|^n is n*|x|^(n-1)
+        out[i] = n * pow(fabs(x[i]), n - 1.0f);
+    }
+}
+```
 ---
 
 ## Theorem Sketch
@@ -216,7 +262,8 @@ Similar to above, inspired from it, this theorem actually focuses on specific or
   - Thread-based C++ functions for single-cycle training functions
   - Evaluation Metrics for pre-training, training and testing stages
   - All corrections made to MNN2D class functions and other functions
-- **0.0.4**: New Network definitions (in progress)
+- **0.0.4**: Paper Version
+- **0.0.5**: New Network definitions (future implementation)
   - new classes and definitions
   - 
 

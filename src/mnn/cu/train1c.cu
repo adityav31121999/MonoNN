@@ -1,5 +1,5 @@
 #ifdef USE_CU
-#include "mnn1d.hpp"
+#include "mnn.hpp"
 #include "mnn2d.hpp"
 #include <vector>
 #include <stdexcept>
@@ -7,6 +7,7 @@
 #include <algorithm> // For std::max
 #include <cmath>     // For std::ceil
 #include <limits>    // For std::numeric_limits
+#include <cstdlib>   // For rand()
 
 /**
  * @brief trains the mnn network on a single input-target pair for 1 cycle using CUDA.
@@ -14,7 +15,7 @@
  * @param target The target output vector.
  * @param useBuffer 0 for stand alone functions or 1 for all-buffers-in-single function 
  */
-void mnn1d::cuTrain1c(const std::vector<float>& input, const std::vector<float>& target, bool useBuffer) {
+void mnn::cuTrain1c(const std::vector<float>& input, const std::vector<float>& target, bool useBuffer) {
     if (useBuffer == 0) {
         // 1. Forward propagation
         cuForprop(input);
@@ -78,7 +79,8 @@ void mnn1d::cuTrain1c(const std::vector<float>& input, const std::vector<float>&
             CU_CHECK(cudaMalloc(&d_preoutgoing_l, sizeof(float) * max_layer_width));
             CU_CHECK(cudaMalloc(&d_dpow_l, sizeof(float) * max_layer_width));
             CU_CHECK(cudaMalloc(&d_dact_l, sizeof(float) * max_layer_width));
-            size_t max_cweight_size = cweights[layers-1].size() * cweights[layers-1][0].size();
+            size_t max_cweight_size = 0;
+            for(int i = 0; i < layers; i++) max_cweight_size = std::max(max_cweight_size, cweights[i].size() * cweights[i][0].size());
             CU_CHECK(cudaMalloc(&d_C_T, sizeof(float) * max_cweight_size));
         }
 
@@ -122,6 +124,7 @@ void mnn1d::cuTrain1c(const std::vector<float>& input, const std::vector<float>&
 
         // Copy output D2H to check for correctness and loss
         CU_CHECK(cudaMemcpy(output.data(), d_activate[layers - 1], output.size() * sizeof(float), cudaMemcpyDeviceToHost));
+        output = softmax(output);
 
         if(maxIndex(output) == maxIndex(target)) {
             float loss = crossEntropy(output, target);
@@ -222,13 +225,34 @@ void mnn1d::cuTrain1c(const std::vector<float>& input, const std::vector<float>&
                 size_t c_size = cweights[i].size() * cweights[i][0].size();
                 size_t b_size = bweights[i].size() * bweights[i][0].size();
                 dim3 globalUpdate = calculate_grid_1d(c_size, WORKSIZE_1D);
+                dim3 globalUpdateB = calculate_grid_1d(b_size, WORKSIZE_1D);
 
-                // Update C weights
-                kernelUpdateWeightsElasticNet<<<globalUpdate, local_1d>>>(d_cweights[i], d_gradC[i], (int)c_size, learningRate, LAMBDA_L1, LAMBDA_L2);
-                CU_CHECK(cudaGetLastError());
-                // Update B weights
-                kernelUpdateWeightsElasticNet<<<globalUpdate, local_1d>>>(d_bweights[i], d_gradB[i], (int)b_size, learningRate, LAMBDA_L1, LAMBDA_L2);
-                CU_CHECK(cudaGetLastError());
+                switch (weightUpdateType) {
+                    case 0:
+                        kernelUpdateWeights<<<globalUpdate, local_1d>>>(d_cweights[i], d_gradC[i], learningRate, (int)c_size);
+                        kernelUpdateWeights<<<globalUpdateB, local_1d>>>(d_bweights[i], d_gradB[i], learningRate, (int)b_size);
+                        break;
+                    case 1:
+                        kernelUpdateWeightsWithL1<<<globalUpdate, local_1d>>>(d_cweights[i], d_gradC[i], (int)c_size, learningRate, LAMBDA_L1);
+                        kernelUpdateWeightsWithL1<<<globalUpdateB, local_1d>>>(d_bweights[i], d_gradB[i], (int)b_size, learningRate, LAMBDA_L1);
+                        break;
+                    case 2:
+                        kernelUpdateWeightsWithL2<<<globalUpdate, local_1d>>>(d_cweights[i], d_gradC[i], (int)c_size, learningRate, LAMBDA_L2);
+                        kernelUpdateWeightsWithL2<<<globalUpdateB, local_1d>>>(d_bweights[i], d_gradB[i], (int)b_size, learningRate, LAMBDA_L2);
+                        break;
+                    case 3:
+                        kernelUpdateWeightsElasticNet<<<globalUpdate, local_1d>>>(d_cweights[i], d_gradC[i], (int)c_size, learningRate, LAMBDA_L1, LAMBDA_L2);
+                        kernelUpdateWeightsElasticNet<<<globalUpdateB, local_1d>>>(d_bweights[i], d_gradB[i], (int)b_size, learningRate, LAMBDA_L1, LAMBDA_L2);
+                        break;
+                    case 4:
+                        kernelUpdateWeightsWithWeightDecay<<<globalUpdate, local_1d>>>(d_cweights[i], d_gradC[i], (int)c_size, learningRate, WEIGHT_DECAY);
+                        kernelUpdateWeightsWithWeightDecay<<<globalUpdateB, local_1d>>>(d_bweights[i], d_gradB[i], (int)b_size, learningRate, WEIGHT_DECAY);
+                        break;
+                    case 5:
+                        kernelUpdateWeightsDropout<<<globalUpdate, local_1d>>>(d_cweights[i], d_gradC[i], (int)c_size, learningRate, DROPOUT_RATE, (uint)rand());
+                        kernelUpdateWeightsDropout<<<globalUpdateB, local_1d>>>(d_bweights[i], d_gradB[i], (int)b_size, learningRate, DROPOUT_RATE, (uint)rand());
+                        break;
+                }
             }
         }
 
@@ -242,6 +266,7 @@ void mnn1d::cuTrain1c(const std::vector<float>& input, const std::vector<float>&
             cweights[i] = reshape(c_upd, cweights[i].size(), cweights[i][0].size());
             bweights[i] = reshape(b_upd, bweights[i].size(), bweights[i][0].size());
         }
+
         // --- Buffer Cleanup ---
         cudaFree(d_in); cudaFree(d_exp); cudaFree(d_out); cudaFree(d_err); cudaFree(d_ones);
         if (layers > 1) {
@@ -255,6 +280,7 @@ void mnn1d::cuTrain1c(const std::vector<float>& input, const std::vector<float>&
         }
     }
 }
+
 
 /**
  * @brief trains the mnn2d network on a single input-target pair using CUDA.
@@ -333,38 +359,39 @@ void mnn2d::cuTrain1c(const std::vector<std::vector<float>>& input, const std::v
         float* d_current_act = d_in;
 
         // First layer
-        int currentInHeight = inHeight, currentInWidth = inWidth, currentOutWidth = width[0];
-        dim3 globalForward = calculate_grid_2d(currentOutWidth, currentInHeight, WORKSIZE_2D_X, WORKSIZE_2D_Y);
-        kernelLayerForward4<<<globalForward, local_2d>>>(d_current_act, d_dotProds[0], d_cweights[0], d_bweights[0], currentInHeight, currentInWidth, currentOutWidth, order);
+        int currentInHeight = inHeight, currentInWidth = inWidth, currentoutSize = width[0];
+        dim3 globalForward = calculate_grid_2d(currentoutSize, currentInHeight, WORKSIZE_2D_X, WORKSIZE_2D_Y);
+        kernelLayerForward4<<<globalForward, local_2d>>>(d_current_act, d_dotProds[0], d_cweights[0], d_bweights[0], currentInHeight, currentInWidth, currentoutSize, order);
         CU_CHECK(cudaGetLastError());
 
         size_t dotprod_size_layer0 = inHeight * width[0];
         dim3 globalSoftmax = calculate_grid_1d(dotprod_size_layer0, WORKSIZE_1D);
-        softmax<<<globalSoftmax, local_1d>>>(d_dotProds[0], d_activate[0], SOFTMAX_TEMP, (int)dotprod_size_layer0);
+        relu<<<globalSoftmax, local_1d>>>(d_dotProds[0], d_activate[0], (int)dotprod_size_layer0);
         CU_CHECK(cudaGetLastError());
 
         // Hidden layers
         for (int i = 1; i < layers; ++i) {
             d_current_act = d_activate[i - 1];
             currentInWidth = width[i - 1];
-            currentOutWidth = width[i];
-            globalForward = calculate_grid_2d(currentOutWidth, inHeight, WORKSIZE_2D_X, WORKSIZE_2D_Y);
-            kernelLayerForward4<<<globalForward, local_2d>>>(d_current_act, d_dotProds[i], d_cweights[i], d_bweights[i], inHeight, currentInWidth, currentOutWidth, order);
+            currentoutSize = width[i];
+            globalForward = calculate_grid_2d(currentoutSize, inHeight, WORKSIZE_2D_X, WORKSIZE_2D_Y);
+            kernelLayerForward4<<<globalForward, local_2d>>>(d_current_act, d_dotProds[i], d_cweights[i], d_bweights[i], inHeight, currentInWidth, currentoutSize, order);
             CU_CHECK(cudaGetLastError());
 
             size_t dotprod_size_layer_i = inHeight * width[i];
             globalSoftmax = calculate_grid_1d(dotprod_size_layer_i, WORKSIZE_1D);
-            softmax<<<globalSoftmax, local_1d>>>(d_dotProds[i], d_activate[i], SOFTMAX_TEMP, (int)dotprod_size_layer_i);
+            relu<<<globalSoftmax, local_1d>>>(d_dotProds[i], d_activate[i], (int)dotprod_size_layer_i);
             CU_CHECK(cudaGetLastError());
         }
 
         // Mean pool the final activation layer
         float* d_final_output;
-        CU_CHECK(cudaMalloc(&d_final_output, sizeof(float) * outWidth));
-        dim3 globalPool = calculate_grid_1d(outWidth, WORKSIZE_1D);
-        meanPool<<<globalPool, local_1d>>>(d_activate[layers - 1], d_final_output, inHeight, outWidth, 1);
+        CU_CHECK(cudaMalloc(&d_final_output, sizeof(float) * outSize));
+        dim3 globalPool = calculate_grid_1d(outSize, WORKSIZE_1D);
+        meanPool<<<globalPool, local_1d>>>(d_activate[layers - 1], d_final_output, inHeight, outSize, 1);
         CU_CHECK(cudaGetLastError());
         CU_CHECK(cudaDeviceSynchronize());
+        output = softmax(output);
 
         // Copy output D2H to check for correctness and loss
         CU_CHECK(cudaMemcpy(output.data(), d_final_output, output.size() * sizeof(float), cudaMemcpyDeviceToHost));
@@ -387,6 +414,7 @@ void mnn2d::cuTrain1c(const std::vector<std::vector<float>>& input, const std::v
             subtract<<<globalSub, local_1d>>>(d_out, d_exp, d_err, (int)output.size());
             CU_CHECK(cudaGetLastError());
 
+            scaleByValue<<<globalSub, local_1d>>>(d_err, d_err, 1.0f / (float)activate[layers - 1].size(), (int)output.size());
             // Distribute the error from d_err to each row of the last layer's incoming gradient buffer.
             for (size_t r = 0; r < activate[layers - 1].size(); ++r) {
                 CU_CHECK(cudaMemcpy(d_incoming[layers - 1] + r * output.size(), d_err, sizeof(float) * output.size(), cudaMemcpyDeviceToDevice));
@@ -401,47 +429,63 @@ void mnn2d::cuTrain1c(const std::vector<std::vector<float>>& input, const std::v
 
                 float *d_C_T, *d_prev_p, *d_prev_p_T, *d_onesT;
                 CU_CHECK(cudaMalloc(&d_C_T, cweights[layer].size() * cweights[layer][0].size() * sizeof(float)));
+                
+                // transpose
                 dim3 globalTranspose = calculate_grid_2d(cweights[layer][0].size(), cweights[layer].size(), WORKSIZE_2D_X, WORKSIZE_2D_Y);
                 transpose<<<globalTranspose, local_2d>>>(d_cweights[layer], d_C_T, cweights[layer].size(), cweights[layer][0].size());
                 CU_CHECK(cudaGetLastError());
 
+                // dL/dz_l x C^T
                 dim3 globalMatMul = calculate_grid_2d(prev_cols, curr_rows, WORKSIZE_2D_X, WORKSIZE_2D_Y);
                 matxmat2mat<<<globalMatMul, local_2d>>>(d_incoming[layer], d_C_T, d_grad_x_CT_buf, curr_rows, curr_cols, prev_cols);
                 CU_CHECK(cudaGetLastError());
 
+                // d(prev_p)
                 dim3 global_1d_prev = calculate_grid_1d(prev_rows * prev_cols, WORKSIZE_1D);
                 dPower<<<global_1d_prev, local_1d>>>(d_activate[layer - 1], d_dprev_p_buf, order, (int)(prev_rows * prev_cols));
                 CU_CHECK(cudaGetLastError());
 
+                // Calculate d(prev_act)
                 size_t prev_dot_size = dotProds[layer - 1].size() * dotProds[layer - 1][0].size();
                 dim3 global_1d_prev_dot = calculate_grid_1d(prev_dot_size, WORKSIZE_1D);
-                softmaxDer<<<global_1d_prev_dot, local_1d>>>(d_dotProds[layer - 1], d_dprev_act_buf, SOFTMAX_TEMP, (int)prev_dot_size);
+                reluDer<<<global_1d_prev_dot, local_1d>>>(d_dotProds[layer - 1], d_dprev_act_buf, (int)prev_dot_size);
                 CU_CHECK(cudaGetLastError());
 
+                // outgoing = (dL/dz_l * C^T) . d(prev_p) . d(prev_act)
                 hadamard2<<<global_1d_prev, local_1d>>>(d_grad_x_CT_buf, d_dprev_p_buf, d_dprev_act_buf, d_incoming[layer - 1], prev_rows, prev_cols);
                 CU_CHECK(cudaGetLastError());
 
+                // --- Calculate Weight Gradients ---
+                // gradc = ALPHA * prev_p^T * incoming
+                // power prev_p
                 CU_CHECK(cudaMalloc(&d_prev_p, prev_rows * prev_cols * sizeof(float)));
                 power<<<global_1d_prev, local_1d>>>(d_activate[layer - 1], d_prev_p, order, (int)(prev_rows * prev_cols));
                 CU_CHECK(cudaGetLastError());
 
+                // transpose prev_p
                 CU_CHECK(cudaMalloc(&d_prev_p_T, prev_cols * prev_rows * sizeof(float)));
                 dim3 globalTransposePrev = calculate_grid_2d(prev_cols, prev_rows, WORKSIZE_2D_X, WORKSIZE_2D_Y);
                 transpose<<<globalTransposePrev, local_2d>>>(d_prev_p, d_prev_p_T, prev_rows, prev_cols);
                 CU_CHECK(cudaGetLastError());
 
+                // dL/dC_layer
                 dim3 globalMatMulGrad = calculate_grid_2d(curr_cols, prev_cols, WORKSIZE_2D_X, WORKSIZE_2D_Y);
                 matxmat2mat<<<globalMatMulGrad, local_2d>>>(d_prev_p_T, d_incoming[layer], d_gradC[layer], prev_cols, prev_rows, curr_cols);
                 CU_CHECK(cudaGetLastError());
+                // scale dL/dC_layer by ALPHA
                 dim3 globalScaleGrad = calculate_grid_1d(prev_cols * curr_cols, WORKSIZE_1D);
                 scaleByValue<<<globalScaleGrad, local_1d>>>(d_gradC[layer], d_gradC[layer], ALPHA, (int)(prev_cols * curr_cols));
                 CU_CHECK(cudaGetLastError());
 
+                // gradB = dL/dz_l x V1^T
+                // transpose ones = onesT
                 std::vector<float> ones_vec(prev_cols * prev_rows, 1.0f);
                 CU_CHECK(cudaMalloc(&d_onesT, sizeof(float) * ones_vec.size()));
                 CU_CHECK(cudaMemcpy(d_onesT, ones_vec.data(), sizeof(float) * ones_vec.size(), cudaMemcpyHostToDevice));
+                // dL/dB_layer
                 matxmat2mat<<<globalMatMulGrad, local_2d>>>(d_onesT, d_incoming[layer], d_gradB[layer], prev_cols, prev_rows, curr_cols);
                 CU_CHECK(cudaGetLastError());
+                // scale dL/dB_layer by 1- ALPHA
                 scaleByValue<<<globalScaleGrad, local_1d>>>(d_gradB[layer], d_gradB[layer], 1.0f - ALPHA, (int)(prev_cols * curr_cols));
                 CU_CHECK(cudaGetLastError());
 
@@ -464,18 +508,22 @@ void mnn2d::cuTrain1c(const std::vector<std::vector<float>>& input, const std::v
             transpose<<<globalTransposeIn, local_2d>>>(d_input_p, d_input_p_T, in_h, in_w);
             CU_CHECK(cudaGetLastError());
 
+            // dL/dC_0
             dim3 globalMatMulGrad0 = calculate_grid_2d(first_layer_cols, in_w, WORKSIZE_2D_X, WORKSIZE_2D_Y);
             matxmat2mat<<<globalMatMulGrad0, local_2d>>>(d_input_p_T, d_incoming[0], d_gradC[0], in_w, in_h, first_layer_cols);
             CU_CHECK(cudaGetLastError());
+            // scale by ALPHA
             dim3 globalScaleGrad0 = calculate_grid_1d(in_w * first_layer_cols, WORKSIZE_1D);
             scaleByValue<<<globalScaleGrad0, local_1d>>>(d_gradC[0], d_gradC[0], ALPHA, (int)(in_w * first_layer_cols));
             CU_CHECK(cudaGetLastError());
 
+            // dL/dB_0
             std::vector<float> ones_vec(in_w * in_h, 1.0f);
             CU_CHECK(cudaMalloc(&d_ones_T, sizeof(float) * ones_vec.size()));
             CU_CHECK(cudaMemcpy(d_ones_T, ones_vec.data(), sizeof(float) * ones_vec.size(), cudaMemcpyHostToDevice));
             matxmat2mat<<<globalMatMulGrad0, local_2d>>>(d_ones_T, d_incoming[0], d_gradB[0], in_w, in_h, first_layer_cols);
             CU_CHECK(cudaGetLastError());
+            // scale by 1
             scaleByValue<<<globalScaleGrad0, local_1d>>>(d_gradB[0], d_gradB[0], 1.0f - ALPHA, (int)(in_w * first_layer_cols));
             CU_CHECK(cudaGetLastError());
             CU_CHECK(cudaDeviceSynchronize());
@@ -487,14 +535,37 @@ void mnn2d::cuTrain1c(const std::vector<std::vector<float>>& input, const std::v
                 size_t c_size = cweights[i].size() * cweights[i][0].size();
                 size_t b_size = bweights[i].size() * bweights[i][0].size();
                 dim3 globalUpdate = calculate_grid_1d(c_size, WORKSIZE_1D);
+                dim3 globalUpdateB = calculate_grid_1d(b_size, WORKSIZE_1D);
 
-                kernelUpdateWeightsElasticNet<<<globalUpdate, local_1d>>>(d_cweights[i], d_gradC[i], (int)c_size, learningRate, LAMBDA_L1, LAMBDA_L2);
-                CU_CHECK(cudaGetLastError());
-
-                kernelUpdateWeightsElasticNet<<<globalUpdate, local_1d>>>(d_bweights[i], d_gradB[i], (int)b_size, learningRate, LAMBDA_L1, LAMBDA_L2);
-                CU_CHECK(cudaGetLastError());
+                switch (weightUpdateType) {
+                    case 0:
+                        kernelUpdateWeights<<<globalUpdate, local_1d>>>(d_cweights[i], d_gradC[i], learningRate, (int)c_size);
+                        kernelUpdateWeights<<<globalUpdateB, local_1d>>>(d_bweights[i], d_gradB[i], learningRate, (int)b_size);
+                        break;
+                    case 1:
+                        kernelUpdateWeightsWithL1<<<globalUpdate, local_1d>>>(d_cweights[i], d_gradC[i], (int)c_size, learningRate, LAMBDA_L1);
+                        kernelUpdateWeightsWithL1<<<globalUpdateB, local_1d>>>(d_bweights[i], d_gradB[i], (int)b_size, learningRate, LAMBDA_L1);
+                        break;
+                    case 2:
+                        kernelUpdateWeightsWithL2<<<globalUpdate, local_1d>>>(d_cweights[i], d_gradC[i], (int)c_size, learningRate, LAMBDA_L2);
+                        kernelUpdateWeightsWithL2<<<globalUpdateB, local_1d>>>(d_bweights[i], d_gradB[i], (int)b_size, learningRate, LAMBDA_L2);
+                        break;
+                    case 3:
+                        kernelUpdateWeightsElasticNet<<<globalUpdate, local_1d>>>(d_cweights[i], d_gradC[i], (int)c_size, learningRate, LAMBDA_L1, LAMBDA_L2);
+                        kernelUpdateWeightsElasticNet<<<globalUpdateB, local_1d>>>(d_bweights[i], d_gradB[i], (int)b_size, learningRate, LAMBDA_L1, LAMBDA_L2);
+                        break;
+                    case 4:
+                        kernelUpdateWeightsWithWeightDecay<<<globalUpdate, local_1d>>>(d_cweights[i], d_gradC[i], (int)c_size, learningRate, WEIGHT_DECAY);
+                        kernelUpdateWeightsWithWeightDecay<<<globalUpdateB, local_1d>>>(d_bweights[i], d_gradB[i], (int)b_size, learningRate, WEIGHT_DECAY);
+                        break;
+                    case 5:
+                        kernelUpdateWeightsDropout<<<globalUpdate, local_1d>>>(d_cweights[i], d_gradC[i], (int)c_size, learningRate, DROPOUT_RATE, (uint)rand());
+                        kernelUpdateWeightsDropout<<<globalUpdateB, local_1d>>>(d_bweights[i], d_gradB[i], (int)b_size, learningRate, DROPOUT_RATE, (uint)rand());
+                        break;
+                }
             }
         }
+
         // Copy updated weights D2H
         for (int i = 0; i < layers; ++i) {
             size_t c_size = cweights[i].size() * cweights[i][0].size();
@@ -505,6 +576,7 @@ void mnn2d::cuTrain1c(const std::vector<std::vector<float>>& input, const std::v
             cweights[i] = reshape(c_upd, cweights[i].size(), cweights[i][0].size());
             bweights[i] = reshape(b_upd, bweights[i].size(), bweights[i][0].size());
         }
+
         // --- Buffer Cleanup ---
         cudaFree(d_in); cudaFree(d_exp); cudaFree(d_out); cudaFree(d_err);
         cudaFree(d_grad_x_CT_buf); cudaFree(d_dprev_p_buf); cudaFree(d_dprev_act_buf);

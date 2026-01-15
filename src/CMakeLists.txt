@@ -9,7 +9,7 @@ set(MNN_SOURCES
     mnn/updateweights.cpp
     mnn/setweights.cpp
     mnn/schedLr.cpp
-    mnn/mnn1d.cpp
+    mnn/mnn.cpp
     mnn/mnn2d.cpp
     mnn/accessbin.cpp
     mnn/image.cpp
@@ -18,7 +18,9 @@ set(MNN_SOURCES
     mnn/trainNtest/batchTrain.cpp
     mnn/trainNtest/fullsetTrain.cpp
     mnn/trainNtest/test.cpp
+    mnn/trainNtest/testOnAll.cpp
     mnn/trainNtest/trainNtest.cpp
+    mnn/trainNtest/postTrain.cpp
     mnn/evaluation/stats.cpp
     mnn/evaluation/session.cpp
     mnn/evaluation/progress.cpp

@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
-#include "mnn1d.hpp"
+#include "mnn.hpp"
 #include "mnn2d.hpp"
 
 // for MNN
@@ -13,13 +13,15 @@
 /**
  * @brief test network on given dataset
  * @param dataSetPath path to test data set folder.
+ * @param isRGB if image is RGB 1, else 0 for grey image
  */
-void mnn1d::test(const std::string &dataSetPath, bool useThreadOrBuffer)
+void mnn::test(const std::string &dataSetPath, bool isRGB, bool useThreadOrBuffer)
 {
     // 1. Access all image files from the dataset path
+    std::string testFilesAddress = dataSetPath + "/test";
     std::vector<std::filesystem::path> filePaths;
     try {
-        for (const auto& entry : std::filesystem::directory_iterator(dataSetPath)) {
+        for (const auto& entry : std::filesystem::directory_iterator(testFilesAddress)) {
             if (entry.is_regular_file()) {
                 filePaths.push_back(entry.path());
             }
@@ -29,7 +31,7 @@ void mnn1d::test(const std::string &dataSetPath, bool useThreadOrBuffer)
     }
 
     if (filePaths.empty()) {
-        std::cout << "Warning: No files found in dataset directory: " << dataSetPath << std::endl;
+        std::cout << "Warning: No files found in dataset directory: " << testFilesAddress << std::endl;
         testPrg.testError = 0.0f;
         return;
     }
@@ -42,10 +44,16 @@ void mnn1d::test(const std::string &dataSetPath, bool useThreadOrBuffer)
     std::cout << "Found " << totalInputs << " files for testing." << std::endl;
     testPrg.totalTestFiles = totalInputs;
 
+    confusion.assign(outSize, std::vector<int>(outSize, 0));
+    allScores.totalSumOfSquares = 0.0;
+    allScores.totalSumOfRegression = 0.0;
+    allScores.totalSumOfError = 0.0;
+
     for(size_t i = 0; i < totalInputs; ++i) {
         const auto& filePath = filePaths[i];
         // Prepare input
-        std::vector<float> input = flatten(cvMat2vec(image2grey(filePath.string())));
+        std::vector<float> input = flatten(image2matrix(filePath.string(), isRGB));
+        std::transform(input.begin(), input.end(), input.begin(), [](float x) { return x / 255.0f; });
 
         // Prepare target
         std::string filename = filePath.stem().string();
@@ -68,7 +76,9 @@ void mnn1d::test(const std::string &dataSetPath, bool useThreadOrBuffer)
         if(maxIndex(this->output) == static_cast<size_t>(label)) {
             correctPredictions++;
         }
-        confusion[label][maxIndex(this->output)] += 1;
+        if (label < outSize) {
+            confusion[label][maxIndex(this->output)] += 1;
+        }
         // accumulate loss
         accLoss += crossEntropy(this->output, target);
         getScore(output, target, allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
@@ -85,16 +95,15 @@ void mnn1d::test(const std::string &dataSetPath, bool useThreadOrBuffer)
     testPrg.correctPredictions = correctPredictions;
     testPrg.testAccuracy = static_cast<float>(correctPredictions * 100) / totalInputs;
     testPrg.totalTestFiles = totalInputs;
-    logTestProgressToCSV(testPrg, path2test_progress);
     // evaluation
+    logTestProgressToCSV(testPrg, path2test_progress);
     allScores.sse = allScores.totalSumOfError / totalInputs;
     allScores.ssr = allScores.totalSumOfRegression / totalInputs;
     allScores.sst = allScores.totalSumOfSquares / totalInputs;
     allScores.r2 = allScores.ssr / allScores.sst;
     confData = {};
     confData = confusionMatrixFunc(confusion);
-    epochDataToCsv(dataSetPath, confusion, confData, allScores, testPrg, true);
-    path2test_progress = dataSetPath + "/mnn1d_test.csv";
+    epochDataToCsv(dataSetPath + "/mnn1d", confusion, confData, allScores, testPrg, true);
     std::cout << "------ Final Result ------" << std::endl;
     std::cout << "Total Inputs: " << totalInputs << std::endl;
     std::cout << "Final Accuracy: " << ((float)correctPredictions / totalInputs) * 100.0f << "%" << std::endl;
@@ -108,8 +117,9 @@ void mnn1d::test(const std::string &dataSetPath, bool useThreadOrBuffer)
 /**
  * @brief test network on given dataset
  * @param dataSetPath path to test data set folder.
+ * @param isRGB if image is RGB 1, else 0 for grey image
  */
-void mnn2d::test(const std::string &dataSetPath, bool useThreadOrBuffer)
+void mnn2d::test(const std::string &dataSetPath, bool isRGB, bool useThreadOrBuffer)
 {
     std::vector<std::filesystem::path> filePaths;
     try {
@@ -136,13 +146,22 @@ void mnn2d::test(const std::string &dataSetPath, bool useThreadOrBuffer)
     std::cout << "Found " << totalInputs << " files for testing." << std::endl;
     testPrg.totalTestFiles = totalInputs;
     
+    confusion.assign(outSize, std::vector<int>(outSize, 0));
+    allScores.totalSumOfSquares = 0.0;
+    allScores.totalSumOfRegression = 0.0;
+    allScores.totalSumOfError = 0.0;
+
     for(size_t i = 0; i < totalInputs; ++i) {
         const auto& filePath = filePaths[i];
-        std::vector<std::vector<float>> input = cvMat2vec(image2grey(filePath.string()));
+        std::vector<std::vector<float>> input = image2matrix(filePath.string(), isRGB);
+        for (int i = 0; i < input.size(); i++) {
+            std::transform(input[i].begin(), input[i].end(), input[i].begin(), [](float x) { return x / 255.0f; });
+        }
+
         std::string filename = filePath.stem().string();
         int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
-        std::vector<float> target(this->outWidth, 0.0f);
-        if (label < this->outWidth) {
+        std::vector<float> target(this->outSize, 0.0f);
+        if (label < this->outSize) {
             target[label] = 1.0f;
         }
 
@@ -158,6 +177,9 @@ void mnn2d::test(const std::string &dataSetPath, bool useThreadOrBuffer)
         // Check prediction
         if(maxIndex(this->output) == static_cast<size_t>(label)) {
             correctPredictions++;
+        }
+        if (label < outSize) {
+            confusion[label][maxIndex(this->output)] += 1;
         }
         getScore(output, target, allScores.totalSumOfSquares, allScores.totalSumOfRegression, allScores.totalSumOfError);
         // accumulate loss
@@ -175,12 +197,19 @@ void mnn2d::test(const std::string &dataSetPath, bool useThreadOrBuffer)
     testPrg.correctPredictions = correctPredictions;
     testPrg.testAccuracy = static_cast<float>(correctPredictions * 100) / totalInputs;
     testPrg.totalTestFiles = totalInputs;
-    path2test_progress = dataSetPath + "/mnn1d_test.csv";
     logTestProgressToCSV(testPrg, path2test_progress);
-    std::cout << "------- Final Result -------" << std::endl;
+    // evaluation
+    allScores.sse = allScores.totalSumOfError / totalInputs;
+    allScores.ssr = allScores.totalSumOfRegression / totalInputs;
+    allScores.sst = allScores.totalSumOfSquares / totalInputs;
+    allScores.r2 = allScores.ssr / allScores.sst;
+    confData = confusionMatrixFunc(confusion);
+    epochDataToCsv(dataSetPath + "/mnn2d", confusion, confData, allScores, testPrg, true);
+    path2test_progress = dataSetPath + "/mnn2d/testProgress.csv";
+    std::cout << "------ Final Result ------" << std::endl;
+    std::cout << "Total Inputs: " << totalInputs << std::endl;
     std::cout << "Final Accuracy: " << ((float)correctPredictions / totalInputs) * 100.0f << "%" << std::endl;
     std::cout << "Final Average Loss: " << testPrg.testError << std::endl;
     std::cout << "Correct Predictions: " << correctPredictions << std::endl;
-    std::cout << "Total Inputs: " << totalInputs << std::endl;
     std::cout << "--- Test Finished (mnn2d) ---" << std::endl;
 }

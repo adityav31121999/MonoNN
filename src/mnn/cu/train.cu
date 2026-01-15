@@ -1,5 +1,5 @@
 #ifdef USE_CU
-#include "mnn1d.hpp"
+#include "mnn.hpp"
 #include "mnn2d.hpp"
 #include <vector>
 #include <stdexcept>
@@ -10,7 +10,7 @@
  * @param input The input vector.
  * @param target The target output vector.
  */
-void mnn1d::cuTrain(const std::vector<float>& input, const std::vector<float>& target) {
+void mnn::cuTrain(const std::vector<float>& input, const std::vector<float>& target) {
     int i = 0;
     float initialLR = this->learningRate;
     while (1) {
@@ -47,7 +47,7 @@ void mnn1d::cuTrain(const std::vector<float>& input, const std::vector<float>& t
  * @param inputs A vector of input vectors.
  * @param targets A vector of target vectors.
  */
-void mnn1d::cuTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets) {
+void mnn::cuTrainBatch(const std::vector<std::vector<float>>& inputs, const std::vector<std::vector<float>>& targets) {
     if (inputs.size() != targets.size()) {
         throw std::invalid_argument("Number of inputs and targets in batch must be the same.");
     }
@@ -194,7 +194,7 @@ void mnn2d::cuTrainBatch(const std::vector<std::vector<std::vector<float>>>& inp
     if (inputs.empty()) {
         return; // Nothing to cuTrain
     }
-    if (inputs[0].size() != inHeight || inputs[0][0].size() != inWidth || targets[0].size() != outWidth) {
+    if (inputs[0].size() != inHeight || inputs[0][0].size() != inWidth || targets[0].size() != outSize) {
         throw std::invalid_argument("Input or target dimensions do not match network configuration.");
     }
  
@@ -218,7 +218,7 @@ void mnn2d::cuTrainBatch(const std::vector<std::vector<std::vector<float>>>& inp
     }
     if (outputBatch.size() != batchSize) {
         outputBatch.resize(batchSize);
-        for(int i=0; i<batchSize; ++i) outputBatch[i].resize(outWidth);
+        for(int i=0; i<batchSize; ++i) outputBatch[i].resize(outSize);
     }
 
     int totalEpochs = 0;

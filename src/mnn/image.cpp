@@ -1,4 +1,4 @@
-#include "mnn1d.hpp"
+#include "mnn.hpp"
 #include "mnn2d.hpp"
 #include <opencv2/core.hpp>      // For cv::Mat
 #include <opencv2/imgcodecs.hpp> // For cv::imread
@@ -73,8 +73,59 @@ cv::Mat image2grey(const std::string& path2image) {
 }
 
 /**
+ * @brief Convert single image to either grayscale matrix or flattened RGB matrix (row-wise)
+ * @param path2image Full path to the image file
+ * @param isRGB false (0): return grayscale 2D matrix (height x width)
+ * true  (1): return color 2D matrix (height x (width * 3)) with B,G,R concatenated per row
+ * @return 2D vector of floats representing the image
+ */
+std::vector<std::vector<float>> image2matrix(const std::string& path2image, bool isRGB) {
+    if (!isRGB) {
+        // Grayscale mode
+        return cvMat2vec(image2grey(path2image));
+    }
+    else {
+        // Color mode
+        cv::Mat image = cv::imread(path2image, cv::IMREAD_COLOR);
+        if (image.empty()) {
+            throw std::runtime_error("Could not open or find the image: " + path2image);
+        }
+
+        int height = image.rows;
+        int width = image.cols;
+
+        // Convert to float
+        cv::Mat float_img;
+        image.convertTo(float_img, CV_32F);
+
+        // Split into B, G, R channels (OpenCV order: BGR)
+        std::vector<cv::Mat> bgr(3);
+        cv::split(float_img, bgr);  // bgr[0]=Blue, bgr[1]=Green, bgr[2]=Red
+
+        // Create result: height rows, each with width*3 columns: B G R B G R ...
+        std::vector<std::vector<float>> result(height, std::vector<float>(width * 3));
+
+        for (int i = 0; i < height; ++i) {
+            float* row_ptr = result[i].data();
+            const float* b_row = bgr[0].ptr<float>(i);
+            const float* g_row = bgr[1].ptr<float>(i);
+            const float* r_row = bgr[2].ptr<float>(i);
+
+            for (int j = 0; j < width; ++j) {
+                row_ptr[3 * j + 0] = b_row[j];  // Blue
+                row_ptr[3 * j + 1] = g_row[j];  // Green
+                row_ptr[3 * j + 2] = r_row[j];  // Red
+            }
+        }
+
+        return result;
+    }
+}
+
+/**
  * @brief convert single image to R, G, B and Grey channels
  * @param path2image image location
+ * @param isRGB is image RGB 1, else 0 for grey image
  * @return 3d vector of shape (4, height, width) containing B, G, R, and Grey channels
  */
 std::vector<std::vector<std::vector<float>>> image2channels(const std::string& path2image) {

@@ -5,6 +5,127 @@
 #include <stdexcept>
 #include <numeric>
 #include <algorithm>
+#include <filesystem>
+#include <fstream>
+
+
+/**
+ * @brief calculate mean of matrix values
+ * @param matrix matrix input
+ * @return mean
+ */
+float calculateMean(const std::vector<std::vector<float>>& matrix) {
+    double sum = 0.0;
+    size_t count = 0;
+    for (const auto& row : matrix) {
+        sum += std::accumulate(row.begin(), row.end(), 0.0);
+        count += row.size();
+    }
+    return (count == 0) ? 0.0f : static_cast<float>(sum / count);
+}
+
+
+/**
+ * @brief calculate covariance of two matrices
+ * @param A reference matrix
+ * @param B matrix to be compared with A
+ * @return covariance of matrices
+ */
+float covariance(const std::vector<std::vector<float>>& A, const std::vector<std::vector<float>>& B) {
+    if (A.empty() || B.empty()) throw std::runtime_error("Matrices must not be empty");
+    if (A.size() != B.size()) throw std::runtime_error("Matrices must have the same number of rows");
+
+    float meanA = calculateMean(A);
+    float meanB = calculateMean(B);
+    
+    double totalCov = 0.0;
+    size_t totalElements = 0;
+
+    for (size_t i = 0; i < A.size(); ++i) {
+        if (A[i].size() != B[i].size()) 
+            throw std::runtime_error("Matrix rows must have matching column sizes");
+        
+        for (size_t j = 0; j < A[i].size(); ++j) {
+            totalCov += (static_cast<double>(A[i][j]) - meanA) * (static_cast<double>(B[i][j]) - meanB);
+            totalElements++;
+        }
+    }
+
+    if (totalElements < 2) return 0.0f;
+    return static_cast<float>(totalCov / (totalElements - 1));
+}
+
+
+/**
+ * @brief calculate pearson correlation of two matrices
+ * @param A reference matrix
+ * @param B matrix to be compared with A
+ * @return correlation of matrices
+ */
+float pearsonCorrelation(const std::vector<std::vector<float>>& A, const std::vector<std::vector<float>>& B) {
+    if (A.empty() || B.empty() || A.size() != B.size())
+        throw std::runtime_error("Matrices must be non-empty and have matching dimensions");
+
+    float meanA = calculateMean(A);
+    float meanB = calculateMean(B);
+
+    double numerator = 0.0;
+    double sumSqDiffA = 0.0;
+    double sumSqDiffB = 0.0;
+
+    for (size_t i = 0; i < A.size(); ++i) {
+        if (A[i].size() != B[i].size()) throw std::runtime_error("Dimension mismatch");
+        for (size_t j = 0; j < A[i].size(); ++j) {
+            double diffA = static_cast<double>(A[i][j]) - meanA;
+            double diffB = static_cast<double>(B[i][j]) - meanB;
+            
+            numerator += diffA * diffB;
+            sumSqDiffA += diffA * diffA;
+            sumSqDiffB += diffB * diffB;
+        }
+    }
+
+    double denominator = std::sqrt(sumSqDiffA * sumSqDiffB);
+    return (denominator == 0) ? 0.0f : static_cast<float>(numerator / denominator);
+}
+
+
+/**
+ * @brief calculate covariance and correlation between matrices
+ * @param orw original weights of layers
+ * @param orb original bias of layers
+ * @param cweights trained weights of layers
+ * @param bweights traine
+ */
+void computeLayerVariance(const std::vector<std::vector<std::vector<float>>>& orw,
+                          const std::vector<std::vector<std::vector<float>>>& orb,
+                          const std::vector<std::vector<std::vector<float>>>& cweights,
+                          const std::vector<std::vector<std::vector<float>>>& bweights,
+                          const std::string &stats)
+{
+    std::vector<float> cov(orw.size(), 0.0f);
+    std::vector<float> corr(orw.size(), 0.0f);
+    for(size_t i = 0; i < orw.size(); i++) {
+        cov[i] = covariance(orw[i], cweights[i]);
+        corr[i] = pearsonCorrelation(orb[i], bweights[i]);
+    }
+
+    std::filesystem::path filePath(stats);
+    if (filePath.has_parent_path() && !std::filesystem::exists(filePath.parent_path())) {
+        std::filesystem::create_directories(filePath.parent_path());
+    }
+
+    std::ofstream file(stats);
+    if (file.is_open()) {
+        file << "layer,covariance,correlation\n";
+        for (size_t i = 0; i < orw.size(); ++i) {
+            file << i << "," << cov[i] << "," << corr[i] << "\n";
+        }
+        file.close();
+    } else {
+        std::cerr << "Error: Could not open file " << stats << " for writing." << std::endl;
+    }
+}
 
 
 /**
@@ -388,8 +509,8 @@ void computeStats(const std::vector<std::vector<std::vector<float>>>& cweights,
  * @param bgrad gradients for biases
  * @param stats statistics (maximum, minimum, mean, standard deviation)
  */
-void computeStatsForCsv(const std::vector<std::vector<std::vector<float>>> &cweights, 
-                        const std::vector<std::vector<std::vector<float>>> &bweights,
+void computeStatsForCsv(const std::vector<std::vector<std::vector<float>>>& cweights, 
+                        const std::vector<std::vector<std::vector<float>>>& bweights,
                         std::vector<std::vector<float>> &stats)
 {
     std::vector<Statistics> cwstats(cweights.size());
@@ -429,10 +550,10 @@ void computeStatsForCsv(const std::vector<std::vector<std::vector<float>>> &cwei
  * @param bgrad gradients for biases
  * @param stats statistics (maximum, minimum, mean, standard deviation)
  */
-void computeStatsForCsv(const std::vector<std::vector<std::vector<float>>> &cweights, 
-                        const std::vector<std::vector<std::vector<float>>> &bweights,
-                        const std::vector<std::vector<std::vector<float>>> &cgrad,
-                        const std::vector<std::vector<std::vector<float>>> &bgrad,
+void computeStatsForCsv(const std::vector<std::vector<std::vector<float>>>& cweights, 
+                        const std::vector<std::vector<std::vector<float>>>& bweights,
+                        const std::vector<std::vector<std::vector<float>>>& cgrad,
+                        const std::vector<std::vector<std::vector<float>>>& bgrad,
                         std::vector<std::vector<float>> &stats)
 {
     std::vector<Statistics> cwstats(cweights.size());
@@ -486,10 +607,10 @@ void computeStatsForCsv(const std::vector<std::vector<std::vector<float>>> &cwei
  * @param bgrad gradients for biases
  * @param stats statistics (maximum, minimum, mean, standard deviation)
  */
-void computeStatsForCsv(const std::vector<std::vector<std::vector<float>>> &cweights, 
-                        const std::vector<std::vector<std::vector<float>>> &bweights,
-                        const std::vector<std::vector<std::vector<float>>> &cgrad,
-                        const std::vector<std::vector<std::vector<float>>> &bgrad,
+void computeStatsForCsv(const std::vector<std::vector<std::vector<float>>>& cweights, 
+                        const std::vector<std::vector<std::vector<float>>>& bweights,
+                        const std::vector<std::vector<std::vector<float>>>& cgrad,
+                        const std::vector<std::vector<std::vector<float>>>& bgrad,
                         const std::vector<std::vector<float>> &activations,
                         std::vector<std::vector<float>> &stats)
 {
@@ -549,11 +670,11 @@ void computeStatsForCsv(const std::vector<std::vector<std::vector<float>>> &cwei
  * @param bgrad gradients for biases
  * @param stats statistics (maximum, minimum, mean, standard deviation)
  */
-void computeStatsForCsv(const std::vector<std::vector<std::vector<float>>> &cweights, 
-                        const std::vector<std::vector<std::vector<float>>> &bweights,
-                        const std::vector<std::vector<std::vector<float>>> &cgrad,
-                        const std::vector<std::vector<std::vector<float>>> &bgrad,
-                        const std::vector<std::vector<std::vector<float>>> &activations,
+void computeStatsForCsv(const std::vector<std::vector<std::vector<float>>>& cweights, 
+                        const std::vector<std::vector<std::vector<float>>>& bweights,
+                        const std::vector<std::vector<std::vector<float>>>& cgrad,
+                        const std::vector<std::vector<std::vector<float>>>& bgrad,
+                        const std::vector<std::vector<std::vector<float>>>& activations,
                         std::vector<std::vector<float>> &stats)
 {
     std::vector<Statistics> cwstats(cweights.size());

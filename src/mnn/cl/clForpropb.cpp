@@ -1,5 +1,5 @@
 #ifdef USE_CL
-#include "mnn1d.hpp"
+#include "mnn.hpp"
 #include "mnn2d.hpp"
 #include <vector>
 #include <stdexcept>
@@ -10,7 +10,7 @@
  * @brief batch forprop for mnn using OpenCL
  * @param input input vector
  */
-void mnn1d::clForprop(const std::vector<std::vector<float>>& input)
+void mnn::clForprop(const std::vector<std::vector<float>>& input)
 {
     try {
         this->batchSize = input.size();
@@ -51,7 +51,7 @@ void mnn1d::clForprop(const std::vector<std::vector<float>>& input)
 
         // kernels
         cl::Kernel kernelSigmoid, kernelForward;
-        kernelSigmoid = kernels.at("sigmoid");
+        kernelSigmoid = kernels.at("relu");
         kernelForward = kernels.at("kernelLayerForwardBatch2");
 
         // first layer forward
@@ -119,10 +119,12 @@ void mnn1d::clForprop(const std::vector<std::vector<float>>& input)
                 std::copy(act_flat.begin() + j * width[i], act_flat.begin() + (j+1) * width[i], actBatch[i][j].begin());
             }
         }
-        outputBatch = actBatch[layers-1];
+        for(int i = 0; i < batchSize; ++i) {
+            outputBatch[i] = softmax(outputBatch[i], SOFTMAX_TEMP);
+        }
     }
     catch (const std::runtime_error& e) {
-        throw std::runtime_error(std::string("Exception in mnn1d::clForprop: ") + e.what());
+        throw std::runtime_error(std::string("Exception in mnn::clForprop: ") + e.what());
     }
 }
 
@@ -174,8 +176,8 @@ void mnn2d::clForprop(const std::vector<std::vector<std::vector<float>>>& input)
         }
 
         // kernels
-        cl::Kernel kernelSoftMax, kernelForward, kernelMeanPool;
-        kernelSoftMax = kernels.at("softmax");
+        cl::Kernel kernelRelu, kernelForward, kernelMeanPool;
+        kernelRelu = kernels.at("relu");
         kernelForward = kernels.at("kernelLayerForwardBatch4");
         kernelMeanPool = kernels.at("meanPool");
 
@@ -195,12 +197,11 @@ void mnn2d::clForprop(const std::vector<std::vector<std::vector<float>>>& input)
 
         // Activation for first layer
         size_t dotprod_size_layer0 = batchSize * inHeight * width[0];
-        kernelSoftMax.setArg(0, d_dotProds[0]);
-        kernelSoftMax.setArg(1, d_activate[0]);
-        kernelSoftMax.setArg(2, SOFTMAX_TEMP);
-        kernelSoftMax.setArg(3, (int)dotprod_size_layer0);
+        kernelRelu.setArg(0, d_dotProds[0]);
+        kernelRelu.setArg(1, d_activate[0]);
+        kernelRelu.setArg(2, (int)dotprod_size_layer0);
         cl::NDRange globalSoftmax = calculate_global_1d(WORKSIZE_1D, dotprod_size_layer0);
-        CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSoftMax, cl::NullRange, globalSoftmax, local_1d));
+        CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelRelu, cl::NullRange, globalSoftmax, local_1d));
 
         // hidden layers
         for(int i = 1; i < this->layers; i++) {
@@ -219,30 +220,29 @@ void mnn2d::clForprop(const std::vector<std::vector<std::vector<float>>>& input)
 
             // softmax to the flattened dot product
             size_t dotprod_size_layer_i = batchSize * inHeight * width[i];
-            kernelSoftMax.setArg(0, d_dotProds[i]);
-            kernelSoftMax.setArg(1, d_activate[i]);
-            kernelSoftMax.setArg(2, SOFTMAX_TEMP);
-            kernelSoftMax.setArg(3, (int)dotprod_size_layer_i);
+            kernelRelu.setArg(0, d_dotProds[i]);
+            kernelRelu.setArg(1, d_activate[i]);
+            kernelRelu.setArg(2, (int)dotprod_size_layer_i);
             globalSoftmax = calculate_global_1d(WORKSIZE_1D, dotprod_size_layer_i);
-            CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelSoftMax, cl::NullRange, globalSoftmax, local_1d));
+            CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelRelu, cl::NullRange, globalSoftmax, local_1d));
         }
 
         // Mean pool the final activation layer
-        cl::Buffer d_final_output(clContext, CL_MEM_WRITE_ONLY, sizeof(float) * batchSize * outWidth);
+        cl::Buffer d_final_output(clContext, CL_MEM_WRITE_ONLY, sizeof(float) * batchSize * outSize);
         kernelMeanPool.setArg(0, d_activate[layers-1]);
         kernelMeanPool.setArg(1, d_final_output);
         kernelMeanPool.setArg(2, inHeight); // rows to pool over
-        kernelMeanPool.setArg(3, outWidth);
+        kernelMeanPool.setArg(3, outSize);
         kernelMeanPool.setArg(4, batchSize);
-        cl::NDRange globalPool(batchSize, outWidth);
+        cl::NDRange globalPool(batchSize, outSize);
         CL_CHECK(clCommandQueue.enqueueNDRangeKernel(kernelMeanPool, cl::NullRange, globalPool, cl::NullRange));
         // Read final output and intermediate results back to host
-        std::vector<float> final_output_flat(batchSize * outWidth);
+        std::vector<float> final_output_flat(batchSize * outSize);
         CL_CHECK(clCommandQueue.enqueueReadBuffer(d_final_output, CL_TRUE, 0, sizeof(float) * final_output_flat.size(), final_output_flat.data()));
         for(int i=0; i<batchSize; ++i) {
-            std::copy(final_output_flat.begin() + i * outWidth, final_output_flat.begin() + (i+1) * outWidth, outputBatch[i].begin());
+            std::copy(final_output_flat.begin() + i * outSize, final_output_flat.begin() + (i+1) * outSize, outputBatch[i].begin());
         }
-        outputBatch = reshape(final_output_flat, batchSize, outWidth);
+        outputBatch = reshape(final_output_flat, batchSize, outSize);
 
         // copy dot and acts
         for(int i=0; i<layers; ++i) {
@@ -259,6 +259,9 @@ void mnn2d::clForprop(const std::vector<std::vector<std::vector<float>>>& input)
                 dotBatch[i][j] = reshape(single_dot, inHeight, width[i]);
                 actBatch[i][j] = reshape(single_act, inHeight, width[i]);
             }
+        }
+        for(int i = 0; i < batchSize; ++i) {
+            outputBatch[i] = softmax(outputBatch[i], SOFTMAX_TEMP);
         }
     }
     catch (const std::runtime_error& e) {

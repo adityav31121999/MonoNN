@@ -35,6 +35,24 @@ extern "C" __global__ void sigmoidDer(const float* x, float* out, int size)
     }
 }
 
+extern "C" __global__ void relu(const float* x, float* out, int size)
+{
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < size) {
+        float val = (x[i] > 0) ? x[i] : 0;
+        out[i] = val; // Removed valueCorrection
+    }
+}
+
+extern "C" __global__ void reluDer(const float* x, float* out, int size)
+{
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < size) {
+        float val = (x[i] > 0) ? 1 : 0;
+        out[i] = val; // Removed valueCorrection
+    }
+}
+
 extern "C" __global__ void softmax_reduce(const float* input,
                                          float* partial_results,
                                          int size, float temp)

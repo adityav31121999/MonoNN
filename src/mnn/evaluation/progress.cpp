@@ -6,6 +6,26 @@
 #include "progress.hpp"
 
 /**
+ * @brief print classes and number of files related to them
+ * @param filePaths vector of file paths
+ * @param classes number of classes
+ */
+void printClassDistribution(const std::vector<std::filesystem::path>& filePaths, int classes) {
+    std::vector<int> classCounts(classes, 0);
+    for (const auto& filePath : filePaths) {
+        std::string filename = filePath.stem().string();
+        try {
+            int label = std::stoi(filename.substr(filename.find_last_of('_') + 1));
+            if (label >= 0 && label < classes) classCounts[label]++;
+        } catch (...) {}
+    }
+    std::cout << "Class Distribution:\n";
+    for (int i = 0; i < classes; ++i) std::cout << "[" << i << "]: " << classCounts[i] << "  \n";
+    std::cout << std::endl;
+}
+
+
+/**
  * @brief Reads the training stage configuration from a CSV file.
  * @param filepath Path to the traintest.csv file.
  * @return A vector of StageInfo structs.
@@ -225,4 +245,45 @@ bool loadLastTestProgress(test_progress& p, const std::string& filePath) {
 
     file.close();
     return true;
+}
+
+/**
+ * @brief Loads the confusion matrix from a session CSV file.
+ * @param confusion Reference to the confusion matrix to populate.
+ * @param filePath Path to the session CSV file.
+ * @return true if successful, false otherwise.
+ */
+bool loadSessionConfusionMatrix(std::vector<std::vector<int>>& confusion, const std::string& filePath) {
+    std::ifstream file(filePath);
+    if (!file.is_open()) return false;
+
+    std::string line;
+    bool matrixFound = false;
+    std::vector<std::vector<int>> tempConfusion;
+
+    while (std::getline(file, line)) {
+        if (line.find("ConfusionMatrix") != std::string::npos) {
+            matrixFound = true;
+            continue;
+        }
+        if (matrixFound) {
+            if (line.empty() || line.find("ClassificationMetrics") != std::string::npos) break;
+            
+            std::vector<int> row;
+            std::stringstream ss(line);
+            std::string val;
+            while (std::getline(ss, val, ',')) {
+                if (!val.empty()) {
+                    try { row.push_back(std::stoi(val)); } catch (...) {}
+                }
+            }
+            if (!row.empty()) tempConfusion.push_back(row);
+        }
+    }
+
+    if (!tempConfusion.empty()) {
+        confusion = tempConfusion;
+        return true;
+    }
+    return false;
 }
