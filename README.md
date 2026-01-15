@@ -1,5 +1,5 @@
 # MonoNN: Monomial Neural Network (EXPERIMENTAL)
-This is an experimental project to study the modification to multi-layer perception from linear to monomial-based neurons.
+This is an experimental project to study the modification to multi-layer perceptron (MLP) from linear to monomial-based neurons.
 
 ---
 
