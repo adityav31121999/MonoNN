@@ -5,6 +5,9 @@
 #include <utility>
 #include <map>
 #include "operators.hpp"
+#include "cusup.hpp"
+#include "clcon.hpp"
+#include "cppop.hpp"
 #include "progress.hpp"
 
 /**
@@ -24,7 +27,7 @@
  */
 
 /**
- * @brief Class representing a Monomial Neural Network (MNN) for 2D input and 1D output.
+ * @brief Class representing a Monomial Neural Network for 2D input and 1D output (MNN2D).
  *      - The monomial is of the form f(x) = c*(x^m) + b
  *          - n: order of monomials
  *          - x: input to monimial`d mlp

@@ -38,9 +38,9 @@ int main() {
         std::cout << "THIS IS MONOMIAL NEURAL NETWORK IMPLEMENTATION" << std::endl;
 
         std::cout << "----------------------MNN----------------------" << std::endl;
-        mnn network1(inSize1, outSize, width_mnn, order, digit);
+        mnn1d network1(inSize1, outSize, width_mnn, order, digit);
         network1.weightUpdateType = 0; network1.learningRate = LEARNING_MAX;
-        network1.trainNtest(digit, isGreyOrRGB, useThreadOrBuffer, 0);
+        network1.fullDataSetTraining(digit, isGreyOrRGB, useThreadOrBuffer);
     }
     catch (const std::exception& e) {
         std::cerr << "An exception occurred in main: " << e.what() << std::endl;

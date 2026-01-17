@@ -3,7 +3,7 @@
 
 #include "include/operators.hpp"
 #include "include/progress.hpp"
-#include "include/mnn.hpp"
+#include "include/mnn1d.hpp"
 #include "include/mnn2d.hpp"
 
 #endif
